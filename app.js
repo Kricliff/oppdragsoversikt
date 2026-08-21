@@ -1,6 +1,8 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const FRIST_SOON_DAYS = 7;
+const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
 const PALETTE_SIZE = 8;
+const STATUS_PRIORITET = { aktiv: 0, pauset: 1, utfort: 2 };
 
 let alleOppdrag = [];
 
@@ -43,22 +45,32 @@ function tikkKlokke() {
 }
 
 function render() {
-  const pagaende = alleOppdrag.filter((o) => o.status !== "avsluttet");
+  const pagaende = alleOppdrag.filter(erSynligPaTavle);
   renderStats(pagaende);
   renderLanes(pagaende);
   emptyState.hidden = pagaende.length > 0;
 }
 
+function erSynligPaTavle(o) {
+  if (o.status === "aktiv" || o.status === "pauset") return true;
+  if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
+  return false; // avsluttet, eller utfort-frist utløpt
+}
+
 function renderStats(liste) {
   const aktive = liste.filter((o) => o.status === "aktiv").length;
   const pauset = liste.filter((o) => o.status === "pauset").length;
-  const kandidater = liste.reduce((sum, o) => sum + o.antallKandidater, 0);
+  const utfort = liste.filter((o) => o.status === "utfort").length;
+  const kandidater = liste
+    .filter((o) => o.status === "aktiv" || o.status === "pauset")
+    .reduce((sum, o) => sum + o.antallKandidater, 0);
   const ansvarlige = new Set(liste.map((o) => o.ansvarlig)).size;
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
     { label: "Pauset", value: pauset, accent: "pauset" },
+    { label: "Utført", value: utfort, accent: "utfort" },
     { label: "Kandidater", value: kandidater },
     { label: "Ansvarlige", value: ansvarlige }
   ].forEach(({ label, value, accent }) => {
@@ -132,7 +144,8 @@ function grupperPerAnsvarlig(liste) {
 
 function sorterForVisning(liste) {
   return [...liste].sort((a, b) => {
-    if (a.status !== b.status) return a.status === "aktiv" ? -1 : 1;
+    if (a.status !== b.status) return STATUS_PRIORITET[a.status] - STATUS_PRIORITET[b.status];
+    if (a.status === "utfort") return new Date(b.utfortDato) - new Date(a.utfortDato);
     return new Date(a.frist) - new Date(b.frist);
   });
 }
@@ -140,7 +153,6 @@ function sorterForVisning(liste) {
 function byggKort(o) {
   const div = document.createElement("div");
   div.className = `card status-${o.status}`;
-  const frist = fristInfo(o.frist);
   div.innerHTML = `
     <div class="tittel">${escapeHtml(o.tittel)}</div>
     <div class="kunde">${escapeHtml(o.kunde)}</div>
@@ -148,15 +160,30 @@ function byggKort(o) {
       <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
       <span class="card-right">
         <span class="kandidater">👤 ${o.antallKandidater}</span>
-        <span class="frist ${frist.soon ? "soon" : ""}">${frist.tekst}</span>
+        ${kortHoyreTekst(o)}
       </span>
     </div>
   `;
   return div;
 }
 
+function kortHoyreTekst(o) {
+  if (o.status === "utfort") {
+    return `<span class="frist">${utfortTekst(o.utfortDato)}</span>`;
+  }
+  const frist = fristInfo(o.frist);
+  return `<span class="frist ${frist.soon ? "soon" : ""}">${frist.tekst}</span>`;
+}
+
+function utfortTekst(iso) {
+  const dager = dagerSiden(iso);
+  if (dager <= 0) return "Utført i dag";
+  if (dager === 1) return "Utført i går";
+  return `Utført for ${dager} dager siden`;
+}
+
 function statusLabel(status) {
-  return { aktiv: "Aktiv", pauset: "Pauset", avsluttet: "Avsluttet" }[status] ?? status;
+  return { aktiv: "Aktiv", pauset: "Pauset", utfort: "Utført", avsluttet: "Avsluttet" }[status] ?? status;
 }
 
 function fristInfo(iso) {
@@ -165,6 +192,11 @@ function fristInfo(iso) {
   const dagerIgjen = Math.ceil((frist - new Date()) / 86400000);
   const tekst = frist.toLocaleDateString("no-NO", { day: "numeric", month: "short" });
   return { tekst, soon: dagerIgjen <= FRIST_SOON_DAYS };
+}
+
+function dagerSiden(iso) {
+  if (!iso) return Infinity;
+  return Math.floor((new Date() - new Date(iso)) / 86400000);
 }
 
 function initialer(navn) {

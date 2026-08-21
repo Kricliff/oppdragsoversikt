@@ -31,5 +31,10 @@ const MOCK_OPPDRAG = [
   { id: "opp-027", tittel: "Fysioterapeut", kunde: "Aleris", ansvarlig: "Camilla Reme", status: "aktiv", antallKandidater: 3, frist: "2026-08-27" },
   { id: "opp-028", tittel: "Truckfører", kunde: "Tine", ansvarlig: "Henrik Moe", status: "pauset", antallKandidater: 1, frist: "2026-10-10" },
   { id: "opp-029", tittel: "Kokk", kunde: "Fursetgruppen", ansvarlig: "Henrik Moe", status: "aktiv", antallKandidater: 6, frist: "2026-09-09" },
-  { id: "opp-030", tittel: "Nettverkstekniker", kunde: "Telia", ansvarlig: "Marte Sund", status: "aktiv", antallKandidater: 5, frist: "2026-09-16" }
+  { id: "opp-030", tittel: "Nettverkstekniker", kunde: "Telia", ansvarlig: "Marte Sund", status: "aktiv", antallKandidater: 5, frist: "2026-09-16" },
+
+  // Eksempler på "utfort" - vises på tavlen i UTFORT_SYNLIG_DAGER (3) dager etter utfortDato, se app.js.
+  { id: "opp-031", tittel: "Rørlegger", kunde: "Rørkjøp AS", ansvarlig: "Anna Berg", status: "utfort", antallKandidater: 4, utfortDato: "2026-08-21" },
+  { id: "opp-032", tittel: "Selger, dagligvare", kunde: "Kiwi", ansvarlig: "Erik Solheim", status: "utfort", antallKandidater: 6, utfortDato: "2026-08-19" },
+  { id: "opp-033", tittel: "Konsulent, økonomi", kunde: "DNB", ansvarlig: "Erik Solheim", status: "utfort", antallKandidater: 3, utfortDato: "2026-08-16" }
 ];

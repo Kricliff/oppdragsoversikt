@@ -30,6 +30,9 @@ async function fetchFromRecman() {
 
 function mapRecmanRespons(recmanData) {
   // TODO: juster mapping når vi ser det faktiske Recman-responsformatet.
+  // status må normaliseres til "aktiv" | "pauset" | "utfort" | "avsluttet".
+  // utfortDato er kun nødvendig når status er "utfort" - styrer hvor lenge
+  // kortet vises på tavlen (se UTFORT_SYNLIG_DAGER i app.js).
   return recmanData.map((r) => ({
     id: r.id,
     tittel: r.title ?? r.tittel,
@@ -37,6 +40,7 @@ function mapRecmanRespons(recmanData) {
     ansvarlig: r.owner?.name ?? r.ansvarlig,
     status: r.status,
     antallKandidater: r.candidateCount ?? r.antallKandidater ?? 0,
-    frist: r.deadline ?? r.frist
+    frist: r.deadline ?? r.frist,
+    utfortDato: r.completedAt ?? r.utfortDato
   }));
 }
