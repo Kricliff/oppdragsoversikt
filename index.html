@@ -4,51 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Oppdragsoversikt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <h1>Oppdragsoversikt</h1>
-  <div class="source-badge" id="sourceBadge">Kilde: mock-data</div>
-</header>
+<div class="board">
 
-<main>
-  <section class="controls">
-    <input type="search" id="searchInput" placeholder="Søk på oppdrag, kunde eller ansvarlig...">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <h1>Oppdragsoversikt</h1>
+    </div>
 
-    <select id="statusFilter">
-      <option value="alle">Alle statuser</option>
-      <option value="aktiv">Aktiv</option>
-      <option value="pauset">Pauset</option>
-      <option value="avsluttet">Avsluttet</option>
-    </select>
+    <div class="stats" id="statsRow"></div>
 
-    <select id="ansvarligFilter">
-      <option value="alle">Alle ansvarlige</option>
-    </select>
+    <div class="clock-block">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="dateLabel">-</div>
+    </div>
+  </header>
 
-    <button id="refreshBtn" type="button">Oppdater</button>
-  </section>
+  <main id="lanes" class="lanes"></main>
 
-  <section class="stats" id="statsRow"></section>
+  <footer class="statusbar">
+    <span id="sourceBadge" class="source-badge">Kilde: mock-data</span>
+    <span class="dot">•</span>
+    <span id="updatedLabel">Sist oppdatert: -</span>
+    <button id="refreshBtn" type="button" title="Oppdater nå" aria-label="Oppdater nå">⟳</button>
+  </footer>
 
-  <section class="table-wrap">
-    <table id="oppdragTable">
-      <thead>
-        <tr>
-          <th data-sort="tittel">Oppdrag</th>
-          <th data-sort="kunde">Kunde</th>
-          <th data-sort="ansvarlig">Ansvarlig</th>
-          <th data-sort="status">Status</th>
-          <th data-sort="antallKandidater">Kandidater</th>
-          <th data-sort="frist">Frist</th>
-        </tr>
-      </thead>
-      <tbody id="oppdragBody"></tbody>
-    </table>
-    <p id="emptyState" class="empty-state" hidden>Ingen oppdrag matcher søket/filteret.</p>
-  </section>
-</main>
+  <p id="emptyState" class="empty-state" hidden>Ingen aktive oppdrag akkurat nå.</p>
+
+</div>
 
 <script src="data/mock-oppdrag.js"></script>
 <script src="recman-adapter.js"></script>

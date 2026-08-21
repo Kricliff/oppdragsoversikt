@@ -1,140 +1,164 @@
-let alleOppdrag = [];
-let sortKolonne = "tittel";
-let sortRetning = 1;
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
+const FRIST_SOON_DAYS = 7;
+const PALETTE_SIZE = 8;
 
-const tbody = document.getElementById("oppdragBody");
-const emptyState = document.getElementById("emptyState");
-const searchInput = document.getElementById("searchInput");
-const statusFilter = document.getElementById("statusFilter");
-const ansvarligFilter = document.getElementById("ansvarligFilter");
-const sourceBadge = document.getElementById("sourceBadge");
+let alleOppdrag = [];
+
+const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
+const sourceBadge = document.getElementById("sourceBadge");
+const updatedLabel = document.getElementById("updatedLabel");
+const emptyState = document.getElementById("emptyState");
+const clockEl = document.getElementById("clock");
+const dateLabelEl = document.getElementById("dateLabel");
+const refreshBtn = document.getElementById("refreshBtn");
 
 async function init() {
   await lastOppdrag();
-  bindEvents();
+  tikkKlokke();
+  setInterval(tikkKlokke, 1000);
+  setInterval(lastOppdrag, AUTO_REFRESH_MS);
+  refreshBtn.addEventListener("click", () => lastOppdrag());
 }
 
 async function lastOppdrag() {
-  sourceBadge.textContent = "Laster...";
+  refreshBtn.classList.add("spinning");
   try {
     alleOppdrag = await hentOppdrag();
     sourceBadge.textContent = RECMAN_CONFIG.enabled ? "Kilde: Recman" : "Kilde: mock-data";
-    fyllAnsvarligFilter();
+    updatedLabel.textContent = `Sist oppdatert: ${new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}`;
     render();
   } catch (err) {
     sourceBadge.textContent = "Feil ved lasting";
     console.error(err);
+  } finally {
+    setTimeout(() => refreshBtn.classList.remove("spinning"), 400);
   }
 }
 
-function fyllAnsvarligFilter() {
-  const navn = [...new Set(alleOppdrag.map((o) => o.ansvarlig))].sort();
-  ansvarligFilter.innerHTML = '<option value="alle">Alle ansvarlige</option>';
-  navn.forEach((n) => {
-    const opt = document.createElement("option");
-    opt.value = n;
-    opt.textContent = n;
-    ansvarligFilter.appendChild(opt);
-  });
-}
-
-function bindEvents() {
-  searchInput.addEventListener("input", render);
-  statusFilter.addEventListener("change", render);
-  ansvarligFilter.addEventListener("change", render);
-  document.getElementById("refreshBtn").addEventListener("click", lastOppdrag);
-
-  document.querySelectorAll("th[data-sort]").forEach((th) => {
-    th.addEventListener("click", () => {
-      const kol = th.dataset.sort;
-      if (sortKolonne === kol) {
-        sortRetning *= -1;
-      } else {
-        sortKolonne = kol;
-        sortRetning = 1;
-      }
-      render();
-    });
-  });
-}
-
-function filtrerteOppdrag() {
-  const q = searchInput.value.trim().toLowerCase();
-  const status = statusFilter.value;
-  const ansvarlig = ansvarligFilter.value;
-
-  return alleOppdrag.filter((o) => {
-    const matcherSok =
-      !q ||
-      o.tittel.toLowerCase().includes(q) ||
-      o.kunde.toLowerCase().includes(q) ||
-      o.ansvarlig.toLowerCase().includes(q);
-    const matcherStatus = status === "alle" || o.status === status;
-    const matcherAnsvarlig = ansvarlig === "alle" || o.ansvarlig === ansvarlig;
-    return matcherSok && matcherStatus && matcherAnsvarlig;
-  });
-}
-
-function sorterOppdrag(liste) {
-  return [...liste].sort((a, b) => {
-    const av = a[sortKolonne];
-    const bv = b[sortKolonne];
-    if (typeof av === "number") return (av - bv) * sortRetning;
-    return String(av).localeCompare(String(bv), "no") * sortRetning;
-  });
+function tikkKlokke() {
+  const now = new Date();
+  clockEl.textContent = now.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  dateLabelEl.textContent = now.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "long" });
 }
 
 function render() {
-  const filtrert = sorterOppdrag(filtrerteOppdrag());
-  renderStats(filtrert);
-  renderTabell(filtrert);
+  const pagaende = alleOppdrag.filter((o) => o.status !== "avsluttet");
+  renderStats(pagaende);
+  renderLanes(pagaende);
+  emptyState.hidden = pagaende.length > 0;
 }
 
 function renderStats(liste) {
-  const totalt = liste.length;
   const aktive = liste.filter((o) => o.status === "aktiv").length;
+  const pauset = liste.filter((o) => o.status === "pauset").length;
   const kandidater = liste.reduce((sum, o) => sum + o.antallKandidater, 0);
+  const ansvarlige = new Set(liste.map((o) => o.ansvarlig)).size;
 
   statsRow.innerHTML = "";
   [
-    { label: "Oppdrag", value: totalt },
-    { label: "Aktive", value: aktive },
-    { label: "Kandidater totalt", value: kandidater }
-  ].forEach(({ label, value }) => {
-    const card = document.createElement("div");
-    card.className = "stat-card";
-    card.innerHTML = `<div class="value">${value}</div><div class="label">${label}</div>`;
-    statsRow.appendChild(card);
+    { label: "Aktive", value: aktive, accent: "aktiv" },
+    { label: "Pauset", value: pauset, accent: "pauset" },
+    { label: "Kandidater", value: kandidater },
+    { label: "Ansvarlige", value: ansvarlige }
+  ].forEach(({ label, value, accent }) => {
+    const el = document.createElement("div");
+    el.className = accent ? `stat-card accent-${accent}` : "stat-card";
+    el.innerHTML = `<span class="value">${value}</span><span class="label">${label}</span>`;
+    statsRow.appendChild(el);
   });
 }
 
-function renderTabell(liste) {
-  tbody.innerHTML = "";
-  emptyState.hidden = liste.length > 0;
+function renderLanes(liste) {
+  const grupper = grupperPerAnsvarlig(liste);
+  lanesEl.innerHTML = "";
 
-  liste.forEach((o) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${escapeHtml(o.tittel)}</td>
-      <td>${escapeHtml(o.kunde)}</td>
-      <td>${escapeHtml(o.ansvarlig)}</td>
-      <td><span class="status-pill status-${o.status}">${statusLabel(o.status)}</span></td>
-      <td>${o.antallKandidater}</td>
-      <td>${formatDato(o.frist)}</td>
+  grupper.forEach(([navn, oppdragListe]) => {
+    const lane = document.createElement("section");
+    lane.className = "lane";
+
+    const farge = fargeForNavn(navn);
+    lane.innerHTML = `
+      <div class="lane-header">
+        <span class="avatar" style="background:${farge}">${initialer(navn)}</span>
+        <span class="name">${escapeHtml(navn)}</span>
+        <span class="lane-count">${oppdragListe.length}</span>
+      </div>
+      <div class="lane-body"></div>
     `;
-    tbody.appendChild(tr);
+
+    const body = lane.querySelector(".lane-body");
+    if (oppdragListe.length === 0) {
+      body.innerHTML = '<div class="lane-empty">Ingen aktive oppdrag</div>';
+    } else {
+      sorterForVisning(oppdragListe).forEach((o) => body.appendChild(byggKort(o)));
+    }
+
+    lanesEl.appendChild(lane);
   });
+}
+
+function grupperPerAnsvarlig(liste) {
+  const map = new Map();
+  liste.forEach((o) => {
+    if (!map.has(o.ansvarlig)) map.set(o.ansvarlig, []);
+    map.get(o.ansvarlig).push(o);
+  });
+  return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], "no"));
+}
+
+function sorterForVisning(liste) {
+  return [...liste].sort((a, b) => {
+    if (a.status !== b.status) return a.status === "aktiv" ? -1 : 1;
+    return new Date(a.frist) - new Date(b.frist);
+  });
+}
+
+function byggKort(o) {
+  const div = document.createElement("div");
+  div.className = `card status-${o.status}`;
+  const frist = fristInfo(o.frist);
+  div.innerHTML = `
+    <div class="tittel">${escapeHtml(o.tittel)}</div>
+    <div class="kunde">${escapeHtml(o.kunde)}</div>
+    <div class="meta-row">
+      <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
+      <span class="card-right">
+        <span class="kandidater">👤 ${o.antallKandidater}</span>
+        <span class="frist ${frist.soon ? "soon" : ""}">${frist.tekst}</span>
+      </span>
+    </div>
+  `;
+  return div;
 }
 
 function statusLabel(status) {
   return { aktiv: "Aktiv", pauset: "Pauset", avsluttet: "Avsluttet" }[status] ?? status;
 }
 
-function formatDato(iso) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleDateString("no-NO", { year: "numeric", month: "short", day: "numeric" });
+function fristInfo(iso) {
+  if (!iso) return { tekst: "-", soon: false };
+  const frist = new Date(iso);
+  const dagerIgjen = Math.ceil((frist - new Date()) / 86400000);
+  const tekst = frist.toLocaleDateString("no-NO", { day: "numeric", month: "short" });
+  return { tekst, soon: dagerIgjen <= FRIST_SOON_DAYS };
+}
+
+function initialer(navn) {
+  return navn
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((del) => del[0].toUpperCase())
+    .join("");
+}
+
+function fargeForNavn(navn) {
+  let hash = 0;
+  for (let i = 0; i < navn.length; i++) {
+    hash = (hash * 31 + navn.charCodeAt(i)) % PALETTE_SIZE;
+  }
+  return `var(--palette-${hash + 1})`;
 }
 
 function escapeHtml(str) {
