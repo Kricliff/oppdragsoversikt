@@ -142,8 +142,102 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: clamp(10px, 1.4vw, 20px);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: clamp(8px, 1.2vw, 20px);
+}
+
+/* Tetthet skalerer ned kort/avatar/skrift når det er mange rådgivere,
+   slik at tavlen fortsatt får plass til alle uten å stole på skrolling. */
+.lanes.density-compact { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.lanes.density-dense { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+.lanes.density-compact .lane-header {
+  padding: 8px 12px;
+  gap: 0.5rem;
+}
+
+.lanes.density-compact .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 0.68rem;
+}
+
+.lanes.density-compact .lane-header .name {
+  font-size: 0.82rem;
+}
+
+.lanes.density-compact .lane-body {
+  padding: 8px;
+  gap: 0.45rem;
+}
+
+.lanes.density-compact .card {
+  padding: 0.5rem 0.65rem;
+}
+
+.lanes.density-compact .card .tittel {
+  font-size: 0.78rem;
+}
+
+.lanes.density-compact .card .kunde {
+  font-size: 0.68rem;
+  margin-bottom: 0.4rem;
+}
+
+.lanes.density-dense .lane-header {
+  padding: 6px 10px;
+  gap: 0.4rem;
+}
+
+.lanes.density-dense .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 0.6rem;
+}
+
+.lanes.density-dense .lane-header .name {
+  font-size: 0.74rem;
+}
+
+.lanes.density-dense .lane-count {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.45rem;
+}
+
+.lanes.density-dense .lane-body {
+  padding: 6px;
+  gap: 0.35rem;
+}
+
+.lanes.density-dense .card {
+  padding: 0.4rem 0.55rem;
+}
+
+.lanes.density-dense .card .tittel {
+  font-size: 0.72rem;
+  margin-bottom: 0.25rem;
+  white-space: normal;
+}
+
+.lanes.density-dense .card .kunde {
+  display: none;
+}
+
+.lanes.density-dense .status-pill {
+  font-size: 0.6rem;
+  padding: 0.12rem 0.4rem;
+}
+
+.lanes.density-dense .card-right {
+  font-size: 0.62rem;
+}
+
+.lane-more {
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  text-align: center;
+  padding: 0.25rem 0.2rem 0.05rem;
 }
 
 .lane {

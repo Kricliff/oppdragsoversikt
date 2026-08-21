@@ -71,6 +71,10 @@ function renderStats(liste) {
 
 function renderLanes(liste) {
   const grupper = grupperPerAnsvarlig(liste);
+  const tetthet = tetthetForAntall(grupper.length);
+  const maksKort = MAKS_KORT_PER_TETTHET[tetthet];
+
+  lanesEl.className = `lanes density-${tetthet}`;
   lanesEl.innerHTML = "";
 
   grupper.forEach(([navn, oppdragListe]) => {
@@ -91,12 +95,31 @@ function renderLanes(liste) {
     if (oppdragListe.length === 0) {
       body.innerHTML = '<div class="lane-empty">Ingen aktive oppdrag</div>';
     } else {
-      sorterForVisning(oppdragListe).forEach((o) => body.appendChild(byggKort(o)));
+      const sortert = sorterForVisning(oppdragListe);
+      const synlige = sortert.slice(0, maksKort);
+      const rest = sortert.length - synlige.length;
+
+      synlige.forEach((o) => body.appendChild(byggKort(o)));
+
+      if (rest > 0) {
+        const mer = document.createElement("div");
+        mer.className = "lane-more";
+        mer.textContent = `+${rest} flere`;
+        body.appendChild(mer);
+      }
     }
 
     lanesEl.appendChild(lane);
   });
 }
+
+function tetthetForAntall(antallRadgivere) {
+  if (antallRadgivere <= 6) return "cozy";
+  if (antallRadgivere <= 14) return "compact";
+  return "dense";
+}
+
+const MAKS_KORT_PER_TETTHET = { cozy: 6, compact: 4, dense: 3 };
 
 function grupperPerAnsvarlig(liste) {
   const map = new Map();
