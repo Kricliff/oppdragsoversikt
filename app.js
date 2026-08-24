@@ -60,17 +60,16 @@ function erSynligPaTavle(o) {
 }
 
 function renderStats(liste) {
+  const utfortIArListe = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const aktive = liste.filter((o) => o.status === "aktiv").length;
-  const utfortIAr = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato)).length;
-  const kandidater = liste
-    .filter((o) => o.status === "aktiv")
-    .reduce((sum, o) => sum + o.antallKandidater, 0);
+  const utfortIAr = utfortIArListe.length;
+  const kandidaterLandet = utfortIArListe.reduce((sum, o) => sum + o.antallKandidater, 0);
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
-    { label: "Kandidater", value: kandidater }
+    { label: "Kandidater Landet", value: kandidaterLandet }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
