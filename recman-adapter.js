@@ -30,7 +30,7 @@ async function fetchFromRecman() {
 
 function mapRecmanRespons(recmanData) {
   // TODO: juster mapping når vi ser det faktiske Recman-responsformatet.
-  // status må normaliseres til "aktiv" | "pauset" | "utfort" | "avsluttet".
+  // status må normaliseres til "aktiv" | "utfort" - alt annet vises ikke på tavlen (se app.js).
   // utfortDato er kun nødvendig når status er "utfort" - styrer hvor lenge
   // kortet vises på tavlen (se UTFORT_SYNLIG_DAGER i app.js).
   return recmanData.map((r) => ({

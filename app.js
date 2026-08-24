@@ -2,7 +2,7 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data 
 const FRIST_SOON_DAYS = 7;
 const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
 const PALETTE_SIZE = 8;
-const STATUS_PRIORITET = { aktiv: 0, pauset: 1, utfort: 2 };
+const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 
 let alleOppdrag = [];
 
@@ -52,24 +52,22 @@ function render() {
 }
 
 function erSynligPaTavle(o) {
-  if (o.status === "aktiv" || o.status === "pauset") return true;
+  if (o.status === "aktiv") return true;
   if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
-  return false; // avsluttet, eller utfort-frist utløpt
+  return false;
 }
 
 function renderStats(liste) {
   const aktive = liste.filter((o) => o.status === "aktiv").length;
-  const pauset = liste.filter((o) => o.status === "pauset").length;
   const utfort = liste.filter((o) => o.status === "utfort").length;
   const kandidater = liste
-    .filter((o) => o.status === "aktiv" || o.status === "pauset")
+    .filter((o) => o.status === "aktiv")
     .reduce((sum, o) => sum + o.antallKandidater, 0);
   const ansvarlige = new Set(liste.map((o) => o.ansvarlig)).size;
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
-    { label: "Pauset", value: pauset, accent: "pauset" },
     { label: "Utført", value: utfort, accent: "utfort" },
     { label: "Kandidater", value: kandidater },
     { label: "Ansvarlige", value: ansvarlige }
@@ -183,7 +181,7 @@ function utfortTekst(iso) {
 }
 
 function statusLabel(status) {
-  return { aktiv: "Aktiv", pauset: "Pauset", utfort: "Utført", avsluttet: "Avsluttet" }[status] ?? status;
+  return { aktiv: "Aktiv", utfort: "Utført" }[status] ?? status;
 }
 
 function fristInfo(iso) {
