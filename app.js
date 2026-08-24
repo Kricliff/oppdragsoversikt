@@ -2,12 +2,6 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data 
 const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
-const STADIUM_LABELS = {
-  screening: "Screening",
-  intervju: "Intervju",
-  referanser: "Referanser",
-  tilbud: "Tilbud sendt"
-};
 
 let alleOppdrag = [];
 
@@ -170,6 +164,7 @@ function byggKort(o) {
         ${kortHoyreTekst(o)}
       </span>
     </div>
+    ${fremdriftBarHtml(o)}
   `;
   return div;
 }
@@ -178,10 +173,16 @@ function kortHoyreTekst(o) {
   if (o.status === "utfort") {
     return `<span class="frist">${utfortTekst(o.utfortDato)}</span>`;
   }
-  if (o.stadium && STADIUM_LABELS[o.stadium]) {
-    return `<span class="stadium">${STADIUM_LABELS[o.stadium]}</span>`;
+  if (typeof o.fremdriftProsent === "number") {
+    return `<span class="fremdrift">${o.fremdriftProsent}%</span>`;
   }
   return "";
+}
+
+function fremdriftBarHtml(o) {
+  if (o.status !== "aktiv" || typeof o.fremdriftProsent !== "number") return "";
+  const prosent = Math.max(0, Math.min(100, o.fremdriftProsent));
+  return `<div class="progress-bar"><div class="progress-bar-fill" style="width:${prosent}%"></div></div>`;
 }
 
 function utfortTekst(iso) {
