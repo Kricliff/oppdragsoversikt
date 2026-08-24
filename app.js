@@ -65,16 +65,12 @@ function renderStats(liste) {
   const kandidater = liste
     .filter((o) => o.status === "aktiv")
     .reduce((sum, o) => sum + o.antallKandidater, 0);
-  const ansvarlige = new Set(
-    liste.filter((o) => o.status === "aktiv" || erIDetteAret(o.utfortDato)).map((o) => o.ansvarlig)
-  ).size;
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
-    { label: "Kandidater", value: kandidater },
-    { label: "Ansvarlige", value: ansvarlige }
+    { label: "Kandidater", value: kandidater }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
