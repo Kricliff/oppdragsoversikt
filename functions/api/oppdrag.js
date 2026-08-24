@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 // Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
 // lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
@@ -80,23 +80,28 @@ async function hentOgNormaliser(apiKey) {
     }
   }
 
-  // Kundenavn - "company"-scope. Recman har over 1000 kunder totalt (paginert), så i
-  // stedet for å bla gjennom alle henter vi bare de companyId-ene som faktisk er i bruk
-  // på prosjektene våre, via companyIds-filteret (samme mønster som projectIds).
-  // Faller tilbake til "Kunde #<id>" for enkelt-oppslag som skulle feile.
+  // Kundenavn + kundetype - "company"-scope. Recman har over 1000 kunder totalt
+  // (paginert), så i stedet for å bla gjennom alle henter vi bare de companyId-ene som
+  // faktisk er i bruk på prosjektene våre, via companyIds-filteret (samme mønster som
+  // projectIds). Faller tilbake til "Kunde #<id>" for enkelt-oppslag som skulle feile.
   const kundeNavn = {};
+  const kundeType = {};
+  let kundedataLastetOk = false;
   const brukteCompanyIds = [...new Set(Object.values(projectJson.data).map((p) => p.companyId).filter(Boolean))];
   if (brukteCompanyIds.length > 0) {
     try {
-      const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name&companyIds=${brukteCompanyIds.join(",")}`;
+      const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name,type&companyIds=${brukteCompanyIds.join(",")}`;
       const companyJson = await fetch(companyUrl).then((r) => r.json());
       if (companyJson.success) {
+        kundedataLastetOk = true;
         for (const [id, c] of Object.entries(companyJson.data ?? {})) {
           if (c.name) kundeNavn[id] = c.name;
+          if (c.type) kundeType[id] = c.type;
         }
       }
     } catch {
-      // kundeNavn forblir tom - "Kunde #<id>" brukes under
+      // kundeNavn/kundeType forblir tomme - "Kunde #<id>" brukes under, og
+      // kunde-type-filteret slås av (se erIkkeEkteKunde) siden vi ikke fikk data.
     }
   }
 
@@ -105,6 +110,12 @@ async function hentOgNormaliser(apiKey) {
       const status = STATUS_MAP[p.status];
       if (!status) return null; // cancelled/lost - skjules
       if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
+      // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
+      // knyttet til f.eks. et "prospect" er salgsoppfølging, ikke et reelt kundeoppdrag -
+      // luk dem bort så tavlen bare viser arbeid for faktiske kunder. Slår aldri filteret på
+      // hvis kundedata ikke lot seg hente (kundedataLastetOk === false) - da vises alt,
+      // heller enn å risikere å skjule ekte oppdrag pga. en API-feil.
+      if (kundedataLastetOk && kundeType[p.companyId] && kundeType[p.companyId] !== "customer") return null;
 
       return {
         id: "recman-" + p.projectId,
