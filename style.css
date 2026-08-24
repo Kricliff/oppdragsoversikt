@@ -297,7 +297,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.06rem 0.3rem;
+  padding: 0.03rem 0.3rem;
 }
 
 .lanes.card-scale-4 .card .tittel {
@@ -334,8 +334,8 @@ body {
 }
 
 .lanes.card-scale-4 .lane-body {
-  padding: 4px;
-  gap: 0.06rem;
+  padding: 3px;
+  gap: 0.03rem;
 }
 
 .lane {
