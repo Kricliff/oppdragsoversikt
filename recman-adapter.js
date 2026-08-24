@@ -17,7 +17,7 @@ async function hentOppdrag() {
 
 async function fetchFromRecman() {
   // Forventet respons fra Recman må mappes til samme felt-navn som MOCK_OPPDRAG:
-  // id, tittel, kunde, ansvarlig, status, antallKandidater, frist
+  // id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato
   const res = await fetch(`${RECMAN_CONFIG.baseUrl}/oppdrag`, {
     headers: { Authorization: `Bearer ${RECMAN_CONFIG.apiKey}` }
   });
@@ -40,7 +40,6 @@ function mapRecmanRespons(recmanData) {
     ansvarlig: r.owner?.name ?? r.ansvarlig,
     status: r.status,
     antallKandidater: r.candidateCount ?? r.antallKandidater ?? 0,
-    frist: r.deadline ?? r.frist,
     utfortDato: r.completedAt ?? r.utfortDato
   }));
 }

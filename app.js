@@ -1,5 +1,4 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
-const FRIST_SOON_DAYS = 7;
 const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
@@ -148,7 +147,7 @@ function sorterForVisning(liste) {
   return [...liste].sort((a, b) => {
     if (a.status !== b.status) return STATUS_PRIORITET[a.status] - STATUS_PRIORITET[b.status];
     if (a.status === "utfort") return new Date(b.utfortDato) - new Date(a.utfortDato);
-    return new Date(a.frist) - new Date(b.frist);
+    return a.tittel.localeCompare(b.tittel, "no");
   });
 }
 
@@ -173,8 +172,7 @@ function kortHoyreTekst(o) {
   if (o.status === "utfort") {
     return `<span class="frist">${utfortTekst(o.utfortDato)}</span>`;
   }
-  const frist = fristInfo(o.frist);
-  return `<span class="frist ${frist.soon ? "soon" : ""}">${frist.tekst}</span>`;
+  return "";
 }
 
 function utfortTekst(iso) {
@@ -186,14 +184,6 @@ function utfortTekst(iso) {
 
 function statusLabel(status) {
   return { aktiv: "Aktiv", utfort: "Utført" }[status] ?? status;
-}
-
-function fristInfo(iso) {
-  if (!iso) return { tekst: "-", soon: false };
-  const frist = new Date(iso);
-  const dagerIgjen = Math.ceil((frist - new Date()) / 86400000);
-  const tekst = frist.toLocaleDateString("no-NO", { day: "numeric", month: "short" });
-  return { tekst, soon: dagerIgjen <= FRIST_SOON_DAYS };
 }
 
 function dagerSiden(iso) {

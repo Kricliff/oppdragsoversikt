@@ -13,7 +13,6 @@
   --utfort: #38bdf8;
   --utfort-soft: rgba(56, 189, 248, 0.16);
   --neutral: #64748b;
-  --frist-warn: #fb7185;
 
   --palette-1: #60a5fa;
   --palette-2: #c084fc;
@@ -434,11 +433,6 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-.card-right .frist.soon {
-  color: var(--frist-warn);
-  font-weight: 600;
 }
 
 /* ---------- Footer / status ---------- */
