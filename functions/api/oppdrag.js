@@ -11,6 +11,11 @@
 
 const CACHE_SECONDS = 20 * 60;
 
+// Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
+// lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
+// er rørt i Recman på lenger enn dette regnes ikke som aktivt lenger, og skjules.
+const AKTIV_MAKS_DAGER_UTEN_OPPDATERING = 90;
+
 // Recman sine prosjekt-statuser (se help.recman.io "Projects module") normalisert til
 // det tavlen forstår. "cancelled" og "lost" er bevisst utelatt - de skal ikke vises,
 // og alt som ikke er "aktiv"/"utfort" skjules automatisk av erSynligPaTavle i app.js.
@@ -88,6 +93,7 @@ async function hentOgNormaliser(apiKey) {
     .map((p) => {
       const status = STATUS_MAP[p.status];
       if (!status) return null; // cancelled/lost - skjules
+      if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
 
       return {
         id: "recman-" + p.projectId,
@@ -103,4 +109,10 @@ async function hentOgNormaliser(apiKey) {
       };
     })
     .filter(Boolean);
+}
+
+function erForGammelTilAVaereAktiv(updated) {
+  if (!updated) return true;
+  const dagerSiden = (Date.now() - new Date(updated.replace(" ", "T") + "Z").getTime()) / 86400000;
+  return dagerSiden > AKTIV_MAKS_DAGER_UTEN_OPPDATERING;
 }
