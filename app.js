@@ -50,6 +50,7 @@ function render() {
   // er synlig på tavlen (utført-kort forsvinner der etter UTFORT_SYNLIG_DAGER).
   renderStats(alleOppdrag);
   renderLanes(pagaende);
+  tilpassKortStorrelseTilSkjerm();
   emptyState.hidden = pagaende.length > 0;
 }
 
@@ -81,7 +82,6 @@ function renderStats(liste) {
 function renderLanes(liste) {
   const grupper = grupperPerAnsvarlig(liste);
   const tetthet = tetthetForAntall(grupper.length);
-  const maksKort = MAKS_KORT_PER_TETTHET[tetthet];
 
   lanesEl.className = `lanes density-${tetthet}`;
   lanesEl.innerHTML = "";
@@ -104,18 +104,7 @@ function renderLanes(liste) {
     if (oppdragListe.length === 0) {
       body.innerHTML = '<div class="lane-empty">Ingen aktive oppdrag</div>';
     } else {
-      const sortert = sorterForVisning(oppdragListe);
-      const synlige = sortert.slice(0, maksKort);
-      const rest = sortert.length - synlige.length;
-
-      synlige.forEach((o) => body.appendChild(byggKort(o)));
-
-      if (rest > 0) {
-        const mer = document.createElement("div");
-        mer.className = "lane-more";
-        mer.textContent = `+${rest} flere`;
-        body.appendChild(mer);
-      }
+      sorterForVisning(oppdragListe).forEach((o) => body.appendChild(byggKort(o)));
     }
 
     lanesEl.appendChild(lane);
@@ -128,7 +117,23 @@ function tetthetForAntall(antallRadgivere) {
   return "dense";
 }
 
-const MAKS_KORT_PER_TETTHET = { cozy: 6, compact: 4, dense: 3 };
+// Alle oppdrag skal vises uten skrolling. Etter at tavlen er tegnet, prøver vi
+// stadig mer kompakte kort-skalaer til ingen rådgiver-kolonne flyter over.
+const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2", "card-scale-3"];
+
+function tilpassKortStorrelseTilSkjerm() {
+  for (const nivå of KORT_SKALA_NIVAER) {
+    KORT_SKALA_NIVAER.forEach((n) => n && lanesEl.classList.remove(n));
+    if (nivå) lanesEl.classList.add(nivå);
+    if (!harOverflow()) return;
+  }
+  // Selv på tettest nivå er det ikke garantert plass til absolutt alt i ekstreme
+  // tilfeller - da vinner "ingen skrolling" og resten klippes visuelt av overflow:hidden.
+}
+
+function harOverflow() {
+  return [...lanesEl.querySelectorAll(".lane-body")].some((el) => el.scrollHeight > el.clientHeight + 1);
+}
 
 function grupperPerAnsvarlig(liste) {
   const map = new Map();
