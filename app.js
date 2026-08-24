@@ -46,7 +46,9 @@ function tikkKlokke() {
 
 function render() {
   const pagaende = alleOppdrag.filter(erSynligPaTavle);
-  renderStats(pagaende);
+  // Statuslinjen skal vise tall for hele året, ikke bare det som fortsatt
+  // er synlig på tavlen (utført-kort forsvinner der etter UTFORT_SYNLIG_DAGER).
+  renderStats(alleOppdrag);
   renderLanes(pagaende);
   emptyState.hidden = pagaende.length > 0;
 }
@@ -59,16 +61,18 @@ function erSynligPaTavle(o) {
 
 function renderStats(liste) {
   const aktive = liste.filter((o) => o.status === "aktiv").length;
-  const utfort = liste.filter((o) => o.status === "utfort").length;
+  const utfortIAr = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato)).length;
   const kandidater = liste
     .filter((o) => o.status === "aktiv")
     .reduce((sum, o) => sum + o.antallKandidater, 0);
-  const ansvarlige = new Set(liste.map((o) => o.ansvarlig)).size;
+  const ansvarlige = new Set(
+    liste.filter((o) => o.status === "aktiv" || erIDetteAret(o.utfortDato)).map((o) => o.ansvarlig)
+  ).size;
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
-    { label: "Utført", value: utfort, accent: "utfort" },
+    { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Kandidater", value: kandidater },
     { label: "Ansvarlige", value: ansvarlige }
   ].forEach(({ label, value, accent }) => {
@@ -195,6 +199,11 @@ function fristInfo(iso) {
 function dagerSiden(iso) {
   if (!iso) return Infinity;
   return Math.floor((new Date() - new Date(iso)) / 86400000);
+}
+
+function erIDetteAret(iso) {
+  if (!iso) return false;
+  return new Date(iso).getFullYear() === new Date().getFullYear();
 }
 
 function initialer(navn) {

@@ -33,7 +33,12 @@ const MOCK_OPPDRAG = [
   { id: "opp-030", tittel: "Nettverkstekniker", kunde: "Telia", ansvarlig: "Marte Sund", status: "aktiv", antallKandidater: 5, frist: "2026-09-16" },
 
   // Eksempler på "utfort" - vises på tavlen i UTFORT_SYNLIG_DAGER (3) dager etter utfortDato, se app.js.
+  // Statuslinjen i toppen teller derimot ALLE utfort-oppdrag med utfortDato i år (erIDetteAret i app.js),
+  // så de eldre eksemplene under teller med i "Utført i år" selv om de ikke vises på tavlen lenger.
   { id: "opp-031", tittel: "Rørlegger", kunde: "Rørkjøp AS", ansvarlig: "Anna Berg", status: "utfort", antallKandidater: 4, utfortDato: "2026-08-24" },
   { id: "opp-032", tittel: "Selger, dagligvare", kunde: "Kiwi", ansvarlig: "Erik Solheim", status: "utfort", antallKandidater: 6, utfortDato: "2026-08-22" },
-  { id: "opp-033", tittel: "Konsulent, økonomi", kunde: "DNB", ansvarlig: "Erik Solheim", status: "utfort", antallKandidater: 3, utfortDato: "2026-08-19" }
+  { id: "opp-033", tittel: "Konsulent, økonomi", kunde: "DNB", ansvarlig: "Erik Solheim", status: "utfort", antallKandidater: 3, utfortDato: "2026-08-19" },
+  { id: "opp-034", tittel: "Barnehagelærer", kunde: "Bergen Kommune", ansvarlig: "Mona Iversen", status: "utfort", antallKandidater: 5, utfortDato: "2026-02-10" },
+  { id: "opp-035", tittel: "Servicetekniker", kunde: "Bosch", ansvarlig: "Peder Nystad", status: "utfort", antallKandidater: 3, utfortDato: "2026-04-03" },
+  { id: "opp-036", tittel: "HMS-rådgiver", kunde: "Equinor", ansvarlig: "Thomas Aas", status: "utfort", antallKandidater: 7, utfortDato: "2026-06-18" }
 ];
