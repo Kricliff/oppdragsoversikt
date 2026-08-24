@@ -17,7 +17,7 @@ async function hentOppdrag() {
 
 async function fetchFromRecman() {
   // Forventet respons fra Recman må mappes til samme felt-navn som MOCK_OPPDRAG:
-  // id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato
+  // id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato, stadium
   const res = await fetch(`${RECMAN_CONFIG.baseUrl}/oppdrag`, {
     headers: { Authorization: `Bearer ${RECMAN_CONFIG.apiKey}` }
   });
@@ -33,6 +33,8 @@ function mapRecmanRespons(recmanData) {
   // status må normaliseres til "aktiv" | "utfort" - alt annet vises ikke på tavlen (se app.js).
   // utfortDato er kun nødvendig når status er "utfort" - styrer hvor lenge
   // kortet vises på tavlen (se UTFORT_SYNLIG_DAGER i app.js).
+  // stadium må normaliseres til "screening" | "intervju" | "referanser" | "tilbud"
+  // (se STADIUM_LABELS i app.js) - vises kun for aktiv-oppdrag.
   return recmanData.map((r) => ({
     id: r.id,
     tittel: r.title ?? r.tittel,
@@ -40,6 +42,7 @@ function mapRecmanRespons(recmanData) {
     ansvarlig: r.owner?.name ?? r.ansvarlig,
     status: r.status,
     antallKandidater: r.candidateCount ?? r.antallKandidater ?? 0,
-    utfortDato: r.completedAt ?? r.utfortDato
+    utfortDato: r.completedAt ?? r.utfortDato,
+    stadium: r.stage ?? r.stadium
   }));
 }

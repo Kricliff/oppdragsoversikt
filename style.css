@@ -435,6 +435,13 @@ body {
   gap: 0.25rem;
 }
 
+.card-right .stadium {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.9em;
+}
+
 /* ---------- Footer / status ---------- */
 
 .statusbar {

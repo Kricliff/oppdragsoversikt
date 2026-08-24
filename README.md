@@ -17,7 +17,7 @@ Alt API-oppsett ligger i [`recman-adapter.js`](recman-adapter.js):
 
 1. Fyll inn `RECMAN_CONFIG.baseUrl` og sett `enabled: true`.
 2. **Ikke** legg API-nøkkelen rett i klientkoden i produksjon - rut kallet via en liten backend/proxy som holder på nøkkelen, og la `fetchFromRecman()` kalle den proxyen i stedet for Recman direkte.
-3. Juster `mapRecmanRespons()` til det faktiske feltnavnene Recman returnerer (title/client/owner/status/osv.), slik at resten av appen (`app.js`) fortsetter å fungere uendret - den kjenner bare til feltene `id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato`.
+3. Juster `mapRecmanRespons()` til det faktiske feltnavnene Recman returnerer (title/client/owner/status/osv.), slik at resten av appen (`app.js`) fortsetter å fungere uendret - den kjenner bare til feltene `id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato, stadium`. `stadium` er ett av `screening | intervju | referanser | tilbud` (se `STADIUM_LABELS` i app.js) og vises kun på aktive oppdrag.
 
 ## Filstruktur
 

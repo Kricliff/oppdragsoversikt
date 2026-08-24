@@ -2,6 +2,12 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data 
 const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
+const STADIUM_LABELS = {
+  screening: "Screening",
+  intervju: "Intervju",
+  referanser: "Referanser",
+  tilbud: "Tilbud sendt"
+};
 
 let alleOppdrag = [];
 
@@ -171,6 +177,9 @@ function byggKort(o) {
 function kortHoyreTekst(o) {
   if (o.status === "utfort") {
     return `<span class="frist">${utfortTekst(o.utfortDato)}</span>`;
+  }
+  if (o.stadium && STADIUM_LABELS[o.stadium]) {
+    return `<span class="stadium">${STADIUM_LABELS[o.stadium]}</span>`;
   }
   return "";
 }
