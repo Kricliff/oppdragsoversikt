@@ -26,7 +26,7 @@ async function lastOppdrag() {
   refreshBtn.classList.add("spinning");
   try {
     alleOppdrag = await hentOppdrag();
-    sourceBadge.textContent = RECMAN_CONFIG.enabled ? "Kilde: Recman" : "Kilde: mock-data";
+    sourceBadge.textContent = kildeErRecman() ? "Kilde: Recman" : "Kilde: mock-data";
     updatedLabel.textContent = `Sist oppdatert: ${new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}`;
     render();
   } catch (err) {

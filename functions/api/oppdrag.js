@@ -1,0 +1,106 @@
+// Cloudflare Pages Function - server-side proxy mot Recman.
+// Kjører kun på Cloudflare Pages (ikke GitHub Pages, som ikke støtter Functions -
+// der faller recman-adapter.js automatisk tilbake til mock-data).
+//
+// RECMAN_API_KEY leses fra et Cloudflare-secret (satt med `wrangler pages secret put`).
+// Nøkkelen er ALDRI i kode eller i git.
+//
+// Recman har et tak på 200 kall/dag. Vi gjør 3 kall per oppfriskning (project/user/company)
+// og cacher svaret CACHE_SECONDS på Cloudflares edge, så gjentatte sideinnlastinger fra
+// skjermen ikke bruker opp kvoten.
+
+const CACHE_SECONDS = 20 * 60;
+
+// Recman sine prosjekt-statuser (se help.recman.io "Projects module") normalisert til
+// det tavlen forstår. "cancelled" og "lost" er bevisst utelatt - de skal ikke vises,
+// og alt som ikke er "aktiv"/"utfort" skjules automatisk av erSynligPaTavle i app.js.
+const STATUS_MAP = {
+  request: "aktiv",
+  notStarted: "aktiv",
+  active: "aktiv",
+  urgent: "aktiv",
+  solvedEnded: "utfort",
+  solvedOngoing: "utfort"
+};
+
+export async function onRequestGet(context) {
+  const cache = caches.default;
+  const cacheKey = new Request("https://oppdragsoversikt-cache.internal/oppdrag");
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const oppdrag = await hentOgNormaliser(context.env.RECMAN_API_KEY);
+    const response = new Response(JSON.stringify(oppdrag), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": `public, max-age=${CACHE_SECONDS}`
+      }
+    });
+    context.waitUntil(cache.put(cacheKey, response.clone()));
+    return response;
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err) }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+
+async function hentOgNormaliser(apiKey) {
+  if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
+
+  const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members";
+  const projectUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=1`;
+  const userUrl = `https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`;
+  const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name&page=1`;
+
+  const [projectJson, userJson, companyJson] = await Promise.all([
+    fetch(projectUrl).then((r) => r.json()),
+    fetch(userUrl).then((r) => r.json()).catch(() => null),
+    fetch(companyUrl).then((r) => r.json()).catch(() => null)
+  ]);
+
+  if (!projectJson.success) {
+    throw new Error("Recman project-feil: " + JSON.stringify(projectJson.error));
+  }
+
+  // Rådgivernavn - "user"-scope. Slår aldri hele svaret i stykker om dette skulle feile.
+  const radgiverNavn = {};
+  if (userJson && !userJson.error) {
+    for (const [id, u] of Object.entries(userJson)) {
+      const navn = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim();
+      if (navn) radgiverNavn[id] = navn;
+    }
+  }
+
+  // Kundenavn - "company"-scope. Nøkkelen har ikke fått denne tilgangen ennå i skrivende
+  // stund, så dette faller tilbake til "Kunde #<id>" til lesetilgang er gitt - ingen ny
+  // deploy nødvendig når det skjer, det plukkes opp automatisk på neste oppfriskning.
+  const kundeNavn = {};
+  if (companyJson && companyJson.success) {
+    for (const [id, c] of Object.entries(companyJson.data ?? {})) {
+      if (c.name) kundeNavn[id] = c.name;
+    }
+  }
+
+  return Object.values(projectJson.data)
+    .map((p) => {
+      const status = STATUS_MAP[p.status];
+      if (!status) return null; // cancelled/lost - skjules
+
+      return {
+        id: "recman-" + p.projectId,
+        tittel: p.name,
+        kunde: kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
+        ansvarlig: radgiverNavn[p.responsibleUserId] ?? "Ukjent rådgiver",
+        status,
+        // Recman har ikke et felt for kandidater-i-prosess på selve prosjektet - dette er
+        // antall personer registrert som medlemmer på prosjektet, ikke kandidater i pipeline.
+        antallKandidater: Array.isArray(p.members) ? p.members.length : 0,
+        fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
+        utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined
+      };
+    })
+    .filter(Boolean);
+}

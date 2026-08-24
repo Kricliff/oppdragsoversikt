@@ -1,48 +1,28 @@
-// Adapter mot Recman. I dag returneres mock-data; når Recman API-tilgang er klar,
-// fylles RECMAN_CONFIG inn og fetchFromRecman() gjøres om til et ekte kall.
-// Resten av appen (app.js) bryr seg ikke om kilden - den kaller bare hentOppdrag().
+// Henter oppdrag fra vår egen Cloudflare Pages Function (/api/oppdrag), som snakker
+// med Recman server-side - se functions/api/oppdrag.js. API-nøkkelen ligger som et
+// Cloudflare-secret der, aldri i klientkode eller i git.
+//
+// Funksjonen finnes kun på Cloudflare Pages (oppdragsoversikt.pages.dev). GitHub Pages
+// støtter ikke Functions, så der - og hvis noe skulle feile - faller vi automatisk
+// tilbake til mock-data. app.js viser hvilken kilde som faktisk ble brukt via kildeErRecman().
 
-const RECMAN_CONFIG = {
-  baseUrl: "", // f.eks. "https://api.recman.no/v1"
-  apiKey: "",  // settes aldri i klientkode i produksjon - hentes via backend/proxy
-  enabled: false
-};
+let sisteKildeErRecman = false;
+
+function kildeErRecman() {
+  return sisteKildeErRecman;
+}
 
 async function hentOppdrag() {
-  if (RECMAN_CONFIG.enabled && RECMAN_CONFIG.baseUrl) {
-    return fetchFromRecman();
+  try {
+    const res = await fetch("/api/oppdrag");
+    if (!res.ok) throw new Error(`Uventet status ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Uventet svarformat fra /api/oppdrag");
+    sisteKildeErRecman = true;
+    return data;
+  } catch (err) {
+    console.warn("Recman-proxy ikke tilgjengelig, viser mock-data:", err);
+    sisteKildeErRecman = false;
+    return MOCK_OPPDRAG;
   }
-  return Promise.resolve(MOCK_OPPDRAG);
-}
-
-async function fetchFromRecman() {
-  // Forventet respons fra Recman må mappes til samme felt-navn som MOCK_OPPDRAG:
-  // id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato, fremdriftProsent
-  const res = await fetch(`${RECMAN_CONFIG.baseUrl}/oppdrag`, {
-    headers: { Authorization: `Bearer ${RECMAN_CONFIG.apiKey}` }
-  });
-  if (!res.ok) {
-    throw new Error(`Recman API-feil: ${res.status}`);
-  }
-  const data = await res.json();
-  return mapRecmanRespons(data);
-}
-
-function mapRecmanRespons(recmanData) {
-  // TODO: juster mapping når vi ser det faktiske Recman-responsformatet.
-  // status må normaliseres til "aktiv" | "utfort" - alt annet vises ikke på tavlen (se app.js).
-  // utfortDato er kun nødvendig når status er "utfort" - styrer hvor lenge
-  // kortet vises på tavlen (se UTFORT_SYNLIG_DAGER i app.js).
-  // fremdriftProsent er Recman sitt felt for prosentvis fremdrift på oppdraget (0-100),
-  // vises kun for aktiv-oppdrag - juster feltnavnet under når vi ser det faktiske API-svaret.
-  return recmanData.map((r) => ({
-    id: r.id,
-    tittel: r.title ?? r.tittel,
-    kunde: r.client?.name ?? r.kunde,
-    ansvarlig: r.owner?.name ?? r.ansvarlig,
-    status: r.status,
-    antallKandidater: r.candidateCount ?? r.antallKandidater ?? 0,
-    utfortDato: r.completedAt ?? r.utfortDato,
-    fremdriftProsent: r.progressPercent ?? r.fremdriftProsent
-  }));
 }
