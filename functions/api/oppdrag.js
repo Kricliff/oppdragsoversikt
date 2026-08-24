@@ -10,6 +10,9 @@
 // skjermen ikke bruker opp kvoten.
 
 const CACHE_SECONDS = 20 * 60;
+// Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
+// før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
+const CACHE_VERSION = 2;
 
 // Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
 // lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
@@ -30,7 +33,7 @@ const STATUS_MAP = {
 
 export async function onRequestGet(context) {
   const cache = caches.default;
-  const cacheKey = new Request("https://oppdragsoversikt-cache.internal/oppdrag");
+  const cacheKey = new Request(`https://oppdragsoversikt-cache.internal/oppdrag?v=${CACHE_VERSION}`);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
