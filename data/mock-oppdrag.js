@@ -32,7 +32,7 @@ const MOCK_OPPDRAG = [
   { id: "opp-029", tittel: "Kokk", kunde: "Fursetgruppen", ansvarlig: "Henrik Moe", status: "aktiv", antallKandidater: 6, fremdriftProsent: 45 },
   { id: "opp-030", tittel: "Nettverkstekniker", kunde: "Telia", ansvarlig: "Marte Sund", status: "aktiv", antallKandidater: 5, fremdriftProsent: 60 },
 
-  // Eksempler på "utfort" - vises på tavlen i UTFORT_SYNLIG_DAGER (3) dager etter utfortDato, se app.js.
+  // Eksempler på "utfort" - vises på tavlen i UTFORT_SYNLIG_DAGER (7) dager etter utfortDato, se app.js.
   // Statuslinjen i toppen teller derimot ALLE utfort-oppdrag med utfortDato i år (erIDetteAret i app.js),
   // så de eldre eksemplene under teller med i "Utført i år" selv om de ikke vises på tavlen lenger.
   { id: "opp-031", tittel: "Rørlegger", kunde: "Rørkjøp AS", ansvarlig: "Anna Berg", status: "utfort", antallKandidater: 4, utfortDato: "2026-08-24" },

@@ -1,5 +1,5 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
-const UTFORT_SYNLIG_DAGER = 3; // et "Utført"-oppdrag blir stående på tavlen i 3 dager før det forsvinner
+const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 
