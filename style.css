@@ -1,29 +1,31 @@
+/* Fargar og typografi hentet fra greatpeople.no (Poppins, sort/hvit, oransje
+   #ec9b00 aksent, skarpe kanter - se README for detaljer om kilden). */
 :root {
-  --bg-0: #0b1120;
-  --bg-1: #101828;
-  --surface: #16213a;
-  --surface-2: #1c2b4a;
-  --border: rgba(148, 163, 184, 0.14);
-  --text: #eef2ff;
-  --text-muted: #8b96b3;
-  --text-faint: #5b6683;
+  --bg-0: #ffffff;
+  --bg-1: #f7f7f7;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --border: #e3e3e3;
+  --text: #171717;
+  --text-muted: #6b6b6b;
+  --text-faint: #9c9c9c;
 
-  --aktiv: #34d399;
-  --aktiv-soft: rgba(52, 211, 153, 0.16);
-  --utfort: #38bdf8;
-  --utfort-soft: rgba(56, 189, 248, 0.16);
-  --neutral: #64748b;
+  --aktiv: #ec9b00;
+  --aktiv-soft: rgba(236, 155, 0, 0.12);
+  --utfort: #1e73be;
+  --utfort-soft: rgba(30, 115, 190, 0.12);
+  --neutral: #cfcfcf;
 
-  --palette-1: #60a5fa;
-  --palette-2: #c084fc;
-  --palette-3: #f472b6;
-  --palette-4: #fb923c;
-  --palette-5: #2dd4bf;
-  --palette-6: #a3e635;
-  --palette-7: #818cf8;
-  --palette-8: #fbbf24;
+  --palette-1: #4a6fa5;
+  --palette-2: #7b4b94;
+  --palette-3: #c1502e;
+  --palette-4: #2b8a8a;
+  --palette-5: #6b7a3f;
+  --palette-6: #4b4e9e;
+  --palette-7: #a3542c;
+  --palette-8: #3d7a5c;
 
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -37,10 +39,7 @@ html, body {
 }
 
 body {
-  background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(96, 165, 250, 0.10), transparent),
-    radial-gradient(900px 600px at 5% 110%, rgba(192, 132, 252, 0.08), transparent),
-    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  background: var(--bg-0);
 }
 
 .board {
@@ -48,7 +47,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: clamp(14px, 2vh, 28px) clamp(18px, 2.4vw, 40px);
-  gap: clamp(10px, 1.6vh, 20px);
+  gap: clamp(10px, 1.4vh, 16px);
 }
 
 /* ---------- Topbar ---------- */
@@ -63,24 +62,36 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   flex: 0 0 auto;
 }
 
-.brand-mark {
-  width: clamp(10px, 1vw, 14px);
-  height: clamp(28px, 3vh, 36px);
-  border-radius: 4px;
-  background: linear-gradient(180deg, var(--palette-1), var(--palette-2));
-  box-shadow: 0 0 18px rgba(96, 165, 250, 0.5);
+.brand-logo {
+  height: clamp(22px, 2.6vh, 30px);
+  width: auto;
+  display: block;
+}
+
+.brand-divider {
+  width: 1px;
+  height: clamp(20px, 2.6vh, 28px);
+  background: var(--border);
 }
 
 .brand h1 {
-  font-size: clamp(1.15rem, 1.9vw, 1.65rem);
-  font-weight: 800;
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  font-weight: 600;
   margin: 0;
   letter-spacing: -0.01em;
   white-space: nowrap;
+  color: var(--text);
+}
+
+.brand-bar {
+  height: 4px;
+  background: var(--aktiv);
+  flex: 0 0 auto;
+  margin: 0 clamp(-18px, -2.4vw, -40px);
 }
 
 .stats {
@@ -95,15 +106,16 @@ body {
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.35rem 1rem;
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 3px;
 }
 
 .stat-card .value {
   font-size: clamp(1.1rem, 1.6vw, 1.5rem);
   font-weight: 700;
   line-height: 1;
+  color: var(--text);
 }
 
 .stat-card .label {
@@ -121,11 +133,13 @@ body {
 }
 
 .clock {
-  font-family: "IBM Plex Mono", monospace;
+  font-family: "Poppins", sans-serif;
+  font-variant-numeric: tabular-nums;
   font-size: clamp(1.3rem, 2.2vw, 1.9rem);
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   line-height: 1;
+  color: var(--text);
 }
 
 .date {
@@ -245,7 +259,6 @@ body {
 
 .lanes.card-scale-3 .card {
   padding: 0.12rem 0.35rem;
-  border-radius: 6px;
 }
 
 .lanes.card-scale-3 .card .tittel {
@@ -282,9 +295,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: linear-gradient(180deg, var(--surface), var(--bg-1));
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -304,9 +316,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: clamp(0.75rem, 1vw, 0.9rem);
-  color: #0b1120;
+  color: #ffffff;
   flex: 0 0 auto;
 }
 
@@ -316,15 +328,16 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
 }
 
 .lane-count {
   margin-left: auto;
   font-size: clamp(0.72rem, 0.9vw, 0.82rem);
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 999px;
-  padding: 0.15rem 0.6rem;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.55rem;
   flex: 0 0 auto;
 }
 
@@ -336,6 +349,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  background: var(--bg-1);
 }
 
 .lane-empty {
@@ -347,15 +361,15 @@ body {
 /* ---------- Cards ---------- */
 
 .card {
-  background: var(--surface-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--neutral);
-  border-radius: 10px;
   padding: 0.7rem 0.85rem;
   flex: 0 0 auto;
 }
 
 .card.status-aktiv { border-left-color: var(--aktiv); }
-.card.status-utfort { border-left-color: var(--utfort); opacity: 0.8; }
+.card.status-utfort { border-left-color: var(--utfort); opacity: 0.85; }
 
 .card .tittel {
   font-weight: 600;
@@ -364,6 +378,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
 }
 
 .card .kunde {
@@ -389,7 +404,6 @@ body {
   font-size: clamp(0.66rem, 0.78vw, 0.74rem);
   font-weight: 600;
   padding: 0.18rem 0.55rem;
-  border-radius: 999px;
   white-space: nowrap;
 }
 
@@ -436,25 +450,24 @@ body {
 }
 
 .card-right .fremdrift {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
   font-size: 0.9em;
   font-weight: 600;
+  color: var(--aktiv);
 }
 
 .progress-bar {
   height: 3px;
   margin-top: 0.4rem;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
+  background: var(--border);
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
   background: var(--aktiv);
-  border-radius: 2px;
 }
 
 /* I tetteste kort-modus (mange oppdrag på én rådgiver) prioriteres plass
@@ -488,12 +501,12 @@ body {
   cursor: pointer;
   font-size: 0.85rem;
   line-height: 1;
-  transition: transform 0.4s ease, color 0.2s ease;
+  transition: transform 0.4s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .statusbar button:hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--aktiv);
 }
 
 .statusbar button.spinning {
