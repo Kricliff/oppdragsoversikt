@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 // Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
 // lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
@@ -61,12 +61,10 @@ async function hentOgNormaliser(apiKey) {
   const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members";
   const projectUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=1`;
   const userUrl = `https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`;
-  const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name&page=1`;
 
-  const [projectJson, userJson, companyJson] = await Promise.all([
+  const [projectJson, userJson] = await Promise.all([
     fetch(projectUrl).then((r) => r.json()),
-    fetch(userUrl).then((r) => r.json()).catch(() => null),
-    fetch(companyUrl).then((r) => r.json()).catch(() => null)
+    fetch(userUrl).then((r) => r.json()).catch(() => null)
   ]);
 
   if (!projectJson.success) {
@@ -82,13 +80,23 @@ async function hentOgNormaliser(apiKey) {
     }
   }
 
-  // Kundenavn - "company"-scope. Nøkkelen har ikke fått denne tilgangen ennå i skrivende
-  // stund, så dette faller tilbake til "Kunde #<id>" til lesetilgang er gitt - ingen ny
-  // deploy nødvendig når det skjer, det plukkes opp automatisk på neste oppfriskning.
+  // Kundenavn - "company"-scope. Recman har over 1000 kunder totalt (paginert), så i
+  // stedet for å bla gjennom alle henter vi bare de companyId-ene som faktisk er i bruk
+  // på prosjektene våre, via companyIds-filteret (samme mønster som projectIds).
+  // Faller tilbake til "Kunde #<id>" for enkelt-oppslag som skulle feile.
   const kundeNavn = {};
-  if (companyJson && companyJson.success) {
-    for (const [id, c] of Object.entries(companyJson.data ?? {})) {
-      if (c.name) kundeNavn[id] = c.name;
+  const brukteCompanyIds = [...new Set(Object.values(projectJson.data).map((p) => p.companyId).filter(Boolean))];
+  if (brukteCompanyIds.length > 0) {
+    try {
+      const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name&companyIds=${brukteCompanyIds.join(",")}`;
+      const companyJson = await fetch(companyUrl).then((r) => r.json());
+      if (companyJson.success) {
+        for (const [id, c] of Object.entries(companyJson.data ?? {})) {
+          if (c.name) kundeNavn[id] = c.name;
+        }
+      }
+    } catch {
+      // kundeNavn forblir tom - "Kunde #<id>" brukes under
     }
   }
 
