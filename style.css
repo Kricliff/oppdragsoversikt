@@ -291,6 +291,53 @@ body {
   gap: 0.08rem;
 }
 
+/* Siste utvei for rådgivere med et virkelig stort antall oppdrag: tittel og status
+   slås sammen til én linje per kort i stedet for to, som omtrent halverer høyden. */
+.lanes.card-scale-4 .card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.06rem 0.3rem;
+}
+
+.lanes.card-scale-4 .card .tittel {
+  flex: 1 1 auto;
+  font-size: 0.6rem;
+  line-height: 1.3;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lanes.card-scale-4 .card .kunde {
+  display: none;
+}
+
+.lanes.card-scale-4 .meta-row {
+  flex: 0 0 auto;
+  gap: 0.35rem;
+}
+
+.lanes.card-scale-4 .status-pill {
+  font-size: 0.52rem;
+  padding: 0.04rem 0.3rem;
+}
+
+.lanes.card-scale-4 .status-pill::before {
+  display: none;
+}
+
+.lanes.card-scale-4 .card-right {
+  font-size: 0.52rem;
+  gap: 0.3rem;
+}
+
+.lanes.card-scale-4 .lane-body {
+  padding: 4px;
+  gap: 0.06rem;
+}
+
 .lane {
   display: flex;
   flex-direction: column;
@@ -473,7 +520,8 @@ body {
 /* I tetteste kort-modus (mange oppdrag på én rådgiver) prioriteres plass
    fremfor progresjonslinjen - prosenttallet i card-right vises fortsatt. */
 .lanes.card-scale-2 .progress-bar,
-.lanes.card-scale-3 .progress-bar {
+.lanes.card-scale-3 .progress-bar,
+.lanes.card-scale-4 .progress-bar {
   display: none;
 }
 

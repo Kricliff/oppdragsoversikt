@@ -118,7 +118,7 @@ function tetthetForAntall(antallRadgivere) {
 
 // Alle oppdrag skal vises uten skrolling. Etter at tavlen er tegnet, prøver vi
 // stadig mer kompakte kort-skalaer til ingen rådgiver-kolonne flyter over.
-const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2", "card-scale-3"];
+const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2", "card-scale-3", "card-scale-4"];
 
 function tilpassKortStorrelseTilSkjerm() {
   for (const nivå of KORT_SKALA_NIVAER) {
