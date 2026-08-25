@@ -24,6 +24,7 @@ const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
 const refreshBtn = document.getElementById("refreshBtn");
 const temaBtn = document.getElementById("temaBtn");
+const brandLogoEl = document.getElementById("brandLogo");
 const notatEl = document.getElementById("notatTekst");
 const busstiderHeaderEl = document.getElementById("busstiderHeader");
 const busstiderListeEl = document.getElementById("busstiderListe");
@@ -64,6 +65,7 @@ function byttTema() {
 function settTema(tema) {
   document.documentElement.dataset.theme = tema;
   temaBtn.textContent = tema === "dark" ? "☀️" : "🌙";
+  brandLogoEl.src = tema === "dark" ? "assets/great-people-white-logo.png" : "assets/great-people-black-logo.png";
   localStorage.setItem(TEMA_LAGRET_NOKKEL, tema);
 }
 
