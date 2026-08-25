@@ -624,8 +624,8 @@ body {
 
 .busstider {
   position: fixed;
-  right: 260px; /* rett til venstre for post-it-lappen (right:28px + width:220px + 12px luft) */
-  bottom: 28px;
+  right: 28px; /* samme høyrekant som post-it-lappen, stablet rett over den */
+  bottom: 200px; /* postit (~160px høy) + 28px bunnmarg + 12px luft */
   width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -694,5 +694,5 @@ body {
   .lane { max-height: 60vh; }
   .stats { display: none; }
   .postit { right: 12px; bottom: 12px; width: 160px; }
-  .busstider { right: 180px; bottom: 12px; width: 150px; }
+  .busstider { right: 12px; bottom: 180px; width: 150px; }
 }
