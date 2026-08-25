@@ -23,11 +23,13 @@ const emptyState = document.getElementById("emptyState");
 const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
 const refreshBtn = document.getElementById("refreshBtn");
+const temaBtn = document.getElementById("temaBtn");
 const notatEl = document.getElementById("notatTekst");
 const busstiderHeaderEl = document.getElementById("busstiderHeader");
 const busstiderListeEl = document.getElementById("busstiderListe");
 
 async function init() {
+  initTema();
   await lastOppdrag();
   tikkKlokke();
   lastNotat();
@@ -41,7 +43,28 @@ async function init() {
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
+  temaBtn.addEventListener("click", byttTema);
   binderNotat();
+}
+
+// Manuell nattmodus - husker valget i localStorage slik at det består til neste
+// gang noen laster tavlen (f.eks. etter en auto-reload fra sjekkNyVersjon).
+const TEMA_LAGRET_NOKKEL = "oppdragsoversikt-tema";
+
+function initTema() {
+  const lagret = localStorage.getItem(TEMA_LAGRET_NOKKEL);
+  settTema(lagret === "dark" ? "dark" : "light");
+}
+
+function byttTema() {
+  const naavaerende = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  settTema(naavaerende === "dark" ? "light" : "dark");
+}
+
+function settTema(tema) {
+  document.documentElement.dataset.theme = tema;
+  temaBtn.textContent = tema === "dark" ? "☀️" : "🌙";
+  localStorage.setItem(TEMA_LAGRET_NOKKEL, tema);
 }
 
 // Skjermen står ubetjent og laster aldri siden på nytt av seg selv - uten dette ville

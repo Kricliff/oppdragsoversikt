@@ -28,6 +28,24 @@
   font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* Manuell nattmodus (bryter i footeren, se temaBtn i app.js) - blåfargen er lysnet
+   noe (#4a9eef i stedet for #1e73be) siden den opprinnelige er for mørk til å lese
+   godt mot en mørk bakgrunn. */
+:root[data-theme="dark"] {
+  --bg-0: #121212;
+  --bg-1: #1a1a1a;
+  --surface: #1e1e1e;
+  --surface-2: #242424;
+  --border: #333333;
+  --text: #f0f0f0;
+  --text-muted: #a8a8a8;
+  --text-faint: #767676;
+
+  --utfort: #4a9eef;
+  --utfort-soft: rgba(74, 158, 239, 0.16);
+  --aktiv-soft: rgba(236, 155, 0, 0.16);
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -532,8 +550,13 @@ body {
 
 .statusbar .dot { opacity: 0.5; }
 
-.statusbar button {
+.statusbar-actions {
   margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.statusbar button {
   width: 24px;
   height: 24px;
   border-radius: 50%;
