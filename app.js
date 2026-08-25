@@ -64,7 +64,9 @@ function renderStats(liste) {
   const aktive = liste.filter((o) => o.status === "aktiv").length;
   const paVent = liste.filter((o) => o.status === "pavent").length;
   const utfortIAr = utfortIArListe.length;
-  const kandidaterLandet = utfortIArListe.reduce((sum, o) => sum + o.antallKandidater, 0);
+  // Ekte tall fra Recman sin jobApplication-scope (status "hired") når tilgjengelig -
+  // faller tilbake til den gamle tilnærmingen (antallKandidater på mock-data) hvis ikke.
+  const kandidaterLandet = kandidaterLandetIArEkte() ?? utfortIArListe.reduce((sum, o) => sum + (o.antallKandidater ?? 0), 0);
 
   statsRow.innerHTML = "";
   [

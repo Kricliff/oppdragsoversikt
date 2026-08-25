@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 8;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -48,8 +48,8 @@ export async function onRequestGet(context) {
   if (cached) return cached;
 
   try {
-    const oppdrag = await hentOgNormaliser(context.env.RECMAN_API_KEY);
-    const response = new Response(JSON.stringify(oppdrag), {
+    const payload = await hentOgNormaliser(context.env.RECMAN_API_KEY);
+    const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": `public, max-age=${CACHE_SECONDS}`
@@ -115,7 +115,7 @@ async function hentOgNormaliser(apiKey) {
     }
   }
 
-  return Object.values(projectJson.data)
+  const oppdrag = Object.values(projectJson.data)
     .map((p) => {
       let status = STATUS_MAP[p.status];
       if (!status) return null; // cancelled/lost - skjules
@@ -144,15 +144,32 @@ async function hentOgNormaliser(apiKey) {
         kunde: kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
         ansvarlig,
         status,
-        // Ikke vist på kortene lenger (var upålitelig - talte teammedlemmer/kundekontakter,
-        // ikke kandidater). Ligger igjen kun fordi "Kandidater Landet" i statslinjen
-        // fortsatt summerer dette til vi får ekte kandidatdata (se app.js).
-        antallKandidater: Array.isArray(p.members) ? p.members.length : 0,
         fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
         utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined
       };
     })
     .filter(Boolean);
+
+  const kandidaterLandetIAr = await hentKandidaterLandetIAr(apiKey);
+
+  return { oppdrag, kandidaterLandetIAr };
+}
+
+// Ekte antall kandidater "landet" (ansatt) i år, fra "jobApplication"-scopen (status
+// "hired"). Dette er IKKE koblet til enkeltoppdrag - det krever "job post"-tilgang vi
+// ikke har (jobApplication peker på jobPostId, ikke projectId) - men gir et pålitelig
+// totaltall for statslinjen, i stedet for den gamle tilnærmingen som talte
+// teammedlemmer/kundekontakter på fullførte prosjekter.
+async function hentKandidaterLandetIAr(apiKey) {
+  try {
+    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`;
+    const json = await fetch(url).then((r) => r.json());
+    if (!json.success) return null;
+    const iAr = new Date().getFullYear();
+    return json.data.filter((a) => a.updated && new Date(a.updated.replace(" ", "T") + "Z").getFullYear() === iAr).length;
+  } catch {
+    return null;
+  }
 }
 
 function erForGammelTilAVaereAktiv(updated) {

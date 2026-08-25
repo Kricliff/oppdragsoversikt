@@ -30,11 +30,15 @@ Sett/oppdater med:
 npx wrangler pages secret put RECMAN_API_KEY --project-name=oppdragsoversikt
 ```
 
-Funksjonen henter fra Recman sitt v2-API (`project`, `user`, `company`-scope) og
-normaliserer til feltene appen forstår: `id, tittel, kunde, ansvarlig, status,
-antallKandidater, fremdriftProsent, utfortDato`. Se kommentarene i `oppdrag.js` for
-detaljer om statusmapping og filtrene som luker bort upålitelig data (cancelled/lost,
-gamle "aktiv"-registreringer, ikke-kunder, oppdrag uten kjent rådgiver).
+Funksjonen henter fra Recman sitt v2-API (`project`, `user`, `company`,
+`jobApplication`-scope) og svarer med `{ oppdrag: [...], kandidaterLandetIAr: N }`.
+Hvert oppdrag normaliseres til feltene appen forstår: `id, tittel, kunde, ansvarlig,
+status, fremdriftProsent, utfortDato`. `kandidaterLandetIAr` er et eget, ukoblet
+totaltall (antall `jobApplication` med status "hired" i år) - ikke knyttet til
+enkeltoppdrag, siden det krever "job post"-tilgang vi ikke har. Se kommentarene i
+`oppdrag.js` for detaljer om statusmapping og filtrene som luker bort upålitelig data
+(cancelled/lost, gamle "aktiv"-registreringer, ikke-kunder, oppdrag uten kjent
+rådgiver).
 
 Svaret cacher i `CACHE_SECONDS` på Cloudflares edge for å holde oss under Recman sitt
 tak på 200 kall/dag. **Bump `CACHE_VERSION` i `oppdrag.js` når normaliseringslogikken
