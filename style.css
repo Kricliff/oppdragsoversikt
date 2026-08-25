@@ -636,9 +636,12 @@ body {
 .busstider-header {
   padding: 8px 12px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .busstider-liste {

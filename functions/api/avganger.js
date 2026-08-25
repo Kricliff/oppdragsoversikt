@@ -6,9 +6,9 @@
 const WESSELS_PLASS_ID = "NSR:StopPlace:4055"; // Wessels plass, Oslo (nær Rådhusgata 23)
 const NASJONALTEATRET_ID = "NSR:StopPlace:58404"; // Nasjonaltheatret stasjon (tog)
 const ANTALL_BUSSAVGANGER = 6;
-const ANTALL_TOGAVGANGER_PER_RETNING = 3;
+const ANTALL_TOGAVGANGER_PER_RETNING = 6;
 const CACHE_SECONDS = 45; // sanntid - kort cache, i motsetning til Recman-proxyen
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 
 // Entur har ikke noe eget "retning: øst/vest"-felt på estimatedCalls - spor 475/478 er
 // vestgående (mot Drammen/Asker/Kongsberg) og spor 476/477 er østgående (mot Oslo S og
@@ -31,7 +31,7 @@ const QUERY = `{
   }
   nasjonaltheatret: stopPlace(id: "${NASJONALTEATRET_ID}") {
     name
-    estimatedCalls(timeRange: 72000, numberOfDepartures: 20, whiteListedModes: [rail]) {
+    estimatedCalls(timeRange: 72000, numberOfDepartures: 30, whiteListedModes: [rail]) {
       realtime
       expectedDepartureTime
       destinationDisplay { frontText }

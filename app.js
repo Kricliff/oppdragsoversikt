@@ -4,7 +4,8 @@ const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
-const PANEL_BYTT_MS = 5 * 1000; // veksler mellom buss- og tog-visning i samme panel
+const PANEL_BYTT_MS = 7 * 1000; // veksler mellom buss-/tog-visningene i samme panel
+const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
 const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js"];
 
@@ -133,7 +134,8 @@ async function lastBusstider() {
 }
 
 function byttTransportPanel() {
-  visPanel = visPanel === "buss" ? "tog" : "buss";
+  const naavaerendeIndeks = PANEL_REKKEFOLGE.indexOf(visPanel);
+  visPanel = PANEL_REKKEFOLGE[(naavaerendeIndeks + 1) % PANEL_REKKEFOLGE.length];
   renderTransportPanel();
 }
 
@@ -141,9 +143,12 @@ function renderTransportPanel() {
   if (visPanel === "buss") {
     busstiderHeaderEl.textContent = "🚌 Wessels plass";
     renderBusstider();
+  } else if (visPanel === "togOslo") {
+    busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Oslo";
+    renderTog(sisteTog.motOslo);
   } else {
-    busstiderHeaderEl.textContent = "🚆 Nasjonaltheatret";
-    renderTog();
+    busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Drammen";
+    renderTog(sisteTog.motDrammen);
   }
 }
 
@@ -153,12 +158,8 @@ function renderBusstider() {
   );
 }
 
-function renderTog() {
-  const rader = [
-    ...sisteTog.motOslo.map((a) => ({ linje: a.linje, tekst: "→ Oslo", avgangstid: a.avgangstid })),
-    ...sisteTog.motDrammen.map((a) => ({ linje: a.linje, tekst: "← Drammen", avgangstid: a.avgangstid }))
-  ];
-  tegnAvgangsrader(rader);
+function renderTog(liste) {
+  tegnAvgangsrader(liste.map((a) => ({ linje: a.linje, tekst: a.destinasjon, avgangstid: a.avgangstid })));
 }
 
 function tegnAvgangsrader(rader) {
