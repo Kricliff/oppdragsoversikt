@@ -1,0 +1,7 @@
+name = "oppdragsoversikt"
+pages_build_output_dir = "."
+compatibility_date = "2026-08-01"
+
+[[kv_namespaces]]
+binding = "NOTAT_KV"
+id = "041d970ead1042f0aabd622afebb1965"

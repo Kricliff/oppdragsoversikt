@@ -1,7 +1,7 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
-const STATUS_PRIORITET = { aktiv: 0, pavent: 1, utfort: 2 };
+const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 
 let alleOppdrag = [];
 
@@ -13,13 +13,17 @@ const emptyState = document.getElementById("emptyState");
 const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
 const refreshBtn = document.getElementById("refreshBtn");
+const notatEl = document.getElementById("notatTekst");
 
 async function init() {
   await lastOppdrag();
   tikkKlokke();
+  lastNotat();
   setInterval(tikkKlokke, 1000);
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
+  setInterval(lastNotat, AUTO_REFRESH_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
+  binderNotat();
 }
 
 async function lastOppdrag() {
@@ -34,6 +38,46 @@ async function lastOppdrag() {
     console.error(err);
   } finally {
     setTimeout(() => refreshBtn.classList.remove("spinning"), 400);
+  }
+}
+
+// Delt post-it-lapp - lagres server-side (functions/api/notat.js) slik at alle som ser
+// på skjermen ser samme melding. Henter jevnlig, men skriver aldri over teksten mens
+// noen faktisk står og skriver i den (document.activeElement-sjekken under).
+let notatLagreTimer = null;
+
+async function lastNotat() {
+  if (document.activeElement === notatEl) return; // ikke overskriv mens noen skriver
+  try {
+    const res = await fetch("/api/notat");
+    if (!res.ok) return;
+    const data = await res.json();
+    notatEl.value = data.tekst ?? "";
+  } catch (err) {
+    console.warn("Fikk ikke hentet notat:", err);
+  }
+}
+
+function binderNotat() {
+  notatEl.addEventListener("input", () => {
+    clearTimeout(notatLagreTimer);
+    notatLagreTimer = setTimeout(lagreNotat, 1500);
+  });
+  notatEl.addEventListener("blur", () => {
+    clearTimeout(notatLagreTimer);
+    lagreNotat();
+  });
+}
+
+async function lagreNotat() {
+  try {
+    await fetch("/api/notat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tekst: notatEl.value })
+    });
+  } catch (err) {
+    console.warn("Fikk ikke lagret notat:", err);
   }
 }
 
@@ -54,7 +98,7 @@ function render() {
 }
 
 function erSynligPaTavle(o) {
-  if (o.status === "aktiv" || o.status === "pavent") return true;
+  if (o.status === "aktiv") return true;
   if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
   return false;
 }
@@ -62,7 +106,6 @@ function erSynligPaTavle(o) {
 function renderStats(liste) {
   const utfortIArListe = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const aktive = liste.filter((o) => o.status === "aktiv").length;
-  const paVent = liste.filter((o) => o.status === "pavent").length;
   const utfortIAr = utfortIArListe.length;
   // Ekte tall fra Recman sin jobApplication-scope (status "hired") når tilgjengelig -
   // faller tilbake til den gamle tilnærmingen (antallKandidater på mock-data) hvis ikke.
@@ -71,7 +114,6 @@ function renderStats(liste) {
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
-    { label: "På vent", value: paVent, accent: "pavent" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Kandidater Landet", value: kandidaterLandet }
   ].forEach(({ label, value, accent }) => {
@@ -196,7 +238,7 @@ function utfortTekst(iso) {
 }
 
 function statusLabel(status) {
-  return { aktiv: "Aktiv", pavent: "På vent", utfort: "Utført" }[status] ?? status;
+  return { aktiv: "Aktiv", utfort: "Utført" }[status] ?? status;
 }
 
 function dagerSiden(iso) {

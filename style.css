@@ -12,8 +12,6 @@
 
   --aktiv: #ec9b00;
   --aktiv-soft: rgba(236, 155, 0, 0.12);
-  --pavent: #6b6458;
-  --pavent-soft: rgba(107, 100, 88, 0.12);
   --utfort: #1e73be;
   --utfort-soft: rgba(30, 115, 190, 0.12);
   --neutral: #cfcfcf;
@@ -127,7 +125,6 @@ body {
 }
 
 .stat-card.accent-aktiv .value { color: var(--aktiv); }
-.stat-card.accent-pavent .value { color: var(--pavent); }
 .stat-card.accent-utfort .value { color: var(--utfort); }
 
 .clock-block {
@@ -419,7 +416,6 @@ body {
 }
 
 .card.status-aktiv { border-left-color: var(--aktiv); }
-.card.status-pavent { border-left-color: var(--pavent); }
 .card.status-utfort { border-left-color: var(--utfort); opacity: 0.85; }
 
 .card .tittel {
@@ -473,11 +469,6 @@ body {
 
 .status-pill.status-aktiv::before {
   animation: pulse 1.8s ease-in-out infinite;
-}
-
-.status-pill.status-pavent {
-  color: var(--pavent);
-  background: var(--pavent-soft);
 }
 
 .status-pill.status-utfort {
@@ -578,10 +569,62 @@ body {
   display: none;
 }
 
+/* ---------- Post-it ---------- */
+
+.postit {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 220px;
+  min-height: 150px;
+  background: #fde68a;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: rotate(-2deg);
+  padding: 18px 12px 12px;
+  z-index: 50;
+  transition: transform 0.2s ease;
+}
+
+.postit:hover,
+.postit:focus-within {
+  transform: rotate(0deg) scale(1.03);
+}
+
+.postit-pin {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+.postit-text {
+  width: 100%;
+  height: 130px;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4a3b00;
+  line-height: 1.4;
+}
+
+.postit-text::placeholder {
+  color: rgba(74, 59, 0, 0.45);
+}
+
+.postit-text:focus {
+  outline: none;
+}
+
 @media (max-width: 720px) {
   html, body { overflow-y: auto; }
   .board { height: auto; min-height: 100vh; }
   .lanes { grid-template-columns: 1fr; }
   .lane { max-height: 60vh; }
   .stats { display: none; }
+  .postit { right: 12px; bottom: 12px; width: 160px; }
 }
