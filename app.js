@@ -160,7 +160,6 @@ function byggKort(o) {
     <div class="meta-row">
       <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
       <span class="card-right">
-        <span class="kandidater">👤 ${o.antallKandidater}</span>
         ${kortHoyreTekst(o)}
       </span>
     </div>

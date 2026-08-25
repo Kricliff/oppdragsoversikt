@@ -490,12 +490,6 @@ body {
   white-space: nowrap;
 }
 
-.card-right .kandidater {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 .card-right .fremdrift {
   background: var(--bg-1);
   border: 1px solid var(--border);
