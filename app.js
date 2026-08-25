@@ -2,8 +2,11 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data 
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
+const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
+const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
 
 let alleOppdrag = [];
+let sisteAvganger = [];
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -14,14 +17,18 @@ const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
 const refreshBtn = document.getElementById("refreshBtn");
 const notatEl = document.getElementById("notatTekst");
+const busstiderListeEl = document.getElementById("busstiderListe");
 
 async function init() {
   await lastOppdrag();
   tikkKlokke();
   lastNotat();
+  lastBusstider();
   setInterval(tikkKlokke, 1000);
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
+  setInterval(lastBusstider, BUSS_REFRESH_MS);
+  setInterval(renderBusstider, BUSS_TIKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   binderNotat();
 }
@@ -79,6 +86,38 @@ async function lagreNotat() {
   } catch (err) {
     console.warn("Fikk ikke lagret notat:", err);
   }
+}
+
+// Busstider fra holdeplassen ved kontoret (functions/api/avganger.js, ekte
+// Entur/Ruter-sanntidsdata). sisteAvganger caches lokalt slik at "om X min"-teksten
+// kan tikke ned mellom hver reelle henting, uten å måtte spørre API-et hvert 15. sekund.
+async function lastBusstider() {
+  const data = await hentAvganger();
+  sisteAvganger = data.avganger;
+  renderBusstider();
+}
+
+function renderBusstider() {
+  busstiderListeEl.innerHTML = "";
+  if (sisteAvganger.length === 0) {
+    busstiderListeEl.innerHTML = '<div class="buss-tom">Ingen avganger akkurat nå</div>';
+    return;
+  }
+  sisteAvganger.forEach((a) => {
+    const rad = document.createElement("div");
+    rad.className = "buss-rad";
+    rad.innerHTML = `
+      <span class="buss-linje">${escapeHtml(a.linje)}</span>
+      <span class="buss-destinasjon">${escapeHtml(a.destinasjon)}</span>
+      <span class="buss-tid">${minutterTil(a.avgangstid)}</span>
+    `;
+    busstiderListeEl.appendChild(rad);
+  });
+}
+
+function minutterTil(iso) {
+  const min = Math.round((new Date(iso) - new Date()) / 60000);
+  return min <= 0 ? "Nå" : `${min} min`;
 }
 
 function tikkKlokke() {

@@ -620,6 +620,73 @@ body {
   outline: none;
 }
 
+/* ---------- Busstider ---------- */
+
+.busstider {
+  position: fixed;
+  left: 28px;
+  bottom: 28px;
+  width: 230px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+}
+
+.busstider-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
+.busstider-liste {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 24px;
+}
+
+.buss-rad {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.buss-linje {
+  flex: 0 0 auto;
+  min-width: 1.6rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #ffffff;
+  background: var(--aktiv);
+  padding: 0.05rem 0.35rem;
+}
+
+.buss-destinasjon {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.buss-tid {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.buss-tom {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
 @media (max-width: 720px) {
   html, body { overflow-y: auto; }
   .board { height: auto; min-height: 100vh; }
@@ -627,4 +694,5 @@ body {
   .lane { max-height: 60vh; }
   .stats { display: none; }
   .postit { right: 12px; bottom: 12px; width: 160px; }
+  .busstider { left: 12px; bottom: 12px; width: 160px; }
 }
