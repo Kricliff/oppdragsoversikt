@@ -12,13 +12,17 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 9;
+const CACHE_VERSION = 10;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
 // er bevist, behandler vi 100% fremdrift som utført uansett hva statusfeltet sier -
 // men aldri for cancelled/lost, som er en bevisst avsluttet-uten-suksess-tilstand.
 const BEHANDLE_100_PROSENT_SOM_UTFORT = true;
+
+// Faser som kan LØFTES til "utfort" via 100%-regelen over (i tillegg til solvedEnded,
+// som alltid er utfort uansett prosent).
+const KAN_LOFTES_VED_100_PROSENT = new Set(["notStarted", "active", "urgent", "solvedOngoing"]);
 
 // Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
 // lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
@@ -32,12 +36,16 @@ const AKTIV_MAKS_DAGER_UTEN_OPPDATERING = 90;
 // "request" (= "På vent" i Recman sitt grensesnitt) er bevisst IKKE med her (2026-08-25)
 // - ble for mye støy på tavlen. De dukker opp av seg selv når noen setter dem til
 // active/urgent/notStarted i Recman, i stedet for å ta opp plass som en egen kolonne.
+//
+// "solvedOngoing" ("Løst løpende") er bevisst IKKE med her (2026-08-25) - "Utført i år"
+// skal kun telle solvedEnded ("Løst avsluttet") + 100%-regelen under, ikke løpende
+// leveranser. Et solvedOngoing-prosjekt under 100% skjules derfor helt fra tavlen,
+// akkurat som cancelled/lost/request - det når 100% (og telles) i stedet.
 const STATUS_MAP = {
   notStarted: "aktiv",
   active: "aktiv",
   urgent: "aktiv",
-  solvedEnded: "utfort",
-  solvedOngoing: "utfort"
+  solvedEnded: "utfort"
 };
 
 export async function onRequestGet(context) {
@@ -117,11 +125,12 @@ async function hentOgNormaliser(apiKey) {
   const oppdrag = Object.values(projectJson.data)
     .map((p) => {
       let status = STATUS_MAP[p.status];
-      if (!status) return null; // cancelled/lost - skjules
 
-      if (BEHANDLE_100_PROSENT_SOM_UTFORT && status === "aktiv" && Number(p.completePercent) >= 100) {
+      if (BEHANDLE_100_PROSENT_SOM_UTFORT && KAN_LOFTES_VED_100_PROSENT.has(p.status) && Number(p.completePercent) >= 100) {
         status = "utfort";
       }
+
+      if (!status) return null; // cancelled/lost/request/solvedOngoing under 100% - skjules
 
       if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
       // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
