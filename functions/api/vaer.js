@@ -5,7 +5,8 @@
 const LAT = 59.9139;
 const LON = 10.7522; // Oslo sentrum
 const CACHE_SECONDS = 30 * 60; // MET oppdaterer værdata typisk hver time
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
+const NEDBOR_TERSKEL_MM = 0.2; // under dette regnes det som ubetydelig duskregn
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -45,8 +46,15 @@ async function hentVaer() {
     forste.data.next_6_hours?.summary?.symbol_code ??
     null;
 
+  // Paraply-varsel: regn nå ELLER innen et par timer - begge sjekkes siden
+  // next_1_hours alene ikke fanger opp regn som starter litt senere.
+  const nedbor1t = forste.data.next_1_hours?.details?.precipitation_amount ?? 0;
+  const nedbor6t = forste.data.next_6_hours?.details?.precipitation_amount ?? 0;
+  const taMedParaply = nedbor1t >= NEDBOR_TERSKEL_MM || nedbor6t >= NEDBOR_TERSKEL_MM;
+
   return {
     temperatur: Math.round(forste.data.instant.details.air_temperature),
-    symbolKode
+    symbolKode,
+    taMedParaply
   };
 }

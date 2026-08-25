@@ -157,10 +157,24 @@ body {
 
 .vaer {
   display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
   padding-right: clamp(0.45rem, 1vw, 1.1rem);
   border-right: 1px solid var(--border);
+}
+
+.vaer-rad {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.vaer-varsel {
+  font-size: clamp(0.55rem, 0.7vw, 0.68rem);
+  font-weight: 600;
+  color: var(--utfort);
+  white-space: nowrap;
 }
 
 .vaer-ikon {

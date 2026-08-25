@@ -33,6 +33,7 @@ const busstiderHeaderEl = document.getElementById("busstiderHeader");
 const busstiderListeEl = document.getElementById("busstiderListe");
 const vaerIkonEl = document.getElementById("vaerIkon");
 const vaerTempEl = document.getElementById("vaerTemp");
+const vaerVarselEl = document.getElementById("vaerVarsel");
 
 async function init() {
   initTema();
@@ -64,6 +65,7 @@ async function lastVaer() {
   if (!data) return;
   vaerIkonEl.textContent = vaerIkonForSymbol(data.symbolKode);
   vaerTempEl.textContent = `${data.temperatur}°`;
+  vaerVarselEl.hidden = !data.taMedParaply;
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
