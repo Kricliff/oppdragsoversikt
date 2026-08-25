@@ -658,13 +658,14 @@ body {
 
 .buss-linje {
   flex: 0 0 auto;
-  min-width: 1.6rem;
+  min-width: 2.1rem;
   text-align: center;
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #ffffff;
   background: var(--aktiv);
-  padding: 0.05rem 0.35rem;
+  padding: 0.05rem 0.3rem;
+  white-space: nowrap;
 }
 
 .buss-destinasjon {

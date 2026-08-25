@@ -4,11 +4,14 @@ const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
+const PANEL_BYTT_MS = 5 * 1000; // veksler mellom buss- og tog-visning i samme panel
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
 const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js"];
 
 let alleOppdrag = [];
 let sisteAvganger = [];
+let sisteTog = { motDrammen: [], motOslo: [] };
+let visPanel = "buss"; // "buss" (Wessels plass) | "tog" (Nasjonaltheatret)
 let sisteKodeInnhold = null;
 
 const lanesEl = document.getElementById("lanes");
@@ -20,6 +23,7 @@ const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
 const refreshBtn = document.getElementById("refreshBtn");
 const notatEl = document.getElementById("notatTekst");
+const busstiderHeaderEl = document.getElementById("busstiderHeader");
 const busstiderListeEl = document.getElementById("busstiderListe");
 
 async function init() {
@@ -31,7 +35,8 @@ async function init() {
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
   setInterval(lastBusstider, BUSS_REFRESH_MS);
-  setInterval(renderBusstider, BUSS_TIKK_MS);
+  setInterval(renderTransportPanel, BUSS_TIKK_MS);
+  setInterval(byttTransportPanel, PANEL_BYTT_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
@@ -115,27 +120,59 @@ async function lagreNotat() {
   }
 }
 
-// Busstider fra holdeplassen ved kontoret (functions/api/avganger.js, ekte
-// Entur/Ruter-sanntidsdata). sisteAvganger caches lokalt slik at "om X min"-teksten
-// kan tikke ned mellom hver reelle henting, uten å måtte spørre API-et hvert 15. sekund.
+// Avganger fra begge holdeplassene ved kontoret (functions/api/avganger.js, ekte
+// Entur/Ruter-sanntidsdata) - buss fra Wessels plass og tog fra Nasjonaltheatret.
+// Panelet veksler visning mellom de to hvert PANEL_BYTT_MS (se byttTransportPanel).
+// Data cachet lokalt slik at "om X min"-teksten kan tikke ned mellom hver reelle
+// henting, uten å måtte spørre API-et hvert 15. sekund.
 async function lastBusstider() {
   const data = await hentAvganger();
   sisteAvganger = data.avganger;
-  renderBusstider();
+  sisteTog = data.tog ?? { motDrammen: [], motOslo: [] };
+  renderTransportPanel();
+}
+
+function byttTransportPanel() {
+  visPanel = visPanel === "buss" ? "tog" : "buss";
+  renderTransportPanel();
+}
+
+function renderTransportPanel() {
+  if (visPanel === "buss") {
+    busstiderHeaderEl.textContent = "🚌 Wessels plass";
+    renderBusstider();
+  } else {
+    busstiderHeaderEl.textContent = "🚆 Nasjonaltheatret";
+    renderTog();
+  }
 }
 
 function renderBusstider() {
+  tegnAvgangsrader(
+    sisteAvganger.map((a) => ({ linje: a.linje, tekst: a.destinasjon, avgangstid: a.avgangstid }))
+  );
+}
+
+function renderTog() {
+  const rader = [
+    ...sisteTog.motOslo.map((a) => ({ linje: a.linje, tekst: "→ Oslo", avgangstid: a.avgangstid })),
+    ...sisteTog.motDrammen.map((a) => ({ linje: a.linje, tekst: "← Drammen", avgangstid: a.avgangstid }))
+  ];
+  tegnAvgangsrader(rader);
+}
+
+function tegnAvgangsrader(rader) {
   busstiderListeEl.innerHTML = "";
-  if (sisteAvganger.length === 0) {
+  if (rader.length === 0) {
     busstiderListeEl.innerHTML = '<div class="buss-tom">Ingen avganger akkurat nå</div>';
     return;
   }
-  sisteAvganger.forEach((a) => {
+  rader.forEach((a) => {
     const rad = document.createElement("div");
     rad.className = "buss-rad";
     rad.innerHTML = `
       <span class="buss-linje">${escapeHtml(a.linje)}</span>
-      <span class="buss-destinasjon">${escapeHtml(a.destinasjon)}</span>
+      <span class="buss-destinasjon">${escapeHtml(a.tekst)}</span>
       <span class="buss-tid">${busstidTekst(a.avgangstid)}</span>
     `;
     busstiderListeEl.appendChild(rad);
