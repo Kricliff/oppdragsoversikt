@@ -109,15 +109,16 @@ function renderBusstider() {
     rad.innerHTML = `
       <span class="buss-linje">${escapeHtml(a.linje)}</span>
       <span class="buss-destinasjon">${escapeHtml(a.destinasjon)}</span>
-      <span class="buss-tid">${minutterTil(a.avgangstid)}</span>
+      <span class="buss-tid">${busstidTekst(a.avgangstid)}</span>
     `;
     busstiderListeEl.appendChild(rad);
   });
 }
 
-function minutterTil(iso) {
+function busstidTekst(iso) {
+  const tid = new Date(iso).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
   const min = Math.round((new Date(iso) - new Date()) / 60000);
-  return min <= 0 ? "Nå" : `${min} min`;
+  return min <= 0 ? `${tid} (nå)` : `${tid} (${min} min)`;
 }
 
 function tikkKlokke() {
