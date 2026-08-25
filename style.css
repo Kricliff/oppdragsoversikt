@@ -12,6 +12,8 @@
 
   --aktiv: #ec9b00;
   --aktiv-soft: rgba(236, 155, 0, 0.12);
+  --pavent: #6b6458;
+  --pavent-soft: rgba(107, 100, 88, 0.12);
   --utfort: #1e73be;
   --utfort-soft: rgba(30, 115, 190, 0.12);
   --neutral: #cfcfcf;
@@ -125,6 +127,7 @@ body {
 }
 
 .stat-card.accent-aktiv .value { color: var(--aktiv); }
+.stat-card.accent-pavent .value { color: var(--pavent); }
 .stat-card.accent-utfort .value { color: var(--utfort); }
 
 .clock-block {
@@ -416,6 +419,7 @@ body {
 }
 
 .card.status-aktiv { border-left-color: var(--aktiv); }
+.card.status-pavent { border-left-color: var(--pavent); }
 .card.status-utfort { border-left-color: var(--utfort); opacity: 0.85; }
 
 .card .tittel {
@@ -469,6 +473,11 @@ body {
 
 .status-pill.status-aktiv::before {
   animation: pulse 1.8s ease-in-out infinite;
+}
+
+.status-pill.status-pavent {
+  color: var(--pavent);
+  background: var(--pavent-soft);
 }
 
 .status-pill.status-utfort {

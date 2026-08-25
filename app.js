@@ -1,7 +1,7 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
-const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
+const STATUS_PRIORITET = { aktiv: 0, pavent: 1, utfort: 2 };
 
 let alleOppdrag = [];
 
@@ -54,7 +54,7 @@ function render() {
 }
 
 function erSynligPaTavle(o) {
-  if (o.status === "aktiv") return true;
+  if (o.status === "aktiv" || o.status === "pavent") return true;
   if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
   return false;
 }
@@ -62,12 +62,14 @@ function erSynligPaTavle(o) {
 function renderStats(liste) {
   const utfortIArListe = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const aktive = liste.filter((o) => o.status === "aktiv").length;
+  const paVent = liste.filter((o) => o.status === "pavent").length;
   const utfortIAr = utfortIArListe.length;
   const kandidaterLandet = utfortIArListe.reduce((sum, o) => sum + o.antallKandidater, 0);
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
+    { label: "På vent", value: paVent, accent: "pavent" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Kandidater Landet", value: kandidaterLandet }
   ].forEach(({ label, value, accent }) => {
@@ -192,7 +194,7 @@ function utfortTekst(iso) {
 }
 
 function statusLabel(status) {
-  return { aktiv: "Aktiv", utfort: "Utført" }[status] ?? status;
+  return { aktiv: "Aktiv", pavent: "På vent", utfort: "Utført" }[status] ?? status;
 }
 
 function dagerSiden(iso) {

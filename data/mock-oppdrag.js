@@ -1,6 +1,6 @@
 // Mock-data i samme form som recman-adapter.js forventer å motta fra Recman API.
 // Byttes ut med et ekte API-kall når Recman-tilgang er på plass (se recman-adapter.js).
-// Kun to statuser i bruk: "aktiv" og "utfort".
+// Tre statuser i bruk: "aktiv", "pavent" (På vent) og "utfort".
 //
 // Rådgivernavnene er ekte (hentet fra Recman sitt "user"-scope 2026-08-24) - resten
 // av innholdet (tittel/kunde/antallKandidater/fremdriftProsent) er fortsatt påfunnet,
@@ -34,6 +34,10 @@ const MOCK_OPPDRAG = [
   { id: "opp-028", tittel: "Truckfører", kunde: "Tine", ansvarlig: "Eivind Namløs", status: "aktiv", antallKandidater: 1, fremdriftProsent: 30 },
   { id: "opp-029", tittel: "Kokk", kunde: "Fursetgruppen", ansvarlig: "Eivind Namløs", status: "aktiv", antallKandidater: 6, fremdriftProsent: 45 },
   { id: "opp-030", tittel: "Nettverkstekniker", kunde: "Telia", ansvarlig: "Fredrik Hjortdal", status: "aktiv", antallKandidater: 5, fremdriftProsent: 60 },
+
+  // Eksempler på "pavent" - kunden har fått en forespørsel, men den er ikke satt i gang.
+  { id: "opp-040", tittel: "Kategorisjef Innkjøp", kunde: "Norgesgruppen", ansvarlig: "Sara Göthe", status: "pavent", antallKandidater: 0, fremdriftProsent: 0 },
+  { id: "opp-041", tittel: "HR-direktør", kunde: "Skanska", ansvarlig: "Fredrik Aaslestad", status: "pavent", antallKandidater: 0, fremdriftProsent: 0 },
 
   // Eksempler på "utfort" - vises på tavlen i UTFORT_SYNLIG_DAGER (7) dager etter utfortDato, se app.js.
   // Statuslinjen i toppen teller derimot ALLE utfort-oppdrag med utfortDato i år (erIDetteAret i app.js),
