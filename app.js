@@ -257,8 +257,8 @@ function renderStats(liste) {
     { label: "Aktive", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Kandidater Landet", value: kandidaterLandet },
-    { label: "Telefoner denne mnd.", value: sisteTelling.telefoner },
-    { label: "Salgsmøter denne mnd.", value: sisteTelling.moter }
+    { label: "Telefoner", value: sisteTelling.telefoner },
+    { label: "Salgsmøter", value: sisteTelling.moter }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
