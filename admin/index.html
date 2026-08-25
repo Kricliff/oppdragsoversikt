@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Oppdragsoversikt</title>
+<link rel="icon" href="../assets/gp-favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #ffffff;
+    --surface: #fafafa;
+    --border: #e3e3e3;
+    --text: #171717;
+    --text-muted: #6b6b6b;
+    --aktiv: #ec9b00;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg-0); color: var(--text); font-family: "Poppins", -apple-system, "Segoe UI", sans-serif; }
+  .side {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: clamp(28px, 6vh, 64px) clamp(20px, 4vw, 28px) 80px;
+  }
+  .topplinje { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+  .topplinje img { height: 24px; }
+  .divider { width: 1px; height: 20px; background: var(--border); }
+  .merkelapp {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--aktiv);
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: -0.01em; }
+  .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 2rem; max-width: 52ch; }
+  .kort {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+  .kort h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.9rem; }
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    padding: 0.8rem;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--text);
+    resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--aktiv); outline-offset: -1px; }
+  .statusrad {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .lagreknapp {
+    background: var(--aktiv);
+    color: #ffffff;
+    border: none;
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+  }
+  .lagreknapp:disabled { opacity: 0.5; cursor: default; }
+  .tilbake {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .tilbake:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="side">
+
+  <div class="topplinje">
+    <img src="../assets/great-people-black-logo.png" alt="GreatPeople">
+    <span class="divider"></span>
+    <span class="merkelapp">Admin</span>
+  </div>
+  <h1>Admin - Oppdragsoversikt</h1>
+  <p class="ingress">Denne siden er kun tilgjengelig for de som er lagt til i egen tilgangspolicy - ikke alle som ser tavlen.</p>
+
+  <div class="kort">
+    <h2>Post-it-lapp</h2>
+    <textarea id="notatTekst" maxlength="500" placeholder="Skriv en beskjed til teamet…"></textarea>
+    <div class="statusrad">
+      <span id="statusTekst">Laster…</span>
+      <button id="lagreKnapp" class="lagreknapp">Lagre</button>
+    </div>
+  </div>
+
+  <a class="tilbake" href="/">← Tilbake til tavlen</a>
+
+</div>
+
+<script>
+  const notatEl = document.getElementById("notatTekst");
+  const statusEl = document.getElementById("statusTekst");
+  const lagreKnapp = document.getElementById("lagreKnapp");
+
+  async function lastNotat() {
+    try {
+      const res = await fetch("/api/notat");
+      const data = await res.json();
+      notatEl.value = data.tekst ?? "";
+      statusEl.textContent = "Hentet";
+    } catch (err) {
+      statusEl.textContent = "Fikk ikke hentet notat";
+      console.warn(err);
+    }
+  }
+
+  async function lagreNotat() {
+    lagreKnapp.disabled = true;
+    statusEl.textContent = "Lagrer…";
+    try {
+      await fetch("/api/notat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tekst: notatEl.value })
+      });
+      statusEl.textContent = `Lagret ${new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}`;
+    } catch (err) {
+      statusEl.textContent = "Fikk ikke lagret";
+      console.warn(err);
+    } finally {
+      lagreKnapp.disabled = false;
+    }
+  }
+
+  lagreKnapp.addEventListener("click", lagreNotat);
+  lastNotat();
+</script>
+</body>
+</html>
