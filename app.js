@@ -7,8 +7,9 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 7 * 1000; // veksler mellom buss-/tog-visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
+const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -30,6 +31,8 @@ const brandLogoEl = document.getElementById("brandLogo");
 const notatEl = document.getElementById("notatTekst");
 const busstiderHeaderEl = document.getElementById("busstiderHeader");
 const busstiderListeEl = document.getElementById("busstiderListe");
+const vaerIkonEl = document.getElementById("vaerIkon");
+const vaerTempEl = document.getElementById("vaerTemp");
 
 async function init() {
   initTema();
@@ -38,6 +41,7 @@ async function init() {
   tikkKlokke();
   lastNotat();
   lastBusstider();
+  lastVaer();
   setInterval(tikkKlokke, 1000);
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
@@ -45,11 +49,21 @@ async function init() {
   setInterval(renderTransportPanel, BUSS_TIKK_MS);
   setInterval(byttTransportPanel, PANEL_BYTT_MS);
   setInterval(lastTelling, TELLING_REFRESH_MS);
+  setInterval(lastVaer, VAER_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
   binderNotat();
+}
+
+// Værmelding for Oslo (functions/api/vaer.js, ekte MET/Yr-data). Rent visuelt -
+// feiler stille (viser bare placeholder-ikonet) om MET skulle være nede.
+async function lastVaer() {
+  const data = await hentVaer();
+  if (!data) return;
+  vaerIkonEl.textContent = vaerIkonForSymbol(data.symbolKode);
+  vaerTempEl.textContent = `${data.temperatur}°`;
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -

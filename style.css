@@ -147,6 +147,32 @@ body {
 
 .clock-block {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.7rem, 1.2vw, 1.1rem);
+}
+
+.vaer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: clamp(0.7rem, 1.2vw, 1.1rem);
+  border-right: 1px solid var(--border);
+}
+
+.vaer-ikon {
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  line-height: 1;
+}
+
+.vaer-temp {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  color: var(--text);
+}
+
+.clock-tid {
   text-align: right;
 }
 
