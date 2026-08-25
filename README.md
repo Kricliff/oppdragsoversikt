@@ -1,7 +1,8 @@
 # Oppdragsoversikt
 
-Enkel webapp (vanilla JS, ingen build-steg) som viser aktive oppdrag og hvem som er ansvarlig.
-Kjører i dag på mock-data, klar for å kobles mot Recman.
+Enkel webapp (vanilla JS, ingen build-steg) som viser aktive oppdrag og hvem som er
+ansvarlig - laget for å stå på en skjerm på kontoret. Live på
+[oppdragsoversikt.pages.dev](https://oppdragsoversikt.pages.dev) (bak Cloudflare Access).
 
 ## Kjøre lokalt
 
@@ -11,20 +12,48 @@ Kjører i dag på mock-data, klar for å kobles mot Recman.
 npx serve .
 ```
 
-## Koble til Recman
+`/api/oppdrag` (se under) finnes ikke lokalt, så appen faller automatisk tilbake til
+mock-data i `data/mock-oppdrag.js`.
 
-Alt API-oppsett ligger i [`recman-adapter.js`](recman-adapter.js):
+## Recman-integrasjonen
 
-1. Fyll inn `RECMAN_CONFIG.baseUrl` og sett `enabled: true`.
-2. **Ikke** legg API-nøkkelen rett i klientkoden i produksjon - rut kallet via en liten backend/proxy som holder på nøkkelen, og la `fetchFromRecman()` kalle den proxyen i stedet for Recman direkte.
-3. Juster `mapRecmanRespons()` til det faktiske feltnavnene Recman returnerer (title/client/owner/status/osv.), slik at resten av appen (`app.js`) fortsetter å fungere uendret - den kjenner bare til feltene `id, tittel, kunde, ansvarlig, status, antallKandidater, utfortDato, fremdriftProsent`. `fremdriftProsent` er et tall 0-100 (samme fremdriftsprosent som settes på oppdraget i Recman) og vises kun på aktive oppdrag, som tekst og som en tynn fremdriftslinje.
+Ekte data kommer fra [`functions/api/oppdrag.js`](functions/api/oppdrag.js), en
+Cloudflare Pages Function som kjører server-side (kun på Cloudflare Pages, ikke på
+GitHub Pages - Recman sitt API støtter ikke CORS, så nettleseren kan ikke kalle det
+direkte uansett). `recman-adapter.js` kaller bare dette same-origin-endepunktet og
+faller tilbake til mock-data hvis noe svikter.
+
+API-nøkkelen ligger som et Cloudflare-secret (`RECMAN_API_KEY`), aldri i kode eller git.
+Sett/oppdater med:
+
+```bash
+npx wrangler pages secret put RECMAN_API_KEY --project-name=oppdragsoversikt
+```
+
+Funksjonen henter fra Recman sitt v2-API (`project`, `user`, `company`-scope) og
+normaliserer til feltene appen forstår: `id, tittel, kunde, ansvarlig, status,
+antallKandidater, fremdriftProsent, utfortDato`. Se kommentarene i `oppdrag.js` for
+detaljer om statusmapping og filtrene som luker bort upålitelig data (cancelled/lost,
+gamle "aktiv"-registreringer, ikke-kunder, oppdrag uten kjent rådgiver).
+
+Svaret cacher i `CACHE_SECONDS` på Cloudflares edge for å holde oss under Recman sitt
+tak på 200 kall/dag. **Bump `CACHE_VERSION` i `oppdrag.js` når normaliseringslogikken
+endres**, ellers kan en gammel cachet respons fortsette å bli servert i opptil
+`CACHE_SECONDS` etter en deploy.
+
+## Deploy
+
+```bash
+git push origin master                                            # GitHub (kildekode)
+npx wrangler pages deploy . --project-name=oppdragsoversikt --branch=master   # Cloudflare (live)
+```
 
 ## Filstruktur
 
 | Fil | Beskrivelse |
 |---|---|
-| `index.html` | Layout: søk, filtre, tabell |
-| `style.css` | Styling |
-| `app.js` | Rendering, filtrering, sortering |
-| `data/mock-oppdrag.js` | Eksempeldata |
-| `recman-adapter.js` | Datakilde-abstraksjon (mock i dag, Recman senere) |
+| `index.html` / `style.css` | Layout og GreatPeople-tilpasset design |
+| `app.js` | Rendering, tetthetsjustering, tavle-logikk |
+| `functions/api/oppdrag.js` | Cloudflare Pages Function - henter og normaliserer ekte Recman-data |
+| `recman-adapter.js` | Kaller `/api/oppdrag`, faller tilbake til mock-data hvis det feiler |
+| `data/mock-oppdrag.js` | Eksempeldata brukt lokalt og som fallback |

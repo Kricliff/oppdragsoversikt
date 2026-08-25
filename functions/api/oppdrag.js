@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -128,14 +128,21 @@ async function hentOgNormaliser(apiKey) {
       // heller enn å risikere å skjule ekte oppdrag pga. en API-feil.
       if (kundedataLastetOk && kundeType[p.companyId] && kundeType[p.companyId] !== "customer") return null;
 
+      // Kan vi ikke slå opp en faktisk rådgiver, viser vi ikke oppdraget i det hele tatt -
+      // et "Ukjent rådgiver"-oppdrag er uverifiserbart (person som har forlatt firmaet,
+      // feilregistrering, e.l.) og skal ikke telle med i "Utført i år" eller stå på tavlen.
+      const ansvarlig = radgiverNavn[p.responsibleUserId];
+      if (!ansvarlig) return null;
+
       return {
         id: "recman-" + p.projectId,
         tittel: p.name,
         kunde: kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
-        ansvarlig: radgiverNavn[p.responsibleUserId] ?? "Ukjent rådgiver",
+        ansvarlig,
         status,
-        // Recman har ikke et felt for kandidater-i-prosess på selve prosjektet - dette er
-        // antall personer registrert som medlemmer på prosjektet, ikke kandidater i pipeline.
+        // Ikke vist på kortene lenger (var upålitelig - talte teammedlemmer/kundekontakter,
+        // ikke kandidater). Ligger igjen kun fordi "Kandidater Landet" i statslinjen
+        // fortsatt summerer dette til vi får ekte kandidatdata (se app.js).
         antallKandidater: Array.isArray(p.members) ? p.members.length : 0,
         fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
         utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined
