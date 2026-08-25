@@ -7,8 +7,12 @@ const WESSELS_PLASS_ID = "NSR:StopPlace:4055"; // Wessels plass, Oslo (nær Råd
 const NASJONALTEATRET_ID = "NSR:StopPlace:58404"; // Nasjonaltheatret stasjon (tog)
 const ANTALL_BUSSAVGANGER = 6;
 const ANTALL_TOGAVGANGER_PER_RETNING = 6;
+// Rekker man uansett ikke bussen/toget på under 5 min fra kontoret - skjul dem heller enn
+// å vise avganger som allerede er urealistiske å nå. Henter derfor flere kandidater enn vist
+// (se numberOfDepartures under) slik at det alltid er nok igjen etter filtrering.
+const MIN_MINUTTER_UNNA = 5;
 const CACHE_SECONDS = 45; // sanntid - kort cache, i motsetning til Recman-proxyen
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 // Entur har ikke noe eget "retning: øst/vest"-felt på estimatedCalls - spor 475/478 er
 // vestgående (mot Drammen/Asker/Kongsberg) og spor 476/477 er østgående (mot Oslo S og
@@ -20,7 +24,7 @@ const SPOR_MOT_OSLO = new Set(["NSR:Quay:476", "NSR:Quay:477"]);
 const QUERY = `{
   wessels: stopPlace(id: "${WESSELS_PLASS_ID}") {
     name
-    estimatedCalls(timeRange: 72000, numberOfDepartures: ${ANTALL_BUSSAVGANGER}) {
+    estimatedCalls(timeRange: 72000, numberOfDepartures: 15) {
       realtime
       expectedDepartureTime
       destinationDisplay { frontText }
@@ -79,9 +83,12 @@ async function hentAvganger() {
   const json = await res.json();
   if (json.errors) throw new Error("Entur-feil: " + JSON.stringify(json.errors));
 
-  const avganger = (json.data?.wessels?.estimatedCalls ?? []).map(tilAvgang);
+  const avganger = (json.data?.wessels?.estimatedCalls ?? [])
+    .filter(erMinstXMinutterUnna)
+    .slice(0, ANTALL_BUSSAVGANGER)
+    .map(tilAvgang);
 
-  const togKall = json.data?.nasjonaltheatret?.estimatedCalls ?? [];
+  const togKall = (json.data?.nasjonaltheatret?.estimatedCalls ?? []).filter(erMinstXMinutterUnna);
   const togMotDrammen = togKall
     .filter((call) => SPOR_MOT_DRAMMEN.has(call.quay?.id))
     .slice(0, ANTALL_TOGAVGANGER_PER_RETNING)
@@ -100,6 +107,11 @@ async function hentAvganger() {
       motOslo: togMotOslo
     }
   };
+}
+
+function erMinstXMinutterUnna(call) {
+  const minutter = (new Date(call.expectedDepartureTime).getTime() - Date.now()) / 60000;
+  return minutter >= MIN_MINUTTER_UNNA;
 }
 
 function tilAvgang(call) {
