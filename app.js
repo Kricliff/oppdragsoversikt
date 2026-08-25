@@ -5,11 +5,13 @@ const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js"];
+const TELLING_REFRESH_MS = 60 * 1000; // flere kan klikke fra ulike enheter - hold i sync
 
 let alleOppdrag = [];
 let sisteAvganger = [];
 let sisteKodeInnhold = null;
+let sisteTelling = { telefoner: 0, moter: 0 };
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -23,6 +25,7 @@ const notatEl = document.getElementById("notatTekst");
 const busstiderListeEl = document.getElementById("busstiderListe");
 
 async function init() {
+  await lastTelling();
   await lastOppdrag();
   tikkKlokke();
   lastNotat();
@@ -32,10 +35,12 @@ async function init() {
   setInterval(lastNotat, AUTO_REFRESH_MS);
   setInterval(lastBusstider, BUSS_REFRESH_MS);
   setInterval(renderBusstider, BUSS_TIKK_MS);
+  setInterval(lastTelling, TELLING_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   binderNotat();
+  bindTelling();
 }
 
 // Skjermen står ubetjent og laster aldri siden på nytt av seg selv - uten dette ville
@@ -188,6 +193,45 @@ function renderStats(liste) {
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
     el.innerHTML = `<span class="value">${value}</span><span class="label">${label}</span>`;
     statsRow.appendChild(el);
+  });
+
+  [
+    { felt: "telefoner", label: "Antall telefoner", value: sisteTelling.telefoner },
+    { felt: "moter", label: "Antall møter", value: sisteTelling.moter }
+  ].forEach(({ felt, label, value }) => {
+    const el = document.createElement("div");
+    el.className = "stat-card stat-card-telling";
+    el.dataset.felt = felt;
+    el.innerHTML = `
+      <button class="telling-btn telling-minus" data-delta="-1" aria-label="Trekk fra én">−</button>
+      <span class="value">${value}</span>
+      <span class="label">${label}</span>
+      <button class="telling-btn telling-plus" data-delta="1" aria-label="Legg til én">+</button>
+    `;
+    statsRow.appendChild(el);
+  });
+}
+
+// Manuell telling (telefoner/møter) - klikk +/- på kortet, lagres server-side
+// (functions/api/telling.js) og nullstilles automatisk ved ny måned.
+async function lastTelling() {
+  sisteTelling = await hentTelling();
+  renderStats(alleOppdrag);
+}
+
+function bindTelling() {
+  statsRow.addEventListener("click", async (e) => {
+    const knapp = e.target.closest(".telling-btn");
+    if (!knapp) return;
+    const kort = knapp.closest(".stat-card-telling");
+    const felt = kort?.dataset.felt;
+    const delta = Number(knapp.dataset.delta);
+    if (!felt || !delta) return;
+    const resultat = await oppdaterTelling(felt, delta);
+    if (resultat) {
+      sisteTelling = resultat;
+      renderStats(alleOppdrag);
+    }
   });
 }
 
