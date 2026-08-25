@@ -7,12 +7,14 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 7 * 1000; // veksler mellom buss-/tog-visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js"];
+const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 
 let alleOppdrag = [];
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
 let visPanel = "buss"; // "buss" (Wessels plass) | "tog" (Nasjonaltheatret)
+let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 
 const lanesEl = document.getElementById("lanes");
@@ -31,6 +33,7 @@ const busstiderListeEl = document.getElementById("busstiderListe");
 
 async function init() {
   initTema();
+  await lastTelling();
   await lastOppdrag();
   tikkKlokke();
   lastNotat();
@@ -41,11 +44,19 @@ async function init() {
   setInterval(lastBusstider, BUSS_REFRESH_MS);
   setInterval(renderTransportPanel, BUSS_TIKK_MS);
   setInterval(byttTransportPanel, PANEL_BYTT_MS);
+  setInterval(lastTelling, TELLING_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
   binderNotat();
+}
+
+// Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
+// rent lesende, ingen manuell input. Kalles på nytt etter lastOppdrag() via renderStats.
+async function lastTelling() {
+  sisteTelling = await hentTelling();
+  renderStats(alleOppdrag);
 }
 
 // Manuell nattmodus - husker valget i localStorage slik at det består til neste
@@ -245,7 +256,9 @@ function renderStats(liste) {
   [
     { label: "Aktive", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
-    { label: "Kandidater Landet", value: kandidaterLandet }
+    { label: "Kandidater Landet", value: kandidaterLandet },
+    { label: "Telefoner denne mnd.", value: sisteTelling.telefoner },
+    { label: "Salgsmøter denne mnd.", value: sisteTelling.moter }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
