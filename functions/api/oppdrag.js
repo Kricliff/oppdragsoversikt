@@ -12,7 +12,13 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
+
+// EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
+// når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
+// er bevist, behandler vi 100% fremdrift som utført uansett hva statusfeltet sier -
+// men aldri for cancelled/lost, som er en bevisst avsluttet-uten-suksess-tilstand.
+const BEHANDLE_100_PROSENT_SOM_UTFORT = true;
 
 // Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
 // lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
@@ -107,8 +113,13 @@ async function hentOgNormaliser(apiKey) {
 
   return Object.values(projectJson.data)
     .map((p) => {
-      const status = STATUS_MAP[p.status];
+      let status = STATUS_MAP[p.status];
       if (!status) return null; // cancelled/lost - skjules
+
+      if (BEHANDLE_100_PROSENT_SOM_UTFORT && status === "aktiv" && Number(p.completePercent) >= 100) {
+        status = "utfort";
+      }
+
       if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
       // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
       // knyttet til f.eks. et "prospect" er salgsoppfølging, ikke et reelt kundeoppdrag -
