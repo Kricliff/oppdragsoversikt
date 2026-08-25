@@ -268,7 +268,7 @@ function renderStats(liste) {
 
   statsRow.innerHTML = "";
   [
-    { label: "Aktive", value: aktive, accent: "aktiv" },
+    { label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Kandidater Landet", value: kandidaterLandet },
     { label: "Telefoner", value: sisteTelling.telefoner },
