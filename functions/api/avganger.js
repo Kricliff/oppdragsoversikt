@@ -1,18 +1,30 @@
-// Cloudflare Pages Function - viser sanntid avganger fra to holdeplasser nær kontoret:
-// buss fra Wessels plass, og tog fra Nasjonaltheatret (begge retninger). Ruter er del av
-// Entur-samarbeidet, og Entur sitt JourneyPlanner-API er gratis og krever ingen nøkkel -
-// bare en ET-Client-Name-header for identifikasjon (se https://developer.entur.org).
+// Cloudflare Pages Function - viser sanntid avganger fra fire holdeplasser nær kontoret:
+// buss fra Wessels plass, tog fra Nasjonaltheatret (begge retninger), trikk fra Øvre
+// Slottsgate, og T-bane fra Stortinget. Ruter er del av Entur-samarbeidet, og Entur sitt
+// JourneyPlanner-API er gratis og krever ingen nøkkel - bare en ET-Client-Name-header for
+// identifikasjon (se https://developer.entur.org).
 
 const WESSELS_PLASS_ID = "NSR:StopPlace:4055"; // Wessels plass, Oslo (nær Rådhusgata 23)
 const NASJONALTEATRET_ID = "NSR:StopPlace:58404"; // Nasjonaltheatret stasjon (tog)
+const OVRE_SLOTTSGATE_ID = "NSR:StopPlace:61633"; // Øvre Slottsgate (trikk)
+const STORTINGET_ID = "NSR:StopPlace:4029"; // Stortinget (T-bane)
+
 const ANTALL_BUSSAVGANGER = 6;
 const ANTALL_TOGAVGANGER_PER_RETNING = 6;
-// Rekker man uansett ikke bussen/toget på under 5 min fra kontoret - skjul dem heller enn
-// å vise avganger som allerede er urealistiske å nå. Henter derfor flere kandidater enn vist
-// (se numberOfDepartures under) slik at det alltid er nok igjen etter filtrering.
-const MIN_MINUTTER_UNNA = 5;
+const ANTALL_TRIKKAVGANGER = 6;
+const ANTALL_TBANEAVGANGER = 6;
+
+// Rekker man uansett ikke avgangen på under X min fra kontoret - skjul den heller enn å
+// vise noe urealistisk å nå. Ulik terskel per transportmiddel (T-bane/tog tar lenger å gå
+// til enn buss/trikk rett utenfor). Henter derfor flere kandidater enn vist (se
+// numberOfDepartures under) slik at det alltid er nok igjen etter filtrering.
+const MIN_MIN_BUSS = 5;
+const MIN_MIN_TOG = 10;
+const MIN_MIN_TRIKK = 5;
+const MIN_MIN_TBANE = 10;
+
 const CACHE_SECONDS = 45; // sanntid - kort cache, i motsetning til Recman-proxyen
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 
 // Entur har ikke noe eget "retning: øst/vest"-felt på estimatedCalls - spor 475/478 er
 // vestgående (mot Drammen/Asker/Kongsberg) og spor 476/477 er østgående (mot Oslo S og
@@ -40,6 +52,28 @@ const QUERY = `{
       expectedDepartureTime
       destinationDisplay { frontText }
       quay { id }
+      serviceJourney {
+        line { publicCode transportMode }
+      }
+    }
+  }
+  ovreSlottsgate: stopPlace(id: "${OVRE_SLOTTSGATE_ID}") {
+    name
+    estimatedCalls(timeRange: 72000, numberOfDepartures: 20, whiteListedModes: [tram]) {
+      realtime
+      expectedDepartureTime
+      destinationDisplay { frontText }
+      serviceJourney {
+        line { publicCode transportMode }
+      }
+    }
+  }
+  stortinget: stopPlace(id: "${STORTINGET_ID}") {
+    name
+    estimatedCalls(timeRange: 72000, numberOfDepartures: 20, whiteListedModes: [metro]) {
+      realtime
+      expectedDepartureTime
+      destinationDisplay { frontText }
       serviceJourney {
         line { publicCode transportMode }
       }
@@ -84,11 +118,12 @@ async function hentAvganger() {
   if (json.errors) throw new Error("Entur-feil: " + JSON.stringify(json.errors));
 
   const avganger = (json.data?.wessels?.estimatedCalls ?? [])
-    .filter(erMinstXMinutterUnna)
+    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_BUSS))
     .slice(0, ANTALL_BUSSAVGANGER)
     .map(tilAvgang);
 
-  const togKall = (json.data?.nasjonaltheatret?.estimatedCalls ?? []).filter(erMinstXMinutterUnna);
+  const togKall = (json.data?.nasjonaltheatret?.estimatedCalls ?? [])
+    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_TOG));
   const togMotDrammen = togKall
     .filter((call) => SPOR_MOT_DRAMMEN.has(call.quay?.id))
     .slice(0, ANTALL_TOGAVGANGER_PER_RETNING)
@@ -98,6 +133,16 @@ async function hentAvganger() {
     .slice(0, ANTALL_TOGAVGANGER_PER_RETNING)
     .map(tilAvgang);
 
+  const trikk = (json.data?.ovreSlottsgate?.estimatedCalls ?? [])
+    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_TRIKK))
+    .slice(0, ANTALL_TRIKKAVGANGER)
+    .map(tilAvgang);
+
+  const tbane = (json.data?.stortinget?.estimatedCalls ?? [])
+    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_TBANE))
+    .slice(0, ANTALL_TBANEAVGANGER)
+    .map(tilAvgang);
+
   return {
     holdeplass: json.data?.wessels?.name ?? "Wessels plass",
     avganger,
@@ -105,13 +150,21 @@ async function hentAvganger() {
       holdeplass: json.data?.nasjonaltheatret?.name ?? "Nasjonaltheatret",
       motDrammen: togMotDrammen,
       motOslo: togMotOslo
+    },
+    trikk: {
+      holdeplass: json.data?.ovreSlottsgate?.name ?? "Øvre Slottsgate",
+      avganger: trikk
+    },
+    tbane: {
+      holdeplass: json.data?.stortinget?.name ?? "Stortinget",
+      avganger: tbane
     }
   };
 }
 
-function erMinstXMinutterUnna(call) {
+function erMinstXMinutterUnna(call, minMinutter) {
   const minutter = (new Date(call.expectedDepartureTime).getTime() - Date.now()) / 60000;
-  return minutter >= MIN_MINUTTER_UNNA;
+  return minutter >= minMinutter;
 }
 
 function tilAvgang(call) {

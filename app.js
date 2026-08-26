@@ -4,8 +4,8 @@ const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
-const PANEL_BYTT_MS = 7 * 1000; // veksler mellom buss-/tog-visningene i samme panel
-const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen"];
+const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
+const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbane"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
 const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
@@ -14,7 +14,9 @@ const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/v
 let alleOppdrag = [];
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
-let visPanel = "buss"; // "buss" (Wessels plass) | "tog" (Nasjonaltheatret)
+let sisteTrikk = [];
+let sisteTbane = [];
+let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbane
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 
@@ -154,6 +156,8 @@ async function lastBusstider() {
   const data = await hentAvganger();
   sisteAvganger = data.avganger;
   sisteTog = data.tog ?? { motDrammen: [], motOslo: [] };
+  sisteTrikk = data.trikk?.avganger ?? [];
+  sisteTbane = data.tbane?.avganger ?? [];
   renderTransportPanel();
 }
 
@@ -166,23 +170,23 @@ function byttTransportPanel() {
 function renderTransportPanel() {
   if (visPanel === "buss") {
     busstiderHeaderEl.textContent = "🚌 Wessels plass";
-    renderBusstider();
+    renderAvgangsliste(sisteAvganger);
   } else if (visPanel === "togOslo") {
     busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Oslo";
-    renderTog(sisteTog.motOslo);
-  } else {
+    renderAvgangsliste(sisteTog.motOslo);
+  } else if (visPanel === "togDrammen") {
     busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Drammen";
-    renderTog(sisteTog.motDrammen);
+    renderAvgangsliste(sisteTog.motDrammen);
+  } else if (visPanel === "trikk") {
+    busstiderHeaderEl.textContent = "🚊 Øvre Slottsgate";
+    renderAvgangsliste(sisteTrikk);
+  } else {
+    busstiderHeaderEl.textContent = "🚇 Stortinget";
+    renderAvgangsliste(sisteTbane);
   }
 }
 
-function renderBusstider() {
-  tegnAvgangsrader(
-    sisteAvganger.map((a) => ({ linje: a.linje, tekst: a.destinasjon, avgangstid: a.avgangstid }))
-  );
-}
-
-function renderTog(liste) {
+function renderAvgangsliste(liste) {
   tegnAvgangsrader(liste.map((a) => ({ linje: a.linje, tekst: a.destinasjon, avgangstid: a.avgangstid })));
 }
 
