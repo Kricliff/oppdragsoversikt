@@ -7,9 +7,11 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
+const FEIRING_REFRESH_MS = 60 * 1000; // sjekk for nye kandidat-/kunde-hendelser hvert minutt
+const FEIRING_VIS_MS = 14 * 1000; // matcher CSS-animasjonen (feiring-rull, 14s)
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -19,6 +21,8 @@ let sisteTbane = { vestover: [], ostover: [] };
 let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbaneVest | tbaneOst
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
+let feiringKo = [];
+let feiringVisesNaa = false;
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -36,6 +40,9 @@ const busstiderListeEl = document.getElementById("busstiderListe");
 const vaerIkonEl = document.getElementById("vaerIkon");
 const vaerTempEl = document.getElementById("vaerTemp");
 const vaerVarselEl = document.getElementById("vaerVarsel");
+const feiringBannerEl = document.getElementById("feiringBanner");
+const feiringTekst1El = document.getElementById("feiringTekst1");
+const feiringTekst2El = document.getElementById("feiringTekst2");
 
 async function init() {
   initTema();
@@ -53,6 +60,8 @@ async function init() {
   setInterval(byttTransportPanel, PANEL_BYTT_MS);
   setInterval(lastTelling, TELLING_REFRESH_MS);
   setInterval(lastVaer, VAER_REFRESH_MS);
+  lastFeiring();
+  setInterval(lastFeiring, FEIRING_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
@@ -67,6 +76,41 @@ async function lastVaer() {
   vaerIkonEl.textContent = vaerIkonForSymbol(data.symbolKode);
   vaerTempEl.textContent = `${data.temperatur}°`;
   vaerVarselEl.hidden = !data.taMedParaply;
+}
+
+// Feiring av kandidat landet / ny kunde (functions/api/feiring.js) - hver hendelse
+// leveres kun én gang av serveren, legges i en lokal kø og vises som en rullende
+// banner øverst på skjermen, én om gangen.
+async function lastFeiring() {
+  const hendelser = await hentFeiring();
+  if (hendelser.length === 0) return;
+  feiringKo.push(...hendelser);
+  visNesteFeiring();
+}
+
+function visNesteFeiring() {
+  if (feiringVisesNaa || feiringKo.length === 0) return;
+  const hendelse = feiringKo.shift();
+  feiringVisesNaa = true;
+
+  const tekst =
+    hendelse.type === "kunde"
+      ? `🎉 ${hendelse.navn} er ny kunde! 🎉`
+      : "🎉 Ny kandidat landet! 🎉";
+
+  feiringTekst1El.textContent = tekst;
+  feiringTekst2El.textContent = tekst;
+  feiringBannerEl.hidden = false;
+  requestAnimationFrame(() => feiringBannerEl.classList.add("vis"));
+
+  setTimeout(() => {
+    feiringBannerEl.classList.remove("vis");
+    setTimeout(() => {
+      feiringBannerEl.hidden = true;
+      feiringVisesNaa = false;
+      visNesteFeiring();
+    }, 500);
+  }, FEIRING_VIS_MS);
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
