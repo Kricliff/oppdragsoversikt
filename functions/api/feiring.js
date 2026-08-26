@@ -106,24 +106,29 @@ async function finnNyeHendelser(apiKey, kv) {
     .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 
   // --- Diff mot lagret tilstand ---
-  let tilstand = await kv.get(KV_KEY, "json");
-  const forsteGang = !tilstand;
-  if (!tilstand) tilstand = { kjenteHired: [], kjenteKunder: [], kjenteOppdrag: [] };
-
-  const kjenteHiredSet = new Set(tilstand.kjenteHired);
-  const kjenteKunderSet = new Set(tilstand.kjenteKunder);
-  const kjenteOppdragSet = new Set(tilstand.kjenteOppdrag ?? []);
+  // Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) - slik at det
+  // å legge til en NY kategori senere (som "kjenteOppdrag" ble) ikke utløser en feiring for
+  // alt som allerede fantes fra før, bare fordi den kategorien selv er tom første gang.
+  const tilstand = (await kv.get(KV_KEY, "json")) ?? {};
 
   const hendelser = [];
-  if (!forsteGang) {
+
+  if (tilstand.kjenteHired) {
+    const kjenteHiredSet = new Set(tilstand.kjenteHired);
     hired
       .filter((h) => !kjenteHiredSet.has(h.id))
       .forEach((h) => hendelser.push({ type: "kandidat", kunde: h.kunde, ansvarlig: h.ansvarlig }));
+  }
 
+  if (tilstand.kjenteKunder) {
+    const kjenteKunderSet = new Set(tilstand.kjenteKunder);
     nyeKunder
       .filter((k) => !kjenteKunderSet.has(k.id))
       .forEach((k) => hendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
+  }
 
+  if (tilstand.kjenteOppdrag) {
+    const kjenteOppdragSet = new Set(tilstand.kjenteOppdrag);
     nyeOppdrag
       .filter((o) => !kjenteOppdragSet.has(o.id))
       .forEach((o) => hendelser.push({ type: "oppdrag", tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig }));
