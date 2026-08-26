@@ -10,9 +10,8 @@ const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv o
 const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
-const FEIRING_REFRESH_MS = 60 * 1000; // sjekk for nye kandidat-/kunde-hendelser hvert minutt
-const FEIRING_VIS_MS = 4 * 60 * 60 * 1000; // hver hendelse ruller i 4 timer før den forsvinner
-const FEIRING_TIKK_MS = 60 * 1000; // sjekker jevnlig om noen hendelser har gått ut på tid
+const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
+const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henting
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -22,7 +21,7 @@ let sisteTbane = { vestover: [], ostover: [] };
 let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbaneVest | tbaneOst
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
-let feiringAktive = []; // [{ tekst, utloper }] - aktive feiringer som ruller nå
+let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte, se lastFeiring
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -79,32 +78,13 @@ async function lastVaer() {
   vaerVarselEl.hidden = !data.taMedParaply;
 }
 
-// Feiring av kandidat landet / ny kunde (functions/api/feiring.js) - hver hendelse
-// leveres kun én gang av serveren. Flere aktive hendelser vises SAMMEN i samme rulling
-// (i stedet for å stå i kø og vente på hverandre) - hver enkelt hendelse ruller i
-// FEIRING_VIS_MS før den faller ut av visningen på egen hånd.
+// Feiring av kandidat landet / ny kunde / nytt oppdrag (functions/api/feiring.js) -
+// serveren regner ut både tekst og resterende varighet, klienten speiler bare svaret.
+// Det gjør at banneret overlever en sideoppdatering (F5, eller tavlens egen auto-reload)
+// i stedet for å forsvinne fordi serveren kun leverer NYE hendelser én gang.
 async function lastFeiring() {
-  const hendelser = await hentFeiring();
-  const naa = Date.now();
-  hendelser.forEach((h) => {
-    feiringAktive.push({ tekst: feiringTekst(h), utloper: naa + FEIRING_VIS_MS });
-  });
+  feiringAktive = await hentFeiring();
   oppdaterFeiringVisning();
-}
-
-function feiringTekst(h) {
-  if (h.type === "kunde") {
-    return `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`;
-  }
-  if (h.type === "oppdrag") {
-    return h.kunde && h.ansvarlig
-      ? `🎉 Ny annonse ute: ${h.tittel} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
-      : `🎉 Ny annonse ute: ${h.tittel}! 🎉`;
-  }
-  // kandidat
-  return h.kunde && h.ansvarlig
-    ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
-    : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
 }
 
 function oppdaterFeiringVisning() {

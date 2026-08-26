@@ -1,6 +1,7 @@
-// Cloudflare Pages Function - oppdager to typer "feiring"-verdige hendelser og returnerer
-// dem som en engangs-hendelsesliste (hver hendelse leveres kun én gang, så klienten kan
-// vise en rullende feiringsbanner uten å måtte holde styr på hva som allerede er vist).
+// Cloudflare Pages Function - oppdager tre typer "feiring"-verdige hendelser og returnerer
+// ALLE som fortsatt skal vises ("aktive"), ikke bare det som er nytt siden sist. Dette gjør
+// at banneret overlever en sideoppdatering (F5, eller tavlens egen auto-reload ved ny
+// utrulling) - klienten trenger ikke huske noe selv, den speiler bare det serveren sier.
 //
 // 1. Kandidat landet - jobApplication satt til "Hired" (samme kilde som "Kandidater
 //    Landet"-tallet), koblet til kunde + ansvarlig via jobPostId -> jobPost.projectId ->
@@ -12,14 +13,17 @@
 // 3. Nytt oppdrag - en ny annonse (jobPost) er opprettet i Recman, koblet til kunde +
 //    ansvarlig via samme project-oppslag som over.
 //
-// Tilstanden (hvilke ID-er som allerede er sett) lagres i KV. Første gang funksjonen
-// kjører finnes ingen tilstand - da "bootstrappes" den stille (alt som allerede finnes
-// regnes som kjent, ingen feiring utløses for eksisterende data), og bare NYE hendelser
-// etter det trigger en feiring.
+// Tilstanden i KV har to deler:
+// - kjenteHired/kjenteKunder/kjenteOppdrag: ID-er som er sett, for å vite hva som er NYTT.
+//   Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) - slik at det å
+//   legge til en ny kategori senere ikke utløser feiring for alt som fantes fra før.
+// - aktive: ferdigbygde {tekst, utloper}-poster som fortsatt skal vises, uavhengig av om
+//   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 9;
+const CACHE_VERSION = 10;
+const FEIRING_VIS_MS = 4 * 60 * 60 * 1000; // hver hendelse vises i 4 timer før den forsvinner
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -28,7 +32,7 @@ export async function onRequestGet(context) {
   if (cached) return cached;
 
   try {
-    const payload = await finnNyeHendelser(context.env.RECMAN_API_KEY, context.env.NOTAT_KV);
+    const payload = await hentAktiveFeiringer(context.env.RECMAN_API_KEY, context.env.NOTAT_KV);
     const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",
@@ -38,14 +42,29 @@ export async function onRequestGet(context) {
     context.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err), hendelser: [] }), {
+    return new Response(JSON.stringify({ error: String(err), aktive: [] }), {
       status: 502,
       headers: { "Content-Type": "application/json" }
     });
   }
 }
 
-async function finnNyeHendelser(apiKey, kv) {
+function feiringTekst(h) {
+  if (h.type === "kunde") {
+    return `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`;
+  }
+  if (h.type === "oppdrag") {
+    return h.kunde && h.ansvarlig
+      ? `🎉 Ny annonse ute: ${h.tittel} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+      : `🎉 Ny annonse ute: ${h.tittel}! 🎉`;
+  }
+  // kandidat
+  return h.kunde && h.ansvarlig
+    ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+    : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
+}
+
+async function hentAktiveFeiringer(apiKey, kv) {
   const [projectJson, userJson, jobPostJson, hiredJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=companyId,responsibleUserId&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
@@ -123,45 +142,49 @@ async function finnNyeHendelser(apiKey, kv) {
     .filter(([id, c]) => c.type === "customer" && ansvarligForCompanyId[id] && !inneholderGreatPeople(c.name))
     .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 
-  // --- Diff mot lagret tilstand ---
-  // Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) - slik at det
-  // å legge til en NY kategori senere (som "kjenteOppdrag" ble) ikke utløser en feiring for
-  // alt som allerede fantes fra før, bare fordi den kategorien selv er tom første gang.
+  // --- Diff mot lagret tilstand for å finne det som er NYTT ---
   const tilstand = (await kv.get(KV_KEY, "json")) ?? {};
 
-  const hendelser = [];
+  const nyeHendelser = [];
 
   if (tilstand.kjenteHired) {
     const kjenteHiredSet = new Set(tilstand.kjenteHired);
     hired
       .filter((h) => !kjenteHiredSet.has(h.id))
-      .forEach((h) => hendelser.push({ type: "kandidat", kunde: h.kunde, ansvarlig: h.ansvarlig }));
+      .forEach((h) => nyeHendelser.push({ type: "kandidat", kunde: h.kunde, ansvarlig: h.ansvarlig }));
   }
 
   if (tilstand.kjenteKunder) {
     const kjenteKunderSet = new Set(tilstand.kjenteKunder);
     nyeKunder
       .filter((k) => !kjenteKunderSet.has(k.id))
-      .forEach((k) => hendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
+      .forEach((k) => nyeHendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
   if (tilstand.kjenteOppdrag) {
     const kjenteOppdragSet = new Set(tilstand.kjenteOppdrag);
     nyeOppdrag
       .filter((o) => !kjenteOppdragSet.has(o.id))
-      .forEach((o) => hendelser.push({ type: "oppdrag", tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig }));
+      .forEach((o) => nyeHendelser.push({ type: "oppdrag", tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
+
+  // --- Bygg "aktive" - det som fortsatt var aktivt fra før (ikke utløpt) + det nye ---
+  const naa = Date.now();
+  const fortsattAktive = (tilstand.aktive ?? []).filter((a) => a.utloper > naa);
+  const nyAktive = nyeHendelser.map((h) => ({ tekst: feiringTekst(h), utloper: naa + FEIRING_VIS_MS }));
+  const aktive = [...fortsattAktive, ...nyAktive];
 
   await kv.put(
     KV_KEY,
     JSON.stringify({
       kjenteHired: hired.map((h) => h.id),
       kjenteKunder: nyeKunder.map((k) => k.id),
-      kjenteOppdrag: nyeOppdrag.map((o) => o.id)
+      kjenteOppdrag: nyeOppdrag.map((o) => o.id),
+      aktive
     })
   );
 
-  return { hendelser };
+  return { aktive };
 }
 
 async function hentJson(url) {
