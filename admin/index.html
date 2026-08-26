@@ -75,6 +75,26 @@
     cursor: pointer;
   }
   .lagreknapp:disabled { opacity: 0.5; cursor: default; }
+  .emoji-rad {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.7rem;
+  }
+  .emoji-knapp {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  .emoji-knapp:hover { border-color: var(--aktiv); transform: translateY(-1px); }
   .tilbake {
     display: inline-block;
     margin-top: 1rem;
@@ -98,6 +118,7 @@
 
   <div class="kort">
     <h2>Post-it-lapp</h2>
+    <div class="emoji-rad" id="emojiRad"></div>
     <textarea id="notatTekst" maxlength="500" placeholder="Skriv en beskjed til teamet…"></textarea>
     <div class="statusrad">
       <span id="statusTekst">Laster…</span>
@@ -113,6 +134,34 @@
   const notatEl = document.getElementById("notatTekst");
   const statusEl = document.getElementById("statusTekst");
   const lagreKnapp = document.getElementById("lagreKnapp");
+  const emojiRad = document.getElementById("emojiRad");
+
+  const EMOJI_UTVALG = [
+    "😀", "🎉", "🥳", "🏆", "👏", "🙌", "💪", "🔥",
+    "❤️", "✅", "⚠️", "📢", "☀️", "🌧️", "❄️", "🎄",
+    "🎁", "☕", "🍕", "🎂"
+  ];
+
+  EMOJI_UTVALG.forEach((emoji) => {
+    const knapp = document.createElement("button");
+    knapp.type = "button";
+    knapp.className = "emoji-knapp";
+    knapp.textContent = emoji;
+    knapp.setAttribute("aria-label", `Sett inn ${emoji}`);
+    knapp.addEventListener("click", () => settInnEmoji(emoji));
+    emojiRad.appendChild(knapp);
+  });
+
+  function settInnEmoji(emoji) {
+    const start = notatEl.selectionStart ?? notatEl.value.length;
+    const end = notatEl.selectionEnd ?? notatEl.value.length;
+    const nyVerdi = (notatEl.value.slice(0, start) + emoji + notatEl.value.slice(end)).slice(0, 500);
+    notatEl.value = nyVerdi;
+    const nyPos = Math.min(start + emoji.length, nyVerdi.length);
+    notatEl.focus();
+    notatEl.setSelectionRange(nyPos, nyPos);
+    notatEl.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 
   async function lastNotat() {
     if (document.activeElement === notatEl) return; // ikke overskriv mens noen skriver
