@@ -87,7 +87,10 @@ async function lastFeiring() {
   const hendelser = await hentFeiring();
   const naa = Date.now();
   hendelser.forEach((h) => {
-    const tekst = h.type === "kunde" ? `🎉 ${h.navn} er ny kunde! 🎉` : "🎉 Ny kandidat landet! 🎉";
+    const tekst =
+      h.type === "kunde"
+        ? `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`
+        : "🎉 Ny kandidat landet! 🎉"; // kunde/ansvarlig legges til her når "Job post"-tilgang er åpnet
     feiringAktive.push({ tekst, utloper: naa + FEIRING_VIS_MS });
   });
   oppdaterFeiringVisning();

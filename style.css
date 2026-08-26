@@ -773,8 +773,8 @@ body {
   height: 44px;
   z-index: 100;
   overflow: hidden;
-  background: linear-gradient(90deg, #ec9b00, #ffb733, #ec9b00);
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28);
+  background: none;
+  pointer-events: none;
   display: flex;
   align-items: center;
   transform: translateY(100%);
@@ -799,7 +799,7 @@ body {
   font-family: "Poppins", sans-serif;
   font-weight: 700;
   font-size: 1.15rem;
-  color: #171717;
+  color: var(--aktiv);
   letter-spacing: 0.01em;
 }
 

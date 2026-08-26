@@ -8,7 +8,7 @@
 // 2. Ny kunde - et firma har byttet til type "Customer" OG har minst ett reelt prosjekt
 //    (kjent ansvarlig rådgiver). Recman eksponerer ikke selve "Tilbud signert"-øyeblikket
 //    via API i det hele tatt (verken som scope eller felt) - dette er nærmeste tilgjengelige
-//    signal, bekreftet ved testing før utrulling.
+//    signal, bekreftet ved testing før utrulling. Viser ansvarlig rådgiver (fra prosjektet).
 //
 // Tilstanden (hvilke ID-er som allerede er sett) lagres i KV. Første gang funksjonen
 // kjører finnes ingen tilstand - da "bootstrappes" den stille (alt som allerede finnes
@@ -17,7 +17,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -67,7 +67,7 @@ async function finnNyeHendelser(apiKey, kv) {
 
     nyeKunder
       .filter((k) => !kjenteKunderSet.has(k.id))
-      .forEach((k) => hendelser.push({ type: "kunde", navn: k.navn }));
+      .forEach((k) => hendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
   tilstand = {
@@ -97,27 +97,32 @@ async function hentKvalifiserteKunder(apiKey) {
   ]);
   if (!projectJson.success) return [];
 
-  const kjentAnsvarlig = new Set();
+  const navnForUserId = {};
   if (userJson && !userJson.error) {
     Object.entries(userJson).forEach(([id, u]) => {
       const navn = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim();
-      if (navn) kjentAnsvarlig.add(id);
+      if (navn) navnForUserId[id] = navn;
     });
   }
 
-  const companyIdsMedReeltProsjekt = new Set(
-    Object.values(projectJson.data)
-      .filter((p) => p.companyId && kjentAnsvarlig.has(String(p.responsibleUserId)))
-      .map((p) => p.companyId)
-  );
-  if (companyIdsMedReeltProsjekt.size === 0) return [];
+  // Ansvarlig for feiringen = ansvarlig på det første reelle prosjektet vi finner for
+  // firmaet - ved flere prosjekter/rådgivere på samme kunde plukkes bare én, ikke kritisk
+  // presist for en feiringsbanner.
+  const ansvarligForCompanyId = {};
+  Object.values(projectJson.data).forEach((p) => {
+    const ansvarlig = navnForUserId[String(p.responsibleUserId)];
+    if (p.companyId && ansvarlig && !ansvarligForCompanyId[p.companyId]) {
+      ansvarligForCompanyId[p.companyId] = ansvarlig;
+    }
+  });
+  if (Object.keys(ansvarligForCompanyId).length === 0) return [];
 
-  const idListe = [...companyIdsMedReeltProsjekt].join(",");
+  const idListe = Object.keys(ansvarligForCompanyId).join(",");
   const companyUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name,type&companyIds=${idListe}`;
   const companyJson = await fetch(companyUrl).then((r) => r.json());
   if (!companyJson.success) return [];
 
   return Object.entries(companyJson.data)
     .filter(([, c]) => c.type === "customer")
-    .map(([id, c]) => ({ id, navn: c.name }));
+    .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 }
