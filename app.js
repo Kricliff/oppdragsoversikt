@@ -55,7 +55,6 @@ async function init() {
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
-  binderNotat();
 }
 
 // Værmelding for Oslo (functions/api/vaer.js, ekte MET/Yr-data). Rent visuelt -
@@ -133,13 +132,9 @@ async function lastOppdrag() {
   }
 }
 
-// Delt post-it-lapp - lagres server-side (functions/api/notat.js) slik at alle som ser
-// på skjermen ser samme melding. Henter jevnlig, men skriver aldri over teksten mens
-// noen faktisk står og skriver i den (document.activeElement-sjekken under).
-let notatLagreTimer = null;
-
+// Delt post-it-lapp - kun lesevisning her (functions/api/notat.js). Redigeres via
+// /admin, ikke direkte på tavlen - se readonly-attributtet på selve textarea.
 async function lastNotat() {
-  if (document.activeElement === notatEl) return; // ikke overskriv mens noen skriver
   try {
     const res = await fetch("/api/notat");
     if (!res.ok) return;
@@ -147,29 +142,6 @@ async function lastNotat() {
     notatEl.value = data.tekst ?? "";
   } catch (err) {
     console.warn("Fikk ikke hentet notat:", err);
-  }
-}
-
-function binderNotat() {
-  notatEl.addEventListener("input", () => {
-    clearTimeout(notatLagreTimer);
-    notatLagreTimer = setTimeout(lagreNotat, 1500);
-  });
-  notatEl.addEventListener("blur", () => {
-    clearTimeout(notatLagreTimer);
-    lagreNotat();
-  });
-}
-
-async function lagreNotat() {
-  try {
-    await fetch("/api/notat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tekst: notatEl.value })
-    });
-  } catch (err) {
-    console.warn("Fikk ikke lagret notat:", err);
   }
 }
 
