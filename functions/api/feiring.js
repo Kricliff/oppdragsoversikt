@@ -9,6 +9,8 @@
 //    (kjent ansvarlig rådgiver). Recman eksponerer ikke selve "Tilbud signert"-øyeblikket
 //    via API i det hele tatt (verken som scope eller felt) - dette er nærmeste tilgjengelige
 //    signal, bekreftet ved testing før utrulling.
+// 3. Nytt oppdrag - en ny annonse (jobPost) er opprettet i Recman, koblet til kunde +
+//    ansvarlig via samme project-oppslag som over.
 //
 // Tilstanden (hvilke ID-er som allerede er sett) lagres i KV. Første gang funksjonen
 // kjører finnes ingen tilstand - da "bootstrappes" den stille (alt som allerede finnes
@@ -17,7 +19,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -47,7 +49,7 @@ async function finnNyeHendelser(apiKey, kv) {
   const [projectJson, userJson, jobPostJson, hiredJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=companyId,responsibleUserId&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=projectId`),
+    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=title,projectId`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`)
   ]);
 
@@ -68,11 +70,18 @@ async function finnNyeHendelser(apiKey, kv) {
   const companyById = companyJson?.success ? companyJson.data : {};
 
   const projectIdForJobPostId = {};
-  if (jobPostJson?.success) {
-    Object.values(jobPostJson.data).forEach((jp) => {
-      projectIdForJobPostId[jp.jobPostId] = jp.projectId;
-    });
-  }
+  const jobPostRader = jobPostJson?.success ? Object.values(jobPostJson.data) : [];
+  jobPostRader.forEach((jp) => {
+    projectIdForJobPostId[jp.jobPostId] = jp.projectId;
+  });
+
+  // --- Nytt oppdrag: annonse (jobPost) -> project -> kunde/ansvarlig ---
+  const nyeOppdrag = jobPostRader.map((jp) => {
+    const project = jp.projectId ? projectById[jp.projectId] : null;
+    const kunde = project ? companyById[project.companyId]?.name : null;
+    const ansvarlig = project ? navnForUserId[String(project.responsibleUserId)] : null;
+    return { id: String(jp.jobPostId), tittel: jp.title, kunde, ansvarlig };
+  });
 
   // --- Kandidat landet: jobApplication -> jobPost -> project -> kunde/ansvarlig ---
   const hiredRader = hiredJson?.success ? hiredJson.data : [];
@@ -99,10 +108,11 @@ async function finnNyeHendelser(apiKey, kv) {
   // --- Diff mot lagret tilstand ---
   let tilstand = await kv.get(KV_KEY, "json");
   const forsteGang = !tilstand;
-  if (!tilstand) tilstand = { kjenteHired: [], kjenteKunder: [] };
+  if (!tilstand) tilstand = { kjenteHired: [], kjenteKunder: [], kjenteOppdrag: [] };
 
   const kjenteHiredSet = new Set(tilstand.kjenteHired);
   const kjenteKunderSet = new Set(tilstand.kjenteKunder);
+  const kjenteOppdragSet = new Set(tilstand.kjenteOppdrag ?? []);
 
   const hendelser = [];
   if (!forsteGang) {
@@ -113,13 +123,18 @@ async function finnNyeHendelser(apiKey, kv) {
     nyeKunder
       .filter((k) => !kjenteKunderSet.has(k.id))
       .forEach((k) => hendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
+
+    nyeOppdrag
+      .filter((o) => !kjenteOppdragSet.has(o.id))
+      .forEach((o) => hendelser.push({ type: "oppdrag", tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
   await kv.put(
     KV_KEY,
     JSON.stringify({
       kjenteHired: hired.map((h) => h.id),
-      kjenteKunder: nyeKunder.map((k) => k.id)
+      kjenteKunder: nyeKunder.map((k) => k.id),
+      kjenteOppdrag: nyeOppdrag.map((o) => o.id)
     })
   );
 

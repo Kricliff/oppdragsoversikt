@@ -87,15 +87,24 @@ async function lastFeiring() {
   const hendelser = await hentFeiring();
   const naa = Date.now();
   hendelser.forEach((h) => {
-    const tekst =
-      h.type === "kunde"
-        ? `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`
-        : h.kunde && h.ansvarlig
-          ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
-          : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
-    feiringAktive.push({ tekst, utloper: naa + FEIRING_VIS_MS });
+    feiringAktive.push({ tekst: feiringTekst(h), utloper: naa + FEIRING_VIS_MS });
   });
   oppdaterFeiringVisning();
+}
+
+function feiringTekst(h) {
+  if (h.type === "kunde") {
+    return `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`;
+  }
+  if (h.type === "oppdrag") {
+    return h.kunde && h.ansvarlig
+      ? `🎉 Nytt oppdrag hos ${h.kunde}: ${h.tittel}! (${h.ansvarlig}) 🎉`
+      : `🎉 Nytt oppdrag: ${h.tittel}! 🎉`;
+  }
+  // kandidat
+  return h.kunde && h.ansvarlig
+    ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+    : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
 }
 
 function oppdaterFeiringVisning() {
