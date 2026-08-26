@@ -19,7 +19,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -75,23 +75,33 @@ async function finnNyeHendelser(apiKey, kv) {
     projectIdForJobPostId[jp.jobPostId] = jp.projectId;
   });
 
+  // GreatPeople sitt eget selskap (type "ownCompany") - interne oppdrag/ansettelser skal
+  // ikke feires som om det var en ekstern kunde. Prosjekt som ikke lar seg slå opp i det
+  // hele tatt (f.eks. en lukket annonse) er IKKE det samme som internt - de beholdes med
+  // kunde/ansvarlig = null, og faller tilbake til generisk tekst hos klienten som før.
+  const erInternKunde = (project) => Boolean(project) && companyById[project.companyId]?.type === "ownCompany";
+
   // --- Nytt oppdrag: annonse (jobPost) -> project -> kunde/ansvarlig ---
-  const nyeOppdrag = jobPostRader.map((jp) => {
-    const project = jp.projectId ? projectById[jp.projectId] : null;
-    const kunde = project ? companyById[project.companyId]?.name : null;
-    const ansvarlig = project ? navnForUserId[String(project.responsibleUserId)] : null;
-    return { id: String(jp.jobPostId), tittel: jp.title, kunde, ansvarlig };
-  });
+  const nyeOppdrag = jobPostRader
+    .map((jp) => ({ jp, project: jp.projectId ? projectById[jp.projectId] : null }))
+    .filter(({ project }) => !erInternKunde(project))
+    .map(({ jp, project }) => ({
+      id: String(jp.jobPostId),
+      tittel: jp.title,
+      kunde: project ? companyById[project.companyId]?.name : null,
+      ansvarlig: project ? navnForUserId[String(project.responsibleUserId)] : null
+    }));
 
   // --- Kandidat landet: jobApplication -> jobPost -> project -> kunde/ansvarlig ---
   const hiredRader = hiredJson?.success ? hiredJson.data : [];
-  const hired = hiredRader.map((a) => {
-    const projectId = projectIdForJobPostId[a.jobPostId];
-    const project = projectId ? projectById[projectId] : null;
-    const kunde = project ? companyById[project.companyId]?.name : null;
-    const ansvarlig = project ? navnForUserId[String(project.responsibleUserId)] : null;
-    return { id: String(a.jobApplicationId), kunde, ansvarlig };
-  });
+  const hired = hiredRader
+    .map((a) => ({ a, project: projectIdForJobPostId[a.jobPostId] ? projectById[projectIdForJobPostId[a.jobPostId]] : null }))
+    .filter(({ project }) => !erInternKunde(project))
+    .map(({ a, project }) => ({
+      id: String(a.jobApplicationId),
+      kunde: project ? companyById[project.companyId]?.name : null,
+      ansvarlig: project ? navnForUserId[String(project.responsibleUserId)] : null
+    }));
 
   // --- Ny kunde: type=customer OG minst ett reelt prosjekt (kjent ansvarlig) ---
   const ansvarligForCompanyId = {};
