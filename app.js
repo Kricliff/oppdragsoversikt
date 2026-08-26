@@ -90,7 +90,9 @@ async function lastFeiring() {
     const tekst =
       h.type === "kunde"
         ? `🎉 ${h.navn} er ny kunde! (${h.ansvarlig}) 🎉`
-        : "🎉 Ny kandidat landet! 🎉"; // kunde/ansvarlig legges til her når "Job post"-tilgang er åpnet
+        : h.kunde && h.ansvarlig
+          ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+          : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
     feiringAktive.push({ tekst, utloper: naa + FEIRING_VIS_MS });
   });
   oppdaterFeiringVisning();
