@@ -22,7 +22,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 10;
+const CACHE_VERSION = 11;
 const FEIRING_VIS_MS = 4 * 60 * 60 * 1000; // hver hendelse vises i 4 timer før den forsvinner
 
 export async function onRequestGet(context) {
