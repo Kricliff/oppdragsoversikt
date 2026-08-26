@@ -65,6 +65,9 @@ body {
   display: flex;
   flex-direction: column;
   padding: clamp(14px, 2vh, 28px) clamp(18px, 2.4vw, 40px);
+  /* ekstra bunnmarg reservert til feiringsbanneret (44px + 8px luft), permanent slik at
+     statuslinjen aldri havner under den når banneret dukker opp */
+  padding-bottom: calc(clamp(14px, 2vh, 28px) + 52px);
   gap: clamp(10px, 1.4vh, 16px);
 }
 
@@ -642,7 +645,7 @@ body {
 .postit {
   position: fixed;
   right: 28px;
-  bottom: 28px;
+  bottom: 80px; /* 28px opprinnelig marg + 44px feiringsbanner + 8px luft */
   width: 220px;
   min-height: 150px;
   background: #fde68a;
@@ -694,7 +697,7 @@ body {
 .busstider {
   position: fixed;
   right: 28px; /* samme høyrekant som post-it-lappen, stablet rett over den */
-  bottom: 224px; /* postit (~160px høy) + 28px bunnmarg + 36px luft */
+  bottom: 276px; /* postit (~160px høy) + 80px bunnmarg (inkl. feiringsbanner) + 36px luft */
   width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -766,15 +769,15 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  top: 0;
-  height: 64px;
+  bottom: 0;
+  height: 44px;
   z-index: 100;
   overflow: hidden;
   background: linear-gradient(90deg, #ec9b00, #ffb733, #ec9b00);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.28);
   display: flex;
   align-items: center;
-  transform: translateY(-100%);
+  transform: translateY(100%);
   transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -786,7 +789,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 14s linear infinite;
+  animation: feiring-rull 22s linear infinite;
   will-change: transform;
 }
 
@@ -795,7 +798,7 @@ body {
   padding-right: 6vw;
   font-family: "Poppins", sans-serif;
   font-weight: 700;
-  font-size: 1.7rem;
+  font-size: 1.15rem;
   color: #171717;
   letter-spacing: 0.01em;
 }
@@ -811,6 +814,7 @@ body {
   .lanes { grid-template-columns: 1fr; }
   .lane { max-height: 60vh; }
   .stats { display: none; }
-  .postit { right: 12px; bottom: 12px; width: 160px; }
-  .busstider { right: 12px; bottom: 180px; width: 150px; }
+  .postit { right: 12px; bottom: 64px; width: 160px; }
+  .busstider { right: 12px; bottom: 232px; width: 150px; }
+  .feiring-tekst { font-size: 0.95rem; }
 }
