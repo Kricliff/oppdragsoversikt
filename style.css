@@ -789,7 +789,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 22s linear infinite;
+  animation: feiring-rull 45s linear infinite;
   will-change: transform;
 }
 
