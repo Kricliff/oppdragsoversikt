@@ -19,7 +19,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 
 export async function onRequestGet(context) {
   const cache = caches.default;
