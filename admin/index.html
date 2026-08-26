@@ -115,6 +115,7 @@
   const lagreKnapp = document.getElementById("lagreKnapp");
 
   async function lastNotat() {
+    if (document.activeElement === notatEl) return; // ikke overskriv mens noen skriver
     try {
       const res = await fetch("/api/notat");
       const data = await res.json();
@@ -144,8 +145,19 @@
     }
   }
 
+  let notatLagreTimer = null;
+  notatEl.addEventListener("input", () => {
+    clearTimeout(notatLagreTimer);
+    notatLagreTimer = setTimeout(lagreNotat, 1500);
+  });
+  notatEl.addEventListener("blur", () => {
+    clearTimeout(notatLagreTimer);
+    lagreNotat();
+  });
+
   lagreKnapp.addEventListener("click", lagreNotat);
   lastNotat();
+  setInterval(lastNotat, 60 * 1000); // hold i sync om noen andre endrer den samtidig
 </script>
 </body>
 </html>
