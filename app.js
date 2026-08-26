@@ -11,7 +11,7 @@ const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // sjekk for nye kandidat-/kunde-hendelser hvert minutt
-const FEIRING_VIS_MS = 14 * 1000; // matcher CSS-animasjonen (feiring-rull, 14s)
+const FEIRING_VIS_MS = 5 * 60 * 60 * 1000; // ruller i 5 timer før den forsvinner
 
 let alleOppdrag = [];
 let sisteAvganger = [];
