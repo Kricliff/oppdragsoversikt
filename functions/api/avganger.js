@@ -24,7 +24,7 @@ const MIN_MIN_TRIKK = 5;
 const MIN_MIN_TBANE = 10;
 
 const CACHE_SECONDS = 45; // sanntid - kort cache, i motsetning til Recman-proxyen
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 6;
 
 // Entur har ikke noe eget "retning: øst/vest"-felt på estimatedCalls - spor 475/478 er
 // vestgående (mot Drammen/Asker/Kongsberg) og spor 476/477 er østgående (mot Oslo S og
@@ -32,6 +32,13 @@ const CACHE_VERSION = 5;
 // kjente sluttdestinasjoner - fysiske spor endrer seg ikke, så dette er stabilt.
 const SPOR_MOT_DRAMMEN = new Set(["NSR:Quay:475", "NSR:Quay:478"]);
 const SPOR_MOT_OSLO = new Set(["NSR:Quay:476", "NSR:Quay:477"]);
+
+// Samme prinsipp for T-banen på Stortinget - spor 2 går vestover (mot Majorstuen og
+// videre til Frognerseteren/Sognsvann/Røa/Kolsås/Østerås osv.), spor 1 og 3 går østover
+// (mot Tøyen og videre til Ellingsrudåsen/Mortensrud/Bergkrystallen osv.). Funnet empirisk
+// ved å sjekke destinasjon per spor over mange avganger.
+const SPOR_VESTOVER = new Set(["NSR:Quay:7255"]);
+const SPOR_OSTOVER = new Set(["NSR:Quay:7256", "NSR:Quay:7257"]);
 
 const QUERY = `{
   wessels: stopPlace(id: "${WESSELS_PLASS_ID}") {
@@ -70,10 +77,11 @@ const QUERY = `{
   }
   stortinget: stopPlace(id: "${STORTINGET_ID}") {
     name
-    estimatedCalls(timeRange: 72000, numberOfDepartures: 20, whiteListedModes: [metro]) {
+    estimatedCalls(timeRange: 72000, numberOfDepartures: 30, whiteListedModes: [metro]) {
       realtime
       expectedDepartureTime
       destinationDisplay { frontText }
+      quay { id }
       serviceJourney {
         line { publicCode transportMode }
       }
@@ -138,8 +146,14 @@ async function hentAvganger() {
     .slice(0, ANTALL_TRIKKAVGANGER)
     .map(tilAvgang);
 
-  const tbane = (json.data?.stortinget?.estimatedCalls ?? [])
-    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_TBANE))
+  const tbaneKall = (json.data?.stortinget?.estimatedCalls ?? [])
+    .filter((c) => erMinstXMinutterUnna(c, MIN_MIN_TBANE));
+  const tbaneVestover = tbaneKall
+    .filter((call) => SPOR_VESTOVER.has(call.quay?.id))
+    .slice(0, ANTALL_TBANEAVGANGER)
+    .map(tilAvgang);
+  const tbaneOstover = tbaneKall
+    .filter((call) => SPOR_OSTOVER.has(call.quay?.id))
     .slice(0, ANTALL_TBANEAVGANGER)
     .map(tilAvgang);
 
@@ -157,7 +171,8 @@ async function hentAvganger() {
     },
     tbane: {
       holdeplass: json.data?.stortinget?.name ?? "Stortinget",
-      avganger: tbane
+      vestover: tbaneVestover,
+      ostover: tbaneOstover
     }
   };
 }

@@ -5,7 +5,7 @@ const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
-const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbane"];
+const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
 const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
@@ -15,8 +15,8 @@ let alleOppdrag = [];
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
 let sisteTrikk = [];
-let sisteTbane = [];
-let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbane
+let sisteTbane = { vestover: [], ostover: [] };
+let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbaneVest | tbaneOst
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 
@@ -157,7 +157,7 @@ async function lastBusstider() {
   sisteAvganger = data.avganger;
   sisteTog = data.tog ?? { motDrammen: [], motOslo: [] };
   sisteTrikk = data.trikk?.avganger ?? [];
-  sisteTbane = data.tbane?.avganger ?? [];
+  sisteTbane = data.tbane ?? { vestover: [], ostover: [] };
   renderTransportPanel();
 }
 
@@ -180,9 +180,12 @@ function renderTransportPanel() {
   } else if (visPanel === "trikk") {
     busstiderHeaderEl.textContent = "🚊 Øvre Slottsgate";
     renderAvgangsliste(sisteTrikk);
+  } else if (visPanel === "tbaneVest") {
+    busstiderHeaderEl.textContent = "🚇 Stortinget - vestover";
+    renderAvgangsliste(sisteTbane.vestover);
   } else {
-    busstiderHeaderEl.textContent = "🚇 Stortinget";
-    renderAvgangsliste(sisteTbane);
+    busstiderHeaderEl.textContent = "🚇 Stortinget - østover";
+    renderAvgangsliste(sisteTbane.ostover);
   }
 }
 
