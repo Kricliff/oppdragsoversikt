@@ -693,7 +693,7 @@ body {
 .busstider {
   position: fixed;
   right: 28px; /* samme høyrekant som post-it-lappen, stablet rett over den */
-  bottom: 200px; /* postit (~160px høy) + 28px bunnmarg + 12px luft */
+  bottom: 224px; /* postit (~160px høy) + 28px bunnmarg + 36px luft */
   width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
