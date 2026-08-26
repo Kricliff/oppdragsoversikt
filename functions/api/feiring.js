@@ -19,7 +19,7 @@
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -75,16 +75,24 @@ async function finnNyeHendelser(apiKey, kv) {
     projectIdForJobPostId[jp.jobPostId] = jp.projectId;
   });
 
-  // GreatPeople sitt eget selskap (type "ownCompany") - interne oppdrag/ansettelser skal
-  // ikke feires som om det var en ekstern kunde. Prosjekt som ikke lar seg slå opp i det
-  // hele tatt (f.eks. en lukket annonse) er IKKE det samme som internt - de beholdes med
-  // kunde/ansvarlig = null, og faller tilbake til generisk tekst hos klienten som før.
-  const erInternKunde = (project) => Boolean(project) && companyById[project.companyId]?.type === "ownCompany";
+  // Interne nyheter skal aldri feires. To uavhengige sjekker: kundens type er
+  // "ownCompany" (GreatPeople sitt eget selskap i Recman), OG - som ekstra sikkerhetsnett -
+  // om ordet "GreatPeople" dukker opp i kundenavn eller annonsetittel i det hele tatt.
+  // Prosjekt som ikke lar seg slå opp (f.eks. en lukket annonse) er IKKE det samme som
+  // internt - de beholdes med kunde/ansvarlig = null, og faller tilbake til generisk
+  // tekst hos klienten som før.
+  const inneholderGreatPeople = (...tekster) =>
+    tekster.some((t) => typeof t === "string" && t.toLowerCase().includes("greatpeople"));
+  const erInternKunde = (project) => {
+    if (!project) return false;
+    const kundenavn = companyById[project.companyId]?.name;
+    return companyById[project.companyId]?.type === "ownCompany" || inneholderGreatPeople(kundenavn);
+  };
 
   // --- Nytt oppdrag: annonse (jobPost) -> project -> kunde/ansvarlig ---
   const nyeOppdrag = jobPostRader
     .map((jp) => ({ jp, project: jp.projectId ? projectById[jp.projectId] : null }))
-    .filter(({ project }) => !erInternKunde(project))
+    .filter(({ jp, project }) => !erInternKunde(project) && !inneholderGreatPeople(jp.title))
     .map(({ jp, project }) => ({
       id: String(jp.jobPostId),
       tittel: jp.title,
@@ -112,7 +120,7 @@ async function finnNyeHendelser(apiKey, kv) {
     }
   });
   const nyeKunder = Object.entries(companyById)
-    .filter(([id, c]) => c.type === "customer" && ansvarligForCompanyId[id])
+    .filter(([id, c]) => c.type === "customer" && ansvarligForCompanyId[id] && !inneholderGreatPeople(c.name))
     .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 
   // --- Diff mot lagret tilstand ---

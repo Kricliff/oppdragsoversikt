@@ -98,8 +98,8 @@ function feiringTekst(h) {
   }
   if (h.type === "oppdrag") {
     return h.kunde && h.ansvarlig
-      ? `🎉 Nytt oppdrag hos ${h.kunde}: ${h.tittel}! (${h.ansvarlig}) 🎉`
-      : `🎉 Nytt oppdrag: ${h.tittel}! 🎉`;
+      ? `🎉 Ny annonse ute: ${h.tittel} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+      : `🎉 Ny annonse ute: ${h.tittel}! 🎉`;
   }
   // kandidat
   return h.kunde && h.ansvarlig
