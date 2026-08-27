@@ -27,6 +27,8 @@ let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte
 let nrkOverskrifter = []; // [{ tittel, logo }] - vises i banneret når det ikke er noen aktive feiringer
 let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
 let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
+let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
+let sisteKundenyttOppdatert = null;
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -49,6 +51,7 @@ const feiringTrackEl = document.getElementById("feiringTrack");
 const feiringTekst1El = document.getElementById("feiringTekst1");
 const feiringTekst2El = document.getElementById("feiringTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
+const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
 
 async function init() {
@@ -174,16 +177,22 @@ function restartFeiringAnimasjon() {
 // Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel, ikke i bunnbanneret.
 async function lastKundenytt() {
   kundenytt = await hentKundenytt();
+  sisteKundenyttOppdatert = Date.now();
   renderKundenytt();
 }
 
 function renderKundenytt() {
   if (kundenytt.length === 0) {
-    kundenyttPanelEl.hidden = true;
+    kundenyttPanelEl.classList.remove("vis");
+    setTimeout(() => {
+      if (kundenytt.length === 0) kundenyttPanelEl.hidden = true;
+    }, 500);
     return;
   }
 
   kundenyttPanelEl.hidden = false;
+  requestAnimationFrame(() => kundenyttPanelEl.classList.add("vis"));
+  settPanelHeader(kundenyttHeaderEl, "📣 Kundenytt", sisteKundenyttOppdatert);
   kundenyttListeEl.replaceChildren(
     ...kundenytt.map((funn) => {
       const rad = document.createElement("div");
@@ -300,6 +309,7 @@ async function lastBusstider() {
   sisteTog = data.tog ?? { motDrammen: [], motOslo: [] };
   sisteTrikk = data.trikk?.avganger ?? [];
   sisteTbane = data.tbane ?? { vestover: [], ostover: [] };
+  sisteBusstiderOppdatert = Date.now();
   renderTransportPanel();
 }
 
@@ -310,24 +320,42 @@ function byttTransportPanel() {
 }
 
 function renderTransportPanel() {
+  let tittel;
   if (visPanel === "buss") {
-    busstiderHeaderEl.textContent = "🚌 Wessels plass";
+    tittel = "🚌 Wessels plass";
     renderAvgangsliste(sisteAvganger);
   } else if (visPanel === "togOslo") {
-    busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Oslo";
+    tittel = "🚆 Nasjonalth. - mot Oslo";
     renderAvgangsliste(sisteTog.motOslo);
   } else if (visPanel === "togDrammen") {
-    busstiderHeaderEl.textContent = "🚆 Nasjonalth. - mot Drammen";
+    tittel = "🚆 Nasjonalth. - mot Drammen";
     renderAvgangsliste(sisteTog.motDrammen);
   } else if (visPanel === "trikk") {
-    busstiderHeaderEl.textContent = "🚊 Øvre Slottsgate";
+    tittel = "🚊 Øvre Slottsgate";
     renderAvgangsliste(sisteTrikk);
   } else if (visPanel === "tbaneVest") {
-    busstiderHeaderEl.textContent = "🚇 Stortinget - vestover";
+    tittel = "🚇 Stortinget - vestover";
     renderAvgangsliste(sisteTbane.vestover);
   } else {
-    busstiderHeaderEl.textContent = "🚇 Stortinget - østover";
+    tittel = "🚇 Stortinget - østover";
     renderAvgangsliste(sisteTbane.ostover);
+  }
+  settPanelHeader(busstiderHeaderEl, tittel, sisteBusstiderOppdatert);
+}
+
+// Viser når dataene i et panel sist faktisk ble hentet på nytt (ikke bare
+// tegnet om), som en liten tillitsindikator - se sisteBusstiderOppdatert/
+// sisteKundenyttOppdatert.
+function settPanelHeader(headerEl, tittel, tidspunkt) {
+  headerEl.textContent = "";
+  const tittelEl = document.createElement("span");
+  tittelEl.textContent = tittel;
+  headerEl.appendChild(tittelEl);
+  if (tidspunkt) {
+    const tid = document.createElement("span");
+    tid.className = "panel-oppdatert";
+    tid.textContent = new Date(tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+    headerEl.appendChild(tid);
   }
 }
 

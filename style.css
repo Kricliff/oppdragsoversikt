@@ -224,6 +224,14 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   grid-auto-rows: 1fr;
   gap: clamp(8px, 1.2vw, 20px);
+  /* Post-it/busstider/kundenytt flyter fast plassert oppå rutenettet i hjørnene
+     nederst - uten dette innrykket havnet ekte kort (kandidat-/prosjektdata) helt
+     skjult bak dem. Dekker post-it og kundenytt (~240px opp fra bunnen) fullt ut;
+     busstider kan i sjeldne tilfeller med mange avganger fortsatt vise seg litt
+     inn i siste kortrad, siden den er stablet enda høyere - vurdert som en
+     akseptabel avveining fremfor å reservere nesten det dobbelte for alle rader
+     for et tilfelle som uansett bare gjelder ett av seks transportpanel om gangen. */
+  padding-bottom: 200px;
 }
 
 /* Tetthet skalerer ned kort/avatar/skrift når det er mange rådgivere,
@@ -706,11 +714,19 @@ body {
 }
 
 .busstider-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 8px 12px;
   font-weight: 600;
   font-size: 0.76rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-1);
+  overflow: hidden;
+}
+
+.busstider-header > span:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -722,6 +738,8 @@ body {
   flex-direction: column;
   gap: 0.4rem;
   min-height: 24px;
+  max-height: 180px; /* rundt 6 avganger - grense for at rutenett-innrykket nederst stemmer */
+  overflow: hidden;
 }
 
 .buss-rad {
@@ -775,14 +793,32 @@ body {
   border: 1px solid var(--border);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
   z-index: 50;
+  transform: translateX(-120%);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.kundenytt.vis {
+  transform: translateX(0);
 }
 
 .kundenytt-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
   padding: 8px 12px;
   font-weight: 600;
   font-size: 0.76rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-1);
+}
+
+.panel-oppdatert {
+  font-weight: 500;
+  font-size: 0.66rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
 }
 
 .kundenytt-liste {
@@ -799,7 +835,7 @@ body {
 .kundenytt-selskap {
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--aktiv);
+  color: var(--text); /* nøytral, ikke oransje - skal ikke lese som en feiring */
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
