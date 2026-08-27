@@ -770,7 +770,7 @@ body {
   left: 28px; /* venstre motstykke til postit/busstider, over bunnbanneret */
   bottom: 80px;
   width: 280px;
-  max-height: 260px;
+  max-height: 160px; /* holdt kompakt, på linje med postit (~160px), for å dekke minst mulig av kortene bak */
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -789,8 +789,8 @@ body {
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  max-height: 220px;
+  gap: 0.5rem;
+  max-height: 120px;
   overflow: hidden;
 }
 
@@ -809,9 +809,10 @@ body {
   color: var(--text);
   line-height: 1.3;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kundenytt-kilde {
@@ -890,6 +891,6 @@ body {
   .stats { display: none; }
   .postit { right: 12px; bottom: 64px; width: 160px; }
   .busstider { right: 12px; bottom: 232px; width: 150px; }
-  .kundenytt { left: 12px; bottom: 64px; width: 160px; max-height: 200px; }
+  .kundenytt { left: 12px; bottom: 64px; width: 150px; max-height: 130px; }
   .feiring-item { font-size: 0.95rem; }
 }
