@@ -63,6 +63,20 @@ export async function onRequestPost(context) {
   return json({ gjestevisning });
 }
 
+// Fjerner en skjerm fra registeret manuelt fra admin-siden. Merk: om skjermen faktisk
+// fortsatt er åpen og melder seg inn med jevne mellomrom, dukker den opp igjen ved neste
+// heartbeat - dette fjerner kun oppføringen, ikke selve skjermens lagrede navn.
+export async function onRequestDelete(context) {
+  const id = new URL(context.request.url).searchParams.get("id");
+  if (!id) return json({ error: "Mangler id" }, 400);
+
+  const alle = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
+  delete alle[id];
+  await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+
+  return json({ ok: true });
+}
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,

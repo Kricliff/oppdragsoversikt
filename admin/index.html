@@ -204,6 +204,8 @@
     cursor: pointer;
   }
   .skjerm-knapp:hover { border-color: var(--aktiv); color: var(--aktiv); }
+  .skjerm-fjern { color: var(--text-muted); }
+  .skjerm-fjern:hover { border-color: #c0392b; color: #c0392b; }
   .tilbake {
     display: inline-block;
     margin-top: 1rem;
@@ -571,6 +573,14 @@
         knapp.addEventListener("click", () => settSkjermGjestevisning(s.id, !s.gjestevisning));
         rad.appendChild(knapp);
 
+        const fjern = document.createElement("button");
+        fjern.type = "button";
+        fjern.className = "skjerm-knapp skjerm-fjern";
+        fjern.textContent = "Fjern";
+        fjern.setAttribute("aria-label", `Fjern ${s.navn} fra listen`);
+        fjern.addEventListener("click", () => fjernSkjerm(s.id));
+        rad.appendChild(fjern);
+
         return rad;
       })
     );
@@ -596,6 +606,15 @@
       });
     } catch (err) {
       console.warn("Fikk ikke sendt fjernstyringskommando:", err);
+    }
+    lastSkjermer();
+  }
+
+  async function fjernSkjerm(id) {
+    try {
+      await fetch(`/api/skjermer?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    } catch (err) {
+      console.warn("Fikk ikke fjernet skjerm:", err);
     }
     lastSkjermer();
   }
