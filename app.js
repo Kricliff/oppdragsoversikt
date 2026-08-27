@@ -1,7 +1,8 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
+const PA_VENT_SYNLIG_DAGER = 7; // et "På vent"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
-const STATUS_PRIORITET = { aktiv: 0, utfort: 1 };
+const STATUS_PRIORITET = { aktiv: 0, paVent: 1, utfort: 2 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
 const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henting
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
@@ -406,6 +407,7 @@ function render() {
 function erSynligPaTavle(o) {
   if (o.status === "aktiv") return true;
   if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
+  if (o.status === "paVent") return dagerSiden(o.paVentDato) <= PA_VENT_SYNLIG_DAGER;
   return false;
 }
 
@@ -501,6 +503,7 @@ function sorterForVisning(liste) {
   return [...liste].sort((a, b) => {
     if (a.status !== b.status) return STATUS_PRIORITET[a.status] - STATUS_PRIORITET[b.status];
     if (a.status === "utfort") return new Date(b.utfortDato) - new Date(a.utfortDato);
+    if (a.status === "paVent") return new Date(b.paVentDato) - new Date(a.paVentDato);
     return a.tittel.localeCompare(b.tittel, "no");
   });
 }
@@ -526,6 +529,9 @@ function kortHoyreTekst(o) {
   if (o.status === "utfort") {
     return `<span class="frist">${utfortTekst(o.utfortDato)}</span>`;
   }
+  if (o.status === "paVent") {
+    return `<span class="frist">${paVentTekst(o.paVentDato)}</span>`;
+  }
   if (typeof o.fremdriftProsent === "number") {
     return `<span class="fremdrift">${o.fremdriftProsent}%</span>`;
   }
@@ -545,8 +551,17 @@ function utfortTekst(iso) {
   return `Utført for ${dager} dager siden`;
 }
 
+// Motsatt av utfortTekst - viser nedtelling i stedet for hvor lenge siden, siden det
+// som er relevant her er når oppdraget forsvinner, ikke når det ble satt på vent.
+function paVentTekst(iso) {
+  const dagerIgjen = PA_VENT_SYNLIG_DAGER - dagerSiden(iso);
+  if (dagerIgjen <= 0) return "Forsvinner snart";
+  if (dagerIgjen === 1) return "Forsvinner om 1 dag";
+  return `Forsvinner om ${dagerIgjen} dager`;
+}
+
 function statusLabel(status) {
-  return { aktiv: "Aktiv", utfort: "Utført" }[status] ?? status;
+  return { aktiv: "Aktiv", utfort: "Utført", paVent: "På vent" }[status] ?? status;
 }
 
 function dagerSiden(iso) {

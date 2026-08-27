@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 12;
+const CACHE_VERSION = 13;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -31,21 +31,24 @@ const AKTIV_MAKS_DAGER_UTEN_OPPDATERING = 90;
 
 // Recman sine prosjekt-statuser (se help.recman.io "Projects module") normalisert til
 // det tavlen forstår. "cancelled" og "lost" er bevisst utelatt - de skal ikke vises,
-// og alt som ikke er "aktiv"/"utfort" skjules automatisk av erSynligPaTavle i app.js.
+// og alt som ikke er "aktiv"/"utfort"/"paVent" skjules automatisk av erSynligPaTavle
+// i app.js.
 //
-// "request" (= "På vent" i Recman sitt grensesnitt) er bevisst IKKE med her (2026-08-25)
-// - ble for mye støy på tavlen. De dukker opp av seg selv når noen setter dem til
-// active/urgent/notStarted i Recman, i stedet for å ta opp plass som en egen kolonne.
+// "request" (= "På vent" i Recman sitt grensesnitt) vises nå som egen status "paVent"
+// (2026-08-27) - står på tavlen i PA_VENT_SYNLIG_DAGER dager (se app.js) fra sist
+// oppdatert i Recman, samme mønster som "Utført". Settes status bort fra "request"
+// igjen før den fristen, følger oppdraget bare sin nye status som normalt.
 //
 // "solvedOngoing" ("Løst løpende") er bevisst IKKE med her (2026-08-25) - "Utført i år"
 // skal kun telle solvedEnded ("Løst avsluttet") + 100%-regelen under, ikke løpende
 // leveranser. Et solvedOngoing-prosjekt under 100% skjules derfor helt fra tavlen,
-// akkurat som cancelled/lost/request - det når 100% (og telles) i stedet.
+// akkurat som cancelled/lost - det når 100% (og telles) i stedet.
 const STATUS_MAP = {
   notStarted: "aktiv",
   active: "aktiv",
   urgent: "aktiv",
-  solvedEnded: "utfort"
+  solvedEnded: "utfort",
+  request: "paVent"
 };
 
 export async function onRequestGet(context) {
@@ -171,7 +174,7 @@ async function hentOgNormaliser(apiKey) {
         status = "utfort";
       }
 
-      if (!status) return null; // cancelled/lost/request/solvedOngoing under 100% - skjules
+      if (!status) return null; // cancelled/lost/solvedOngoing under 100% - skjules
 
       if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
       // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
@@ -194,7 +197,8 @@ async function hentOgNormaliser(apiKey) {
         ansvarlig,
         status,
         fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
-        utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined
+        utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined,
+        paVentDato: status === "paVent" && p.updated ? p.updated.slice(0, 10) : undefined
       };
     })
     .filter(Boolean);

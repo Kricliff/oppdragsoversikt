@@ -14,6 +14,8 @@
   --aktiv-soft: rgba(236, 155, 0, 0.12);
   --utfort: #1e73be;
   --utfort-soft: rgba(30, 115, 190, 0.12);
+  --pa-vent: #767676;
+  --pa-vent-soft: rgba(118, 118, 118, 0.12);
   --neutral: #cfcfcf;
 
   --palette-1: #4a6fa5;
@@ -44,6 +46,8 @@
   --utfort: #4a9eef;
   --utfort-soft: rgba(74, 158, 239, 0.16);
   --aktiv-soft: rgba(236, 155, 0, 0.16);
+  --pa-vent: #a8a8a8;
+  --pa-vent-soft: rgba(168, 168, 168, 0.16);
 }
 
 * { box-sizing: border-box; }
@@ -489,6 +493,7 @@ body {
 
 .card.status-aktiv { border-left-color: var(--aktiv); }
 .card.status-utfort { border-left-color: var(--utfort); opacity: 0.85; }
+.card.status-paVent { border-left-color: var(--pa-vent); opacity: 0.85; }
 
 .card .tittel {
   font-weight: 600;
@@ -546,6 +551,11 @@ body {
 .status-pill.status-utfort {
   color: var(--utfort);
   background: var(--utfort-soft);
+}
+
+.status-pill.status-paVent {
+  color: var(--pa-vent);
+  background: var(--pa-vent-soft);
 }
 
 @keyframes pulse {

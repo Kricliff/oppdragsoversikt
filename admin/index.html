@@ -168,7 +168,7 @@
 
   <div class="kort">
     <h2>Siste endringer på tavlen</h2>
-    <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status, fra og med i går.</p>
+    <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status</p>
     <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
   </div>
 
@@ -266,7 +266,7 @@
   setInterval(lastNotat, 60 * 1000); // hold i sync om noen andre endrer den samtidig
 
   const endringerListeEl = document.getElementById("endringerListe");
-  const STATUS_NAVN = { aktiv: "Aktiv", utfort: "Utført" };
+  const STATUS_NAVN = { aktiv: "Aktiv", utfort: "Utført", paVent: "På vent" };
 
   function endringTekst(h) {
     if (h.type === "borte") return "forsvant fra tavlen";
@@ -275,23 +275,14 @@
     return h.type;
   }
 
-  // Lokal midnatt i går - "fra og med i går", ikke bare siste 24 timer.
-  function igarKlokka0000() {
-    const naa = new Date();
-    return new Date(naa.getFullYear(), naa.getMonth(), naa.getDate() - 1).getTime();
-  }
-
   function renderEndringer(hendelser) {
-    const grense = igarKlokka0000();
-    const relevante = hendelser.filter((h) => h.tidspunkt >= grense);
-
-    if (relevante.length === 0) {
-      endringerListeEl.innerHTML = '<p class="endring-tom">Ingen endringer siden i går.</p>';
+    if (hendelser.length === 0) {
+      endringerListeEl.innerHTML = '<p class="endring-tom">Ingen endringer registrert ennå.</p>';
       return;
     }
 
     endringerListeEl.replaceChildren(
-      ...relevante.map((h) => {
+      ...hendelser.map((h) => {
         const rad = document.createElement("div");
         rad.className = "endring-rad";
 
@@ -312,7 +303,7 @@
 
         const tidEl = document.createElement("span");
         tidEl.className = "endring-tid";
-        tidEl.textContent = new Date(h.tidspunkt).toLocaleString("no-NO", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+        tidEl.textContent = new Date(h.tidspunkt).toLocaleString("no-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
         rad.appendChild(tidEl);
 
         return rad;
