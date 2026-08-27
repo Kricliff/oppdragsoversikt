@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 24;
+const CACHE_VERSION = 25;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 8; // panelet viser nå kun én sak av gangen i en karusell, så flere kan samles opp
 const FERSKHET_DAGER = 7;
@@ -80,14 +80,11 @@ async function hentKundenytt(apiKey, kv) {
   return { funn };
 }
 
+// Henter ALLE kunder i Recman (company type=customer), ikke bare de med et pågående
+// oppdrag på tavlen akkurat nå - kundenytt skal dekke hele kundeporteføljen, inkludert
+// gamle/ferdige kunder uten aktive oppdrag i dag.
 async function hentKundeliste(apiKey) {
-  const projectJson = await hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=companyId&page=1`);
-  const projectById = projectJson?.success ? projectJson.data : {};
-
-  const alleCompanyIds = [...new Set(Object.values(projectById).map((p) => p.companyId).filter(Boolean))];
-  if (!alleCompanyIds.length) return [];
-
-  const companyJson = await hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name,type&companyIds=${alleCompanyIds.join(",")}`);
+  const companyJson = await hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=company&fields=name,type&page=1`);
   const companyById = companyJson?.success ? companyJson.data : {};
 
   const inneholderGreatPeople = (t) => typeof t === "string" && t.toLowerCase().includes("greatpeople");
