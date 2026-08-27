@@ -121,11 +121,8 @@ function renderGjestevisning() {
   const fullforteIAr = alleOppdrag.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const unikeKunder = new Set(aktive.map((o) => o.kunde)).size;
 
-  const kandidaterIAr = kandidaterLandetIArEkte();
-
   gjesteStatsEl.replaceChildren(
     lagGjesteStat(aktive.length, "Aktive oppdrag"),
-    lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år"),
     lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
     lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
   );
