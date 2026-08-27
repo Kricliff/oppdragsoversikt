@@ -109,6 +109,29 @@
     transition: border-color 0.15s ease, transform 0.1s ease;
   }
   .emoji-knapp:hover { border-color: var(--aktiv); transform: translateY(-1px); }
+  .endring-rad {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .endring-rad:last-child { border-bottom: none; }
+  .endring-merke {
+    flex: none;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    margin-top: 0.4rem;
+  }
+  .endring-merke.borte { background: #c02626; }
+  .endring-merke.nytt { background: #1e8a4c; }
+  .endring-merke.status { background: var(--aktiv); }
+  .endring-innhold { flex: 1 1 auto; min-width: 0; }
+  .endring-tittel { font-weight: 600; }
+  .endring-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
+  .endring-tid { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; flex: none; }
+  .endring-tom { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
   .tilbake {
     display: inline-block;
     margin-top: 1rem;
@@ -141,6 +164,12 @@
       <span id="statusTekst">Laster…</span>
       <button id="lagreKnapp" class="lagreknapp">Lagre</button>
     </div>
+  </div>
+
+  <div class="kort">
+    <h2>Siste endringer på tavlen</h2>
+    <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status, fra og med i går.</p>
+    <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
   </div>
 
   <a class="tilbake" href="/">← Tilbake til tavlen</a>
@@ -235,6 +264,75 @@
   lagreKnapp.addEventListener("click", lagreNotat);
   lastNotat();
   setInterval(lastNotat, 60 * 1000); // hold i sync om noen andre endrer den samtidig
+
+  const endringerListeEl = document.getElementById("endringerListe");
+  const STATUS_NAVN = { aktiv: "Aktiv", utfort: "Utført" };
+
+  function endringTekst(h) {
+    if (h.type === "borte") return "forsvant fra tavlen";
+    if (h.type === "nytt") return "dukket opp på tavlen";
+    if (h.type === "status") return `byttet status: ${STATUS_NAVN[h.statusFor] ?? h.statusFor} → ${STATUS_NAVN[h.status] ?? h.status}`;
+    return h.type;
+  }
+
+  // Lokal midnatt i går - "fra og med i går", ikke bare siste 24 timer.
+  function igarKlokka0000() {
+    const naa = new Date();
+    return new Date(naa.getFullYear(), naa.getMonth(), naa.getDate() - 1).getTime();
+  }
+
+  function renderEndringer(hendelser) {
+    const grense = igarKlokka0000();
+    const relevante = hendelser.filter((h) => h.tidspunkt >= grense);
+
+    if (relevante.length === 0) {
+      endringerListeEl.innerHTML = '<p class="endring-tom">Ingen endringer siden i går.</p>';
+      return;
+    }
+
+    endringerListeEl.replaceChildren(
+      ...relevante.map((h) => {
+        const rad = document.createElement("div");
+        rad.className = "endring-rad";
+
+        const merke = document.createElement("span");
+        merke.className = `endring-merke ${h.type}`;
+        rad.appendChild(merke);
+
+        const innhold = document.createElement("div");
+        innhold.className = "endring-innhold";
+        const tittelEl = document.createElement("div");
+        tittelEl.className = "endring-tittel";
+        tittelEl.textContent = h.tittel;
+        const metaEl = document.createElement("div");
+        metaEl.className = "endring-meta";
+        metaEl.textContent = `${h.kunde} · ${h.ansvarlig} · ${endringTekst(h)}`;
+        innhold.append(tittelEl, metaEl);
+        rad.appendChild(innhold);
+
+        const tidEl = document.createElement("span");
+        tidEl.className = "endring-tid";
+        tidEl.textContent = new Date(h.tidspunkt).toLocaleString("no-NO", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+        rad.appendChild(tidEl);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastEndringer() {
+    try {
+      const res = await fetch("/api/endringslogg");
+      const data = await res.json();
+      renderEndringer(Array.isArray(data.hendelser) ? data.hendelser : []);
+    } catch (err) {
+      endringerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet endringsloggen.</p>';
+      console.warn(err);
+    }
+  }
+
+  lastEndringer();
+  setInterval(lastEndringer, 5 * 60 * 1000);
 </script>
 </body>
 </html>

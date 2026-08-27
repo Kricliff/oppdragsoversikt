@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 10;
+const CACHE_VERSION = 11;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -63,6 +63,10 @@ export async function onRequestGet(context) {
       }
     });
     context.waitUntil(cache.put(cacheKey, response.clone()));
+    // Logger nye/borte/status-endrede oppdrag til KV, til bruk i endringsloggen på
+    // /admin (functions/api/endringslogg.js) - kjører kun ved et faktisk cache-miss,
+    // altså på samme kadens som tavlen selv faktisk friskes opp mot Recman.
+    context.waitUntil(loggEndringer(payload.oppdrag, context.env.NOTAT_KV));
     return response;
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
@@ -70,6 +74,43 @@ export async function onRequestGet(context) {
       headers: { "Content-Type": "application/json" }
     });
   }
+}
+
+const ENDRINGSLOGG_KV_KEY = "oppdrag-endringslogg";
+const ENDRINGSLOGG_VIS_DAGER = 14; // hvor lenge en hendelse beholdes i loggen
+
+async function loggEndringer(oppdrag, kv) {
+  if (!kv) return;
+
+  const naaKart = {};
+  oppdrag.forEach((o) => {
+    naaKart[o.id] = { tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig, status: o.status };
+  });
+
+  const tilstand = (await kv.get(ENDRINGSLOGG_KV_KEY, "json")) ?? {};
+  const forrige = tilstand.forrige ?? null;
+  const hendelser = tilstand.hendelser ?? [];
+  const naa = Date.now();
+
+  // Bootstrap-sikkert: kun diff når det faktisk finnes en forrige tilstand å diffe
+  // mot, ellers ville aller første kjøring logget ALLE oppdrag som "nytt".
+  if (forrige) {
+    for (const [id, o] of Object.entries(forrige)) {
+      if (!naaKart[id]) hendelser.push({ tidspunkt: naa, type: "borte", ...o });
+    }
+    for (const [id, o] of Object.entries(naaKart)) {
+      if (!forrige[id]) {
+        hendelser.push({ tidspunkt: naa, type: "nytt", ...o });
+      } else if (forrige[id].status !== o.status) {
+        hendelser.push({ tidspunkt: naa, type: "status", ...o, statusFor: forrige[id].status });
+      }
+    }
+  }
+
+  const grense = naa - ENDRINGSLOGG_VIS_DAGER * 24 * 60 * 60 * 1000;
+  const beholdt = hendelser.filter((h) => h.tidspunkt > grense);
+
+  await kv.put(ENDRINGSLOGG_KV_KEY, JSON.stringify({ forrige: naaKart, hendelser: beholdt }));
 }
 
 async function hentOgNormaliser(apiKey) {
