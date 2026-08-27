@@ -1,4 +1,4 @@
-// Henter siste overskrifter fra NRK (functions/api/nrk.js) - vises i bunnbanneret
+// Henter siste toppsaker fra NRK og TV2 (functions/api/nrk.js) - vises i bunnbanneret
 // når det ikke er noen aktive feiringer der.
 
 async function hentNrkNyheter() {
@@ -6,12 +6,9 @@ async function hentNrkNyheter() {
     const res = await fetch("/api/nrk");
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
-    return {
-      overskrifter: Array.isArray(data.overskrifter) ? data.overskrifter : [],
-      logoUrl: data.logoUrl ?? null
-    };
+    return Array.isArray(data.saker) ? data.saker : [];
   } catch (err) {
-    console.warn("Fikk ikke hentet NRK-nyheter:", err);
-    return { overskrifter: [], logoUrl: null };
+    console.warn("Fikk ikke hentet toppsaker:", err);
+    return [];
   }
 }

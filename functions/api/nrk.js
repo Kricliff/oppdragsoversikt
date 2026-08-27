@@ -1,14 +1,13 @@
-// Cloudflare Pages Function - henter siste overskrifter fra NRKs offentlige RSS-feeder
-// og returnerer dem som en enkel liste med ren tekst. Brukes til å fylle
+// Cloudflare Pages Function - henter siste toppsaker fra NRK og TV2 sine offentlige
+// RSS-feeder og returnerer dem med tittel + kildens egen logo. Brukes til å fylle
 // feiringsbanneret nederst med nyheter når det ikke er noen feiringer å vise.
-//
-// Bruker Norge- og Urix-seksjonene (innenriks/utenriks "hard" nyheter) i stedet for
-// den generelle toppsaker.rss, som blander inn sport, livsstil og regionalt stoff -
-// dette er nærmeste tilgjengelige signal for "viktige oppdateringer" via RSS.
 
-const RSS_URLER = ["https://www.nrk.no/norge/toppsaker.rss", "https://www.nrk.no/urix/toppsaker.rss"];
+const KILDER = [
+  { navn: "NRK", rss: "https://www.nrk.no/toppsaker.rss" },
+  { navn: "TV2", rss: "https://www.tv2.no/rss/nyheter" }
+];
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const ANTALL_SAKER = 6;
 
 export async function onRequestGet(context) {
@@ -18,7 +17,7 @@ export async function onRequestGet(context) {
   if (cached) return cached;
 
   try {
-    const payload = await hentOverskrifter();
+    const payload = await hentToppsaker();
     const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",
@@ -28,29 +27,29 @@ export async function onRequestGet(context) {
     context.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err), overskrifter: [], logoUrl: null }), {
+    return new Response(JSON.stringify({ error: String(err), saker: [] }), {
       status: 502,
       headers: { "Content-Type": "application/json" }
     });
   }
 }
 
-async function hentOverskrifter() {
-  const feeder = await Promise.all(RSS_URLER.map(hentSaker));
-  const alle = feeder.flatMap((f) => f.saker).sort((a, b) => b.publisert - a.publisert);
-  const logoUrl = feeder.map((f) => f.logoUrl).find(Boolean) ?? null;
-  return { overskrifter: alle.slice(0, ANTALL_SAKER).map((s) => s.tittel), logoUrl };
+async function hentToppsaker() {
+  const feeder = await Promise.all(KILDER.map(hentFraKilde));
+  const alle = feeder.flat().sort((a, b) => b.publisert - a.publisert);
+  return { saker: alle.slice(0, ANTALL_SAKER).map(({ tittel, logo }) => ({ tittel, logo })) };
 }
 
-async function hentSaker(url) {
-  const res = await fetch(url, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
-  if (!res.ok) throw new Error(`NRK RSS (${url}) svarte ${res.status}`);
+async function hentFraKilde(kilde) {
+  const res = await fetch(kilde.rss, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
+  if (!res.ok) throw new Error(`${kilde.navn}-feed svarte ${res.status}`);
   const xml = await res.text();
 
-  // NRKs eget kanal-logo, slik NRK selv publiserer den i feeden - hentes direkte fra
-  // <image> i toppen av dokumentet, ikke lastet ned/kopiert av oss.
+  // Kildens egen logo, slik den selv publiserer den i feeden - hentes direkte fra
+  // <image> i toppen av dokumentet, ikke lastet ned/kopiert av oss. TV2 sin er http -
+  // tvinges til https for å unngå blandet-innhold-blokkering i nettleseren.
   const logoMatch = /<image>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/image>/.exec(xml);
-  const logoUrl = logoMatch ? rensXmlTekst(logoMatch[1]) : null;
+  const logo = logoMatch ? rensXmlTekst(logoMatch[1]).replace(/^http:/, "https:") : null;
 
   const saker = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
@@ -61,9 +60,9 @@ async function hentSaker(url) {
     if (!tittel) continue;
     const dateMatch = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemMatch[1]);
     const publisert = dateMatch ? Date.parse(dateMatch[1]) : NaN;
-    saker.push({ tittel, publisert: Number.isNaN(publisert) ? 0 : publisert });
+    saker.push({ tittel, logo, publisert: Number.isNaN(publisert) ? 0 : publisert });
   }
-  return { saker, logoUrl };
+  return saker;
 }
 
 function rensXmlTekst(raw) {

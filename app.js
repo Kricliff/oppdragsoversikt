@@ -24,8 +24,7 @@ let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbaneVest | tban
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte, se lastFeiring
-let nrkOverskrifter = []; // vises i banneret når det ikke er noen aktive feiringer
-let nrkLogoUrl = null; // NRKs eget kanal-logo, hentet fra RSS-feeden via functions/api/nrk.js
+let nrkOverskrifter = []; // [{ tittel, logo }] - vises i banneret når det ikke er noen aktive feiringer
 let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
 let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 
@@ -100,12 +99,10 @@ async function lastFeiring() {
   oppdaterFeiringVisning();
 }
 
-// Siste nytt fra NRK (functions/api/nrk.js) - fyller banneret nederst når det ikke
-// er noen aktive feiringer der. Feiringer har alltid forrang over nyheter.
+// Siste toppsaker fra NRK og TV2 (functions/api/nrk.js) - fyller banneret nederst når
+// det ikke er noen aktive feiringer der. Feiringer har alltid forrang over nyheter.
 async function lastNrk() {
-  const data = await hentNrkNyheter();
-  nrkOverskrifter = data.overskrifter;
-  nrkLogoUrl = data.logoUrl;
+  nrkOverskrifter = await hentNrkNyheter();
   oppdaterFeiringVisning();
 }
 
@@ -117,7 +114,7 @@ function feiringChips() {
   if (feiringAktive.length > 0) {
     return feiringAktive.map((h) => ({ type: "feiring", tekst: h.tekst }));
   }
-  return nrkOverskrifter.map((tittel) => ({ type: "nyhet", tekst: tittel }));
+  return nrkOverskrifter.map((s) => ({ type: "nyhet", tekst: s.tittel, logo: s.logo }));
 }
 
 function oppdaterFeiringVisning() {
@@ -157,11 +154,11 @@ function settFeiringInnhold(containerEl, chips) {
 function lagFeiringChip(chip) {
   const span = document.createElement("span");
   span.className = chip.type === "nyhet" ? "feiring-item nyhet" : "feiring-item";
-  if (chip.type === "nyhet" && nrkLogoUrl) {
+  if (chip.type === "nyhet" && chip.logo) {
     const logo = document.createElement("img");
-    logo.className = "feiring-nrk-logo";
-    logo.src = nrkLogoUrl;
-    logo.alt = "NRK";
+    logo.className = "feiring-kilde-logo";
+    logo.src = chip.logo;
+    logo.alt = "";
     span.appendChild(logo);
   }
   span.appendChild(document.createTextNode(chip.tekst));
