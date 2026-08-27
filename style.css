@@ -931,8 +931,8 @@ body {
 
 .gjeste-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: clamp(14px, 2vw, 32px);
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 1.6vw, 24px);
   width: min(1100px, 92vw);
 }
 
@@ -967,6 +967,12 @@ body {
 
 .gjeste-stat .sammenligning.opp { color: #1e8a4c; }
 .gjeste-stat .sammenligning.ned { color: #c02626; }
+
+.gjeste-stat-notat {
+  margin-top: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
 
 .gjeste-grafer {
   display: grid;

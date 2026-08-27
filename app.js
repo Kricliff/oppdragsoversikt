@@ -122,16 +122,35 @@ function renderGjestevisning() {
 
   const kandidaterIAr = kandidaterLandetIArEkte();
   const kandidatSammenligning = lagSammenligning(kandidaterIAr, kandidaterLandetIFjorEkte());
+  const gjentakendeProsent = beregnGjentakendeKundeandel(alleOppdrag);
+  const dagerSnitt = dagerTilAnsettelseSnittEkte();
 
   gjesteStatsEl.replaceChildren(
     lagGjesteStat(aktive.length, "Aktive oppdrag"),
     lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år", kandidatSammenligning),
     lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
-    lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
+    lagGjesteStat(kandidaterLandetTotaltEkte() ?? "–", "Kandidater landet totalt"),
+    lagGjesteStat(unikeKunder, "Kunder vi jobber med nå"),
+    lagGjesteStat(gjentakendeProsent != null ? `${gjentakendeProsent}%` : "–", "Kunder som kommer tilbake"),
+    ...(dagerSnitt != null ? [lagGjesteStat(dagerSnitt, "Snitt dager til ansettelse", null, "Bransjesnitt er typisk 32-44 dager")] : [])
   );
 
   tegnGjesteGraf(gjesteGrafKandidaterEl, kandidaterLandetPerManedEkte());
   tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
+}
+
+// Andel av kundene vi har hatt oppdrag for (aktiv/utført/på vent) som har hatt mer enn
+// ett oppdrag hos oss - et ærlig lojalitetsmål som ikke krever data om andre byråer for
+// å være overbevisende i seg selv.
+function beregnGjentakendeKundeandel(liste) {
+  const oppdragPerKunde = new Map();
+  liste.forEach((o) => {
+    if (!o.kunde) return;
+    oppdragPerKunde.set(o.kunde, (oppdragPerKunde.get(o.kunde) ?? 0) + 1);
+  });
+  if (oppdragPerKunde.size === 0) return null;
+  const gjentakende = [...oppdragPerKunde.values()].filter((antall) => antall > 1).length;
+  return Math.round((gjentakende / oppdragPerKunde.size) * 100);
 }
 
 function lagSammenligning(iAr, iFjor) {
@@ -140,7 +159,7 @@ function lagSammenligning(iAr, iFjor) {
   return { retning: endring >= 0 ? "opp" : "ned", tekst: `${endring >= 0 ? "↑" : "↓"} ${Math.abs(endring)}% fra i fjor` };
 }
 
-function lagGjesteStat(verdi, etikett, sammenligning) {
+function lagGjesteStat(verdi, etikett, sammenligning, notat) {
   const div = document.createElement("div");
   div.className = "gjeste-stat";
 
@@ -159,6 +178,13 @@ function lagGjesteStat(verdi, etikett, sammenligning) {
     sammenligningEl.className = `sammenligning ${sammenligning.retning}`;
     sammenligningEl.textContent = sammenligning.tekst;
     div.appendChild(sammenligningEl);
+  }
+
+  if (notat) {
+    const notatEl = document.createElement("div");
+    notatEl.className = "gjeste-stat-notat";
+    notatEl.textContent = notat;
+    div.appendChild(notatEl);
   }
 
   return div;

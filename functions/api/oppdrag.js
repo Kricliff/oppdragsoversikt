@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 14;
+const CACHE_VERSION = 15;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -119,7 +119,7 @@ async function loggEndringer(oppdrag, kv) {
 async function hentOgNormaliser(apiKey) {
   if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
 
-  const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members";
+  const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members,startDate";
   const projectUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=1`;
   const userUrl = `https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`;
 
@@ -198,12 +198,14 @@ async function hentOgNormaliser(apiKey) {
         status,
         fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
         utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined,
-        paVentDato: status === "paVent" && p.updated ? p.updated.slice(0, 10) : undefined
+        paVentDato: status === "paVent" && p.updated ? p.updated.slice(0, 10) : undefined,
+        startDato: status === "utfort" ? p.startDate : undefined
       };
     })
     .filter(Boolean);
 
   const kandidatStats = await hentKandidatStats(apiKey);
+  const dagerTilAnsettelseSnitt = beregnDagerTilAnsettelseSnitt(oppdrag);
 
   return {
     oppdrag,
@@ -211,7 +213,9 @@ async function hentOgNormaliser(apiKey) {
     // Kun brukt av gjestevisningen (se functions/api/gjestevisning.js sin klientlogikk
     // i app.js) - ikke av hovedtavlen, som bare bruker kandidaterLandetIAr over.
     kandidaterLandetPerManed: kandidatStats.perManed,
-    kandidaterLandetIFjor: kandidatStats.iFjor
+    dagerTilAnsettelseSnitt,
+    kandidaterLandetIFjor: kandidatStats.iFjor,
+    kandidaterLandetTotalt: kandidatStats.totaltAlleTider
   };
 }
 
@@ -220,12 +224,13 @@ async function hentOgNormaliser(apiKey) {
 // ikke har (jobApplication peker på jobPostId, ikke projectId) - men gir et pålitelig
 // totaltall for statslinjen, i stedet for den gamle tilnærmingen som talte
 // teammedlemmer/kundekontakter på fullførte prosjekter. Beregner i tillegg per-måned
-// for i år og en totalsum for i fjor, til bruk i gjestevisningens graf/sammenligning.
+// for i år, totalt gjennom hele historikken, og et rettferdig i-fjor-tall til bruk i
+// gjestevisningens graf/sammenligning.
 async function hentKandidatStats(apiKey) {
   try {
     const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`;
     const json = await fetch(url).then((r) => r.json());
-    if (!json.success) return { iAr: null, perManed: [], iFjor: null };
+    if (!json.success) return { iAr: null, perManed: [], iFjor: null, totaltAlleTider: null };
 
     const naa = new Date();
     const iAr = naa.getFullYear();
@@ -239,14 +244,41 @@ async function hentKandidatStats(apiKey) {
       perManed.push({ maned: m, antall: datoer.filter((d) => d.getFullYear() === iAr && d.getMonth() === m).length });
     }
 
+    // "I fjor"-tallet må dekke SAMME månedsperiode som i år (jan-nå), ikke hele fjoråret -
+    // ellers sammenlignes f.eks. 8 måneder i år mot 12 måneder i fjor, som alltid vil se
+    // ut som nedgang uansett faktisk utvikling.
+    const iFjorHittil = datoer.filter((d) => d.getFullYear() === iFjor && d.getMonth() <= naa.getMonth()).length;
+
     return {
       iAr: datoer.filter((d) => d.getFullYear() === iAr).length,
       perManed,
-      iFjor: datoer.filter((d) => d.getFullYear() === iFjor).length
+      iFjor: iFjorHittil,
+      totaltAlleTider: datoer.length
     };
   } catch {
-    return { iAr: null, perManed: [], iFjor: null };
+    return { iAr: null, perManed: [], iFjor: null, totaltAlleTider: null };
   }
+}
+
+// Gjennomsnittlig antall dager fra prosjektets startDate til det ble merket utført -
+// samme mål som bransjebenchmarken "time-to-fill" (typisk 32-44 dager for rekrutterings-
+// byråer). Avgrenset til fullførte oppdrag siste 12 måneder (representativt for dagens
+// arbeidsmåte, ikke gamle/gjenbrukte prosjekter) og med en fornuftig øvre grense (365
+// dager) som luker bort åpenbare datafeil uten å late som de aldri skjer.
+function beregnDagerTilAnsettelseSnitt(oppdrag) {
+  const etAarSiden = Date.now() - 365 * 86400000;
+  const dager = oppdrag
+    .filter((o) => o.status === "utfort" && o.startDato && o.utfortDato)
+    .map((o) => {
+      const start = new Date(o.startDato).getTime();
+      const slutt = new Date(o.utfortDato).getTime();
+      return { start, dager: (slutt - start) / 86400000 };
+    })
+    .filter((d) => d.start >= etAarSiden && d.dager > 0 && d.dager <= 365)
+    .map((d) => d.dager);
+
+  if (dager.length === 0) return null;
+  return Math.round(dager.reduce((sum, d) => sum + d, 0) / dager.length);
 }
 
 function erForGammelTilAVaereAktiv(updated) {

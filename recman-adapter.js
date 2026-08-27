@@ -10,6 +10,8 @@ let sisteKildeErRecman = false;
 let sisteKandidaterLandetIAr = null;
 let sisteKandidaterLandetPerManed = [];
 let sisteKandidaterLandetIFjor = null;
+let sisteKandidaterLandetTotalt = null;
+let sisteDagerTilAnsettelseSnitt = null;
 
 function kildeErRecman() {
   return sisteKildeErRecman;
@@ -23,13 +25,21 @@ function kandidaterLandetIArEkte() {
 }
 
 // Kun til gjestevisningen (se visGjestevisning i app.js) - månedsfordeling i år og
-// totalsum i fjor, for grafen/sammenligningen der.
+// et rettferdig (samme periode) i-fjor-tall til sammenligningen der.
 function kandidaterLandetPerManedEkte() {
   return sisteKandidaterLandetPerManed;
 }
 
 function kandidaterLandetIFjorEkte() {
   return sisteKandidaterLandetIFjor;
+}
+
+function kandidaterLandetTotaltEkte() {
+  return sisteKandidaterLandetTotalt;
+}
+
+function dagerTilAnsettelseSnittEkte() {
+  return sisteDagerTilAnsettelseSnitt;
 }
 
 async function hentOppdrag() {
@@ -42,6 +52,8 @@ async function hentOppdrag() {
     sisteKandidaterLandetIAr = typeof data.kandidaterLandetIAr === "number" ? data.kandidaterLandetIAr : null;
     sisteKandidaterLandetPerManed = Array.isArray(data.kandidaterLandetPerManed) ? data.kandidaterLandetPerManed : [];
     sisteKandidaterLandetIFjor = typeof data.kandidaterLandetIFjor === "number" ? data.kandidaterLandetIFjor : null;
+    sisteKandidaterLandetTotalt = typeof data.kandidaterLandetTotalt === "number" ? data.kandidaterLandetTotalt : null;
+    sisteDagerTilAnsettelseSnitt = typeof data.dagerTilAnsettelseSnitt === "number" ? data.dagerTilAnsettelseSnitt : null;
     return data.oppdrag;
   } catch (err) {
     console.warn("Recman-proxy ikke tilgjengelig, viser mock-data:", err);
@@ -49,6 +61,8 @@ async function hentOppdrag() {
     sisteKandidaterLandetIAr = null;
     sisteKandidaterLandetPerManed = [];
     sisteKandidaterLandetIFjor = null;
+    sisteKandidaterLandetTotalt = null;
+    sisteDagerTilAnsettelseSnitt = null;
     return MOCK_OPPDRAG;
   }
 }
