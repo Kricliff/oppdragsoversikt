@@ -66,7 +66,7 @@ export async function onRequestPost(context) {
     // Fellesområdet er den faste skjermen og skal alltid stå i registeret.
     if (alle[id]?.navn !== "Fellesområde") {
       delete alle[id];
-      await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+      await skrivTrygt(context.env.NOTAT_KV, alle);
     }
     return json({ ok: true });
   }
@@ -93,10 +93,22 @@ export async function onRequestPost(context) {
 
   if (noeEndret || tidForNyttSkriv) {
     alle[id] = { navn, sistSett, gjestevisning };
-    await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+    await skrivTrygt(context.env.NOTAT_KV, alle);
   }
 
   return json({ gjestevisning });
+}
+
+// Om selve KV-skrivingen skulle feile (f.eks. den daglige gratiskvoten på 1000 put-
+// operasjoner er brukt opp) skal ikke hele forespørselen krasje - skjermen har uansett
+// fått riktig svar bygget fra det som ble LEST, den mister bare denne ene oppdateringen
+// i lagringen og prøver igjen neste heartbeat.
+async function skrivTrygt(kv, alle) {
+  try {
+    await kv.put(KV_KEY, JSON.stringify(alle));
+  } catch (err) {
+    console.warn("Fikk ikke skrevet skjermregisteret til KV:", err);
+  }
 }
 
 function json(data, status = 200) {
