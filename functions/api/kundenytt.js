@@ -12,7 +12,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 6;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 6;
 const FERSKHET_DAGER = 30;
