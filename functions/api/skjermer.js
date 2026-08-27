@@ -17,7 +17,7 @@ const MAKS_ALDER_MS = 24 * 60 * 60 * 1000; // fjernes helt fra registeret etter 
 // gjenkjenningen av fjernstyringskommandoer skjer likevel på hvert kall, siden den kun
 // leser tilstanden - AKTIV_VINDU_MS under er utvidet tilsvarende, slik at "aktiv" i
 // admin fortsatt stemmer selv om sistSett kun oppdateres i lagringen med dette mellomrommet.
-const HEARTBEAT_SKRIVE_MS = 10 * 60 * 1000;
+const HEARTBEAT_SKRIVE_MS = 5 * 60 * 1000;
 
 // "Kontor" meldte seg inn selv (en fysisk skjerm som fortsatt heartbeater), men skal
 // aldri vises i admin - fjerning derfra alene hjelper ikke siden den bare kommer tilbake
