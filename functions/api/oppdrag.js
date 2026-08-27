@@ -203,8 +203,6 @@ async function hentOgNormaliser(apiKey) {
     })
     .filter(Boolean);
 
-  const kandidatStats = await hentKandidatStats(apiKey);
-
   return {
     oppdrag,
     kandidaterLandetIAr: await hentKandidaterLandetIAr(apiKey)
