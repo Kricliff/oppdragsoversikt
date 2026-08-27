@@ -1,10 +1,14 @@
-// Cloudflare Pages Function - henter siste overskrifter fra NRKs offentlige RSS-feed
-// (toppsaker.rss) og returnerer dem som en enkel liste med ren tekst. Brukes til å
-// fylle feiringsbanneret nederst med nyheter når det ikke er noen feiringer å vise.
+// Cloudflare Pages Function - henter siste overskrifter fra NRKs offentlige RSS-feeder
+// og returnerer dem som en enkel liste med ren tekst. Brukes til å fylle
+// feiringsbanneret nederst med nyheter når det ikke er noen feiringer å vise.
+//
+// Bruker Norge- og Urix-seksjonene (innenriks/utenriks "hard" nyheter) i stedet for
+// den generelle toppsaker.rss, som blander inn sport, livsstil og regionalt stoff -
+// dette er nærmeste tilgjengelige signal for "viktige oppdateringer" via RSS.
 
-const RSS_URL = "https://www.nrk.no/toppsaker.rss";
+const RSS_URLER = ["https://www.nrk.no/norge/toppsaker.rss", "https://www.nrk.no/urix/toppsaker.rss"];
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const ANTALL_SAKER = 6;
 
 export async function onRequestGet(context) {
@@ -32,20 +36,28 @@ export async function onRequestGet(context) {
 }
 
 async function hentOverskrifter() {
-  const res = await fetch(RSS_URL, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
-  if (!res.ok) throw new Error(`NRK RSS svarte ${res.status}`);
+  const feeder = await Promise.all(RSS_URLER.map(hentSaker));
+  const alle = feeder.flat().sort((a, b) => b.publisert - a.publisert);
+  return alle.slice(0, ANTALL_SAKER).map((s) => s.tittel);
+}
+
+async function hentSaker(url) {
+  const res = await fetch(url, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
+  if (!res.ok) throw new Error(`NRK RSS (${url}) svarte ${res.status}`);
   const xml = await res.text();
 
-  const titler = [];
+  const saker = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let itemMatch;
-  while ((itemMatch = itemRegex.exec(xml)) && titler.length < ANTALL_SAKER) {
+  while ((itemMatch = itemRegex.exec(xml))) {
     const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(itemMatch[1]);
-    if (!titleMatch) continue;
-    const tittel = rensXmlTekst(titleMatch[1]);
-    if (tittel) titler.push(tittel);
+    const tittel = titleMatch ? rensXmlTekst(titleMatch[1]) : null;
+    if (!tittel) continue;
+    const dateMatch = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemMatch[1]);
+    const publisert = dateMatch ? Date.parse(dateMatch[1]) : NaN;
+    saker.push({ tittel, publisert: Number.isNaN(publisert) ? 0 : publisert });
   }
-  return titler;
+  return saker;
 }
 
 function rensXmlTekst(raw) {
