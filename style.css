@@ -660,7 +660,7 @@ body {
 
 .postit {
   position: fixed;
-  right: 28px;
+  right: 260px; /* venstre for kundenytt (220px bred + 28px kant + 12px luft) */
   bottom: 80px; /* 28px opprinnelig marg + 44px feiringsbanner + 8px luft */
   width: 220px;
   min-height: 150px;
@@ -712,8 +712,8 @@ body {
 
 .busstider {
   position: fixed;
-  right: 28px; /* samme høyrekant som post-it-lappen, stablet rett over den */
-  bottom: 276px; /* postit (~160px høy) + 80px bunnmarg (inkl. feiringsbanner) + 36px luft */
+  right: 28px; /* samme høyrekant som kundenytt, stablet rett over den */
+  bottom: 276px; /* kundenytt (~140px høy) + 80px bunnmarg (inkl. feiringsbanner) + 56px luft */
   width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -793,7 +793,7 @@ body {
 
 .kundenytt {
   position: fixed;
-  right: 260px; /* rett ved siden av postit (220px bred + 28px kant + 12px luft), samme bunnlinje */
+  right: 28px; /* ytterst til høyre, rett ved siden av postit, samme bunnlinje */
   bottom: 80px;
   width: 220px; /* samme bredde som postit - et ryddig par */
   max-height: 140px; /* viser kun én sak av gangen (karusell), ikke flere stablet */
@@ -936,8 +936,8 @@ body {
   .lanes { grid-template-columns: 1fr; }
   .lane { max-height: 60vh; }
   .stats { display: none; }
-  .postit { right: 12px; bottom: 64px; width: 160px; }
+  .postit { right: 170px; bottom: 64px; width: 160px; }
   .busstider { right: 12px; bottom: 232px; width: 150px; }
-  .kundenytt { right: 180px; bottom: 64px; width: 150px; max-height: 120px; }
+  .kundenytt { right: 12px; bottom: 64px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
 }
