@@ -694,7 +694,7 @@ body {
   resize: none;
   cursor: default;
   font-family: "Caveat", "Poppins", cursive, sans-serif;
-  font-size: 1.35rem; /* håndskrift-fonter virker mindre enn Poppins ved samme størrelse */
+  font-size: 1.15rem; /* håndskrift-fonter virker mindre enn Poppins ved samme størrelse */
   font-weight: 700;
   color: #4a3b00;
   line-height: 1.3;
