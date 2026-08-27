@@ -146,6 +146,13 @@ body {
   color: var(--text);
 }
 
+/* Navn + dato tar mer plass enn et rent tall - holdt mindre enn de vanlige tallene
+   slik at den ikke dominerer resten av statslinjen. */
+.stat-card.bursdag .value {
+  font-size: clamp(0.72rem, 0.95vw, 0.92rem);
+  white-space: nowrap;
+}
+
 .stat-card .label {
   font-size: clamp(0.56rem, 0.72vw, 0.78rem);
   color: var(--text-muted);
@@ -1129,6 +1136,56 @@ body {
   to { transform: translateX(-50%); }
 }
 
+/* ---------- Bursdag (midt på skjermen, kun på selve dagen) ---------- */
+
+.bursdag-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 76px;
+  z-index: 200; /* over alt annet, inkludert kundenytt/postit - dette er en engangsfeiring */
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, #fff3d6, #ffe0a3, #fff3d6);
+  border-top: 3px solid var(--aktiv);
+  border-bottom: 3px solid var(--aktiv);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: translateY(-50%) scale(0.92);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bursdag-banner.vis {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.bursdag-banner-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: bursdag-rull 25s linear infinite;
+  will-change: transform;
+}
+
+.bursdag-banner-tekst {
+  display: inline-block;
+  padding-right: 6vw;
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: #4a3b00; /* fast mørk farge - banneret har egen lys bakgrunn uansett tema */
+  letter-spacing: 0.01em;
+}
+
+@keyframes bursdag-rull {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 @media (max-width: 720px) {
   html, body { overflow-y: auto; }
   .board { height: auto; min-height: 100vh; }
@@ -1143,4 +1200,6 @@ body {
   .gjeste-grafer { grid-template-columns: 1fr; }
   .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
   .gjeste-knapp { left: 12px; bottom: 12px; width: 34px; height: 34px; }
+  .bursdag-banner { height: 56px; }
+  .bursdag-banner-tekst { font-size: 1.1rem; }
 }

@@ -8,7 +8,7 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js", "/bursdager.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
@@ -16,6 +16,9 @@ const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henti
 const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
 const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
 const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
+const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
+const BURSDAG_VIS_MS = 20 * 1000; // hvor lenge feiringen midt på skjermen vises av gangen
+const BURSDAG_SYKLUS_MS = 3 * 60 * 1000; // hvor ofte den dukker opp igjen på selve bursdagen
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -32,6 +35,7 @@ let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
 let sisteKundenyttOppdatert = null;
+let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -62,6 +66,10 @@ const gjesteStatsEl = document.getElementById("gjesteStats");
 const gjesteGrafKandidaterEl = document.getElementById("gjesteGrafKandidater");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
 const gjesteTrenderListeEl = document.getElementById("gjesteTrenderListe");
+const bursdagBannerEl = document.getElementById("bursdagBanner");
+const bursdagBannerTrackEl = document.getElementById("bursdagBannerTrack");
+const bursdagBannerTekst1El = document.getElementById("bursdagBannerTekst1");
+const bursdagBannerTekst2El = document.getElementById("bursdagBannerTekst2");
 
 async function init() {
   initTema();
@@ -87,6 +95,9 @@ async function init() {
   setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
   setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
+  lastBursdager();
+  setInterval(lastBursdager, BURSDAG_REFRESH_MS);
+  setInterval(sjekkBursdagBanner, BURSDAG_SYKLUS_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
@@ -588,6 +599,109 @@ function renderStats(liste) {
     el.innerHTML = `<span class="value">${value}</span><span class="label">${label}</span>`;
     statsRow.appendChild(el);
   });
+
+  leggTilBursdagStat();
+}
+
+// Bursdager (lagt inn manuelt på /admin, functions/api/bursdager.js) - viser neste
+// bursdag i statslinjen, og ruller en feiring midt på skjermen på selve dagen.
+async function lastBursdager() {
+  bursdager = await hentBursdager();
+  renderStats(alleOppdrag); // statslinjen må friskes opp selv om ikke oppdragslisten har endret seg
+  sjekkBursdagBanner();
+}
+
+function leggTilBursdagStat() {
+  const neste = finnNesteBursdag(bursdager);
+  if (!neste) return;
+
+  const el = document.createElement("div");
+  el.className = "stat-card bursdag";
+
+  const value = document.createElement("span");
+  value.className = "value";
+  value.textContent = `🎂 ${formaterBursdagTekst(neste)}`;
+  el.appendChild(value);
+
+  const label = document.createElement("span");
+  label.className = "label";
+  label.textContent = "Neste bursdag";
+  el.appendChild(label);
+
+  statsRow.appendChild(el);
+}
+
+// Finner personen(e) med nærmeste kommende bursdag - i dag teller som "0 dager til",
+// bursdager som allerede har vært i år ruller over til neste år. Flere personer på
+// samme dato vises sammen i stedet for at en tilfeldig én velges.
+function finnNesteBursdag(liste) {
+  if (!liste || liste.length === 0) return null;
+
+  const naa = new Date();
+  const iDag = new Date(naa.getFullYear(), naa.getMonth(), naa.getDate());
+
+  let minDager = Infinity;
+  let navn = [];
+  let dato = null;
+
+  liste.forEach((b) => {
+    const [, mStr, dStr] = b.dato.split("-");
+    const m = Number(mStr) - 1;
+    const d = Number(dStr);
+    let bursdagIAr = new Date(naa.getFullYear(), m, d);
+    if (bursdagIAr < iDag) bursdagIAr = new Date(naa.getFullYear() + 1, m, d);
+
+    const dagerTil = Math.round((bursdagIAr - iDag) / 86400000);
+    if (dagerTil < minDager) {
+      minDager = dagerTil;
+      navn = [b.navn];
+      dato = bursdagIAr;
+    } else if (dagerTil === minDager) {
+      navn.push(b.navn);
+    }
+  });
+
+  return { navn, dato, dagerTil: minDager };
+}
+
+const BURSDAG_MANEDSNAVN = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"];
+
+function formaterBursdagTekst(neste) {
+  const navnTekst = neste.navn.join(" & ");
+  if (neste.dagerTil === 0) return `${navnTekst} i dag!`;
+  return `${navnTekst} (${neste.dato.getDate()}. ${BURSDAG_MANEDSNAVN[neste.dato.getMonth()]})`;
+}
+
+// Ruller en feiring midt på skjermen mens noen har bursdag i dag - vises i
+// BURSDAG_VIS_MS av gangen, med BURSDAG_SYKLUS_MS mellom hver gang, i stedet for å
+// stå fremme hele dagen og dekke innholdet bak.
+function sjekkBursdagBanner() {
+  const naa = new Date();
+  const iDagNavn = bursdager
+    .filter((b) => {
+      const [, mStr, dStr] = b.dato.split("-");
+      return Number(mStr) - 1 === naa.getMonth() && Number(dStr) === naa.getDate();
+    })
+    .map((b) => b.navn);
+
+  if (iDagNavn.length === 0) {
+    bursdagBannerEl.classList.remove("vis");
+    return;
+  }
+
+  const samlet = iDagNavn
+    .map((navn) => `🎉🎂 Gratulerer med dagen, ${navn}! 🎂🎉`)
+    .join("　　");
+  bursdagBannerTekst1El.textContent = samlet;
+  bursdagBannerTekst2El.textContent = samlet;
+
+  bursdagBannerEl.hidden = false;
+  bursdagBannerTrackEl.style.animation = "none";
+  void bursdagBannerTrackEl.offsetWidth; // tving reflow - start rullingen fra venstre kant hver gang
+  bursdagBannerTrackEl.style.animation = "";
+  requestAnimationFrame(() => bursdagBannerEl.classList.add("vis"));
+
+  setTimeout(() => bursdagBannerEl.classList.remove("vis"), BURSDAG_VIS_MS);
 }
 
 function renderLanes(liste) {
