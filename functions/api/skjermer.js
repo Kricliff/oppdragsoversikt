@@ -10,6 +10,14 @@
 
 const KV_KEY = "skjermer";
 const MAKS_ALDER_MS = 24 * 60 * 60 * 1000; // fjernes helt fra registeret etter et døgn uten kontakt
+// Hver skjerm heartbeater hvert 15. sekund (se SKJERM_HEARTBEAT_MS i app.js), men et
+// KV-skriv ("put") koster av en gratis kvote på kun 1000/døgn for HELE kontoen -
+// uten denne bremsen bruker én eneste skjerm hele døgnkvoten i løpet av et par timer.
+// En ren heartbeat (ingen faktisk endring) skrives derfor kun sjelden; selve
+// gjenkjenningen av fjernstyringskommandoer skjer likevel på hvert kall, siden den kun
+// leser tilstanden - AKTIV_VINDU_MS under er utvidet tilsvarende, slik at "aktiv" i
+// admin fortsatt stemmer selv om sistSett kun oppdateres i lagringen med dette mellomrommet.
+const HEARTBEAT_SKRIVE_MS = 5 * 60 * 1000;
 
 // "Kontor" meldte seg inn selv (en fysisk skjerm som fortsatt heartbeater), men skal
 // aldri vises i admin - fjerning derfra alene hjelper ikke siden den bare kommer tilbake
@@ -19,7 +27,9 @@ const SKJULTE_NAVN = new Set(["Kontor"]);
 export async function onRequestGet(context) {
   const alle = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
   const naa = Date.now();
-  const AKTIV_VINDU_MS = 60 * 1000; // regnes som "aktiv" om den har heartbeatet siste minutt
+  // Må være god margin over HEARTBEAT_SKRIVE_MS - sistSett i lagringen kan henge opptil
+  // det mellomrommet bak faktisk kontakt, siden rene heartbeats ikke skriver hver gang.
+  const AKTIV_VINDU_MS = HEARTBEAT_SKRIVE_MS + 90 * 1000;
 
   const skjermer = Object.entries(alle)
     .filter(([, s]) => naa - s.sistSett < MAKS_ALDER_MS)
@@ -74,8 +84,17 @@ export async function onRequestPost(context) {
   // IKKE gjøre det, ellers ser en skjerm som faktisk er offline falskt ut som aktiv.
   const sistSett = body?.heartbeat ? naa : (eksisterende?.sistSett ?? naa);
 
-  alle[id] = { navn, sistSett, gjestevisning };
-  await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+  // Skriv til KV med en gang ved en FAKTISK endring (nytt navn, ny gjestevisning-
+  // tilstand, eller en helt ny skjerm) - ellers kun med jevne mellomrom, se
+  // HEARTBEAT_SKRIVE_MS over. Svaret speiler uansett riktig tilstand hver gang, siden
+  // det bygges fra samme leste `alle`-objekt.
+  const noeEndret = !eksisterende || navn !== eksisterende.navn || gjestevisning !== eksisterende.gjestevisning;
+  const tidForNyttSkriv = !eksisterende || naa - eksisterende.sistSett >= HEARTBEAT_SKRIVE_MS;
+
+  if (noeEndret || tidForNyttSkriv) {
+    alle[id] = { navn, sistSett, gjestevisning };
+    await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+  }
 
   return json({ gjestevisning });
 }
