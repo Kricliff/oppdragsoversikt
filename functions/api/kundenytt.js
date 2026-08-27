@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 19;
+const CACHE_VERSION = 20;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 3; // holdt lavt så panelet forblir kompakt og dekker minst mulig av kortene bak
 const FERSKHET_DAGER = 7;
@@ -155,10 +155,14 @@ function rensXmlTekst(raw) {
   const cdataMatch = /^<!\[CDATA\[([\s\S]*?)\]\]>$/.exec(tekst);
   if (cdataMatch) tekst = cdataMatch[1].trim();
   return tekst
+    // Numeriske referanser (&#233; / &#xE9;) må dekodes generisk - Bing sine kilder
+    // bruker mye av dette for aksenter (é, è, ø fra andre feeder osv.), og en fast
+    // liste med bare navngitte enheter lot disse stå igjen som rå tekst i visningen.
+    .replace(/&#(\d+);/g, (_, kode) => String.fromCodePoint(Number(kode)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, kode) => String.fromCodePoint(parseInt(kode, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'");
 }

@@ -7,7 +7,7 @@ const KILDER = [
   { navn: "TV2", rss: "https://www.tv2.no/rss/nyheter" }
 ];
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const ANTALL_SAKER = 6;
 
 export async function onRequestGet(context) {
@@ -70,10 +70,11 @@ function rensXmlTekst(raw) {
   const cdataMatch = /^<!\[CDATA\[([\s\S]*?)\]\]>$/.exec(tekst);
   if (cdataMatch) tekst = cdataMatch[1].trim();
   return tekst
+    .replace(/&#(\d+);/g, (_, kode) => String.fromCodePoint(Number(kode)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, kode) => String.fromCodePoint(parseInt(kode, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'");
 }
