@@ -1148,6 +1148,11 @@ body {
   justify-content: center;
 }
 
+/* display:flex over slår ellers ut den native [hidden]-skjulingen */
+.skjerm-navngi[hidden] {
+  display: none;
+}
+
 .skjerm-navngi-boks {
   background: var(--surface);
   border: 1px solid var(--border);
