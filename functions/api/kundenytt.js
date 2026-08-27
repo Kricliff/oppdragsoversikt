@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 16;
+const CACHE_VERSION = 19;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 3; // holdt lavt så panelet forblir kompakt og dekker minst mulig av kortene bak
 const FERSKHET_DAGER = 7;
