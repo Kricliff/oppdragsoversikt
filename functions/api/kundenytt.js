@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 23;
+const CACHE_VERSION = 24;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 8; // panelet viser nå kun én sak av gangen i en karusell, så flere kan samles opp
 const FERSKHET_DAGER = 7;
@@ -120,15 +120,12 @@ async function sokNyheterOmKunde(kunde) {
     if (ferskest && publisert <= ferskest.publisert) continue;
 
     const tittel = rensXmlTekst(titleMatch[1]);
-    if (!erTrolegNorskEllerEngelsk(tittel)) continue;
-
     const kildeMatch = /<News:Source>([\s\S]*?)<\/News:Source>/.exec(itemMatch[1]);
-    ferskest = {
-      selskap: kunde.navn,
-      tittel,
-      kilde: kildeMatch ? rensXmlTekst(kildeMatch[1]) : null,
-      publisert
-    };
+    const kilde = kildeMatch ? rensXmlTekst(kildeMatch[1]) : null;
+
+    if (!erTrolegNorskEllerEngelsk(tittel) || IKKE_NO_EN_KILDER.has(kilde)) continue;
+
+    ferskest = { selskap: kunde.navn, tittel, kilde, publisert };
   }
   return ferskest;
 }
@@ -139,7 +136,12 @@ async function sokNyheterOmKunde(kunde) {
 // tyske, spanske og italienske ord som ikke også finnes i norsk/engelsk. Ikke
 // vanntett, men fanger opp den vanligste støyen fra globale finansnyhetsbyråer.
 const IKKE_LATINSK_SKRIFT = /[Ѐ-ӿ一-鿿぀-ヿ가-힯؀-ۿ]/;
-const FREMMEDSPRAK_ORD = /\b(pour|avec|dans|leur|être|nous|vous|cette|après|société|publie|résultats|trimestre|und|für|nicht|auch|wird|über|durch|sowie|einem|einer|del|los|las|por|para|con|una|más|della|degli|delle|perché|anche)\b/i;
+const FREMMEDSPRAK_ORD = /\b(pour|avec|dans|leur|être|nous|vous|cette|après|société|publie|résultats|trimestre|cours|actions?|bourse|chiffre|affaires|titre|und|für|nicht|auch|wird|über|durch|sowie|einem|einer|aktien|unternehmen|milliarden|millionen|del|los|las|por|para|con|una|más|della|degli|delle|perché|anche)\b/i;
+
+// Kjente kilder som konsekvent publiserer på andre språk (globale finansnyhetsbyråer) -
+// et ekstra sikkerhetsnett i tillegg til ordlisten over, siden en tittel som f.eks. bare
+// er "Cours <selskapsnavn>" (Zonebourse sitt faste format) lett kan mangle ord fra listen.
+const IKKE_NO_EN_KILDER = new Set(["Zonebourse", "Finanznachrichten", "AD HOC NEWS", "Boursorama", "marktscreener.com"]);
 
 function erTrolegNorskEllerEngelsk(tekst) {
   if (IKKE_LATINSK_SKRIFT.test(tekst)) return false;
