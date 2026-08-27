@@ -57,6 +57,7 @@ const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
 const gjestevisningEl = document.getElementById("gjestevisning");
+const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
 const gjesteGrafKandidaterEl = document.getElementById("gjesteGrafKandidater");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
@@ -90,6 +91,10 @@ async function init() {
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
   document.addEventListener("keydown", handterGjesteHotkey);
+  gjesteKnappEl.addEventListener("click", veksleGjestevisning);
+  // Knappen selv dekkes av gjestevisningen når den er aktiv (høyere z-index) - klikk
+  // hvor som helst på den for å lukke igjen, i tillegg til Escape/hurtigtasten.
+  gjestevisningEl.addEventListener("click", () => gjestevisningEl.classList.remove("vis"));
 }
 
 // Ctrl+Shift+G veksler gjestevisningen av og på - Escape lukker den. Skjuler alt av
