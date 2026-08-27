@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 16;
+const CACHE_VERSION = 17;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -208,28 +208,26 @@ async function hentOgNormaliser(apiKey) {
   return {
     oppdrag,
     kandidaterLandetIAr: kandidatStats.iAr,
-    // Kun brukt av gjestevisningen (se functions/api/gjestevisning.js sin klientlogikk
-    // i app.js) - ikke av hovedtavlen, som bare bruker kandidaterLandetIAr over.
-    kandidaterLandetPerManed: kandidatStats.perManed,
-    kandidaterLandetIFjor: kandidatStats.iFjor
+    // Kun brukt av gjestevisningens graf (se renderGjestevisning i app.js) - ikke av
+    // hovedtavlen, som bare bruker kandidaterLandetIAr over.
+    kandidaterLandetPerManed: kandidatStats.perManed
   };
 }
 
-// Ekte antall kandidater "landet" (ansatt), fra "jobApplication"-scopen (status
+// Ekte antall kandidater "landet" (ansatt) i år, fra "jobApplication"-scopen (status
 // "hired"). Dette er IKKE koblet til enkeltoppdrag - det krever "job post"-tilgang vi
 // ikke har (jobApplication peker på jobPostId, ikke projectId) - men gir et pålitelig
 // totaltall for statslinjen, i stedet for den gamle tilnærmingen som talte
-// teammedlemmer/kundekontakter på fullførte prosjekter. Beregner i tillegg per-måned
-// for i år, og et rettferdig i-fjor-tall til bruk i gjestevisningens graf/sammenligning.
+// teammedlemmer/kundekontakter på fullførte prosjekter. Beregner i tillegg per-måned,
+// til bruk i gjestevisningens graf.
 async function hentKandidatStats(apiKey) {
   try {
     const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`;
     const json = await fetch(url).then((r) => r.json());
-    if (!json.success) return { iAr: null, perManed: [], iFjor: null };
+    if (!json.success) return { iAr: null, perManed: [] };
 
     const naa = new Date();
     const iAr = naa.getFullYear();
-    const iFjor = iAr - 1;
     const datoer = json.data
       .map((a) => (a.updated ? new Date(a.updated.replace(" ", "T") + "Z") : null))
       .filter(Boolean);
@@ -239,18 +237,9 @@ async function hentKandidatStats(apiKey) {
       perManed.push({ maned: m, antall: datoer.filter((d) => d.getFullYear() === iAr && d.getMonth() === m).length });
     }
 
-    // "I fjor"-tallet må dekke SAMME månedsperiode som i år (jan-nå), ikke hele fjoråret -
-    // ellers sammenlignes f.eks. 8 måneder i år mot 12 måneder i fjor, som alltid vil se
-    // ut som nedgang uansett faktisk utvikling.
-    const iFjorHittil = datoer.filter((d) => d.getFullYear() === iFjor && d.getMonth() <= naa.getMonth()).length;
-
-    return {
-      iAr: datoer.filter((d) => d.getFullYear() === iAr).length,
-      perManed,
-      iFjor: iFjorHittil
-    };
+    return { iAr: datoer.filter((d) => d.getFullYear() === iAr).length, perManed };
   } catch {
-    return { iAr: null, perManed: [], iFjor: null };
+    return { iAr: null, perManed: [] };
   }
 }
 

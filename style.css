@@ -959,15 +959,6 @@ body {
   letter-spacing: 0.04em;
 }
 
-.gjeste-stat .sammenligning {
-  margin-top: 0.3rem;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.gjeste-stat .sammenligning.opp { color: #1e8a4c; }
-.gjeste-stat .sammenligning.ned { color: #c02626; }
-
 .gjeste-grafer {
   display: grid;
   grid-template-columns: 1fr 1fr;

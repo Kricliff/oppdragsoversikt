@@ -122,11 +122,10 @@ function renderGjestevisning() {
   const unikeKunder = new Set(aktive.map((o) => o.kunde)).size;
 
   const kandidaterIAr = kandidaterLandetIArEkte();
-  const kandidatSammenligning = lagSammenligning(kandidaterIAr, kandidaterLandetIFjorEkte());
 
   gjesteStatsEl.replaceChildren(
     lagGjesteStat(aktive.length, "Aktive oppdrag"),
-    lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år", kandidatSammenligning),
+    lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år"),
     lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
     lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
   );
@@ -136,13 +135,7 @@ function renderGjestevisning() {
   renderGjesteTrender();
 }
 
-function lagSammenligning(iAr, iFjor) {
-  if (typeof iAr !== "number" || typeof iFjor !== "number" || iFjor === 0) return null;
-  const endring = Math.round(((iAr - iFjor) / iFjor) * 100);
-  return { retning: endring >= 0 ? "opp" : "ned", tekst: `${endring >= 0 ? "↑" : "↓"} ${Math.abs(endring)}% fra i fjor` };
-}
-
-function lagGjesteStat(verdi, etikett, sammenligning, notat) {
+function lagGjesteStat(verdi, etikett) {
   const div = document.createElement("div");
   div.className = "gjeste-stat";
 
@@ -155,20 +148,6 @@ function lagGjesteStat(verdi, etikett, sammenligning, notat) {
   etikettEl.className = "etikett";
   etikettEl.textContent = etikett;
   div.appendChild(etikettEl);
-
-  if (sammenligning) {
-    const sammenligningEl = document.createElement("div");
-    sammenligningEl.className = `sammenligning ${sammenligning.retning}`;
-    sammenligningEl.textContent = sammenligning.tekst;
-    div.appendChild(sammenligningEl);
-  }
-
-  if (notat) {
-    const notatEl = document.createElement("div");
-    notatEl.className = "gjeste-stat-notat";
-    notatEl.textContent = notat;
-    div.appendChild(notatEl);
-  }
 
   return div;
 }
