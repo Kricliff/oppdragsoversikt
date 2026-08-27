@@ -12,7 +12,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 6;
 const FERSKHET_DAGER = 30;
@@ -90,7 +90,10 @@ async function hentKundeliste(apiKey) {
 }
 
 async function sokNyheterOmKunde(kunde) {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(`"${kunde.navn}"`)}&hl=no&gl=NO&ceid=NO:no`;
+  // Merk: q=%22...%22 (anførselstegn for eksakt frase) gir null treff hos Google News
+  // sitt RSS-søk, selv for kjente selskaper - bekreftet ved testing. Uten anførselstegn
+  // fungerer søket, på bekostning av litt mer upresis treffsikkerhet.
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(kunde.navn)}&hl=no&gl=NO&ceid=NO:no`;
   const xml = await hentTekst(url);
   if (!xml) return null;
 
