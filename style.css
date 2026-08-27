@@ -763,6 +763,62 @@ body {
   color: var(--text-faint);
 }
 
+/* ---------- Kundenytt (omtale av kunder i nyhetene) ---------- */
+
+.kundenytt {
+  position: fixed;
+  left: 28px; /* venstre motstykke til postit/busstider, over bunnbanneret */
+  bottom: 80px;
+  width: 280px;
+  max-height: 260px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+}
+
+.kundenytt-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 0.76rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
+.kundenytt-liste {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+.kundenytt-rad { display: flex; flex-direction: column; gap: 0.1rem; }
+
+.kundenytt-selskap {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--aktiv);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.kundenytt-tittel {
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.kundenytt-kilde {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
 /* ---------- Feiring (kandidat landet / ny kunde) ---------- */
 
 .feiring {
@@ -834,5 +890,6 @@ body {
   .stats { display: none; }
   .postit { right: 12px; bottom: 64px; width: 160px; }
   .busstider { right: 12px; bottom: 232px; width: 150px; }
+  .kundenytt { left: 12px; bottom: 64px; width: 160px; max-height: 200px; }
   .feiring-item { font-size: 0.95rem; }
 }

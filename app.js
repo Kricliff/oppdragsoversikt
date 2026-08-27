@@ -7,12 +7,13 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
 const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henting
 const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
+const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -26,6 +27,7 @@ let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte
 let nrkOverskrifter = []; // vises i banneret når det ikke er noen aktive feiringer
 let nrkLogoUrl = null; // NRKs eget kanal-logo, hentet fra RSS-feeden via functions/api/nrk.js
 let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
+let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -47,6 +49,8 @@ const feiringBannerEl = document.getElementById("feiringBanner");
 const feiringTrackEl = document.getElementById("feiringTrack");
 const feiringTekst1El = document.getElementById("feiringTekst1");
 const feiringTekst2El = document.getElementById("feiringTekst2");
+const kundenyttPanelEl = document.getElementById("kundenyttPanel");
+const kundenyttListeEl = document.getElementById("kundenyttListe");
 
 async function init() {
   initTema();
@@ -68,6 +72,8 @@ async function init() {
   setInterval(lastFeiring, FEIRING_REFRESH_MS);
   lastNrk();
   setInterval(lastNrk, NRK_REFRESH_MS);
+  lastKundenytt();
+  setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
@@ -166,6 +172,46 @@ function restartFeiringAnimasjon() {
   feiringTrackEl.style.animation = "none";
   void feiringTrackEl.offsetWidth; // tving reflow slik at "none" faktisk får effekt
   feiringTrackEl.style.animation = "";
+}
+
+// Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel, ikke i bunnbanneret.
+async function lastKundenytt() {
+  kundenytt = await hentKundenytt();
+  renderKundenytt();
+}
+
+function renderKundenytt() {
+  if (kundenytt.length === 0) {
+    kundenyttPanelEl.hidden = true;
+    return;
+  }
+
+  kundenyttPanelEl.hidden = false;
+  kundenyttListeEl.replaceChildren(
+    ...kundenytt.map((funn) => {
+      const rad = document.createElement("div");
+      rad.className = "kundenytt-rad";
+
+      const selskap = document.createElement("div");
+      selskap.className = "kundenytt-selskap";
+      selskap.textContent = funn.selskap;
+      rad.appendChild(selskap);
+
+      const tittel = document.createElement("div");
+      tittel.className = "kundenytt-tittel";
+      tittel.textContent = funn.tittel;
+      rad.appendChild(tittel);
+
+      if (funn.kilde) {
+        const kilde = document.createElement("div");
+        kilde.className = "kundenytt-kilde";
+        kilde.textContent = funn.kilde;
+        rad.appendChild(kilde);
+      }
+
+      return rad;
+    })
+  );
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
