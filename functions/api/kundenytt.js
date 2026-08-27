@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 21;
+const CACHE_VERSION = 22;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 8; // panelet viser nå kun én sak av gangen i en karusell, så flere kan samles opp
 const FERSKHET_DAGER = 7;
@@ -103,7 +103,10 @@ async function sokNyheterOmKunde(kunde) {
   if (!xml) return null;
 
   // Bing sorterer IKKE etter dato (relevans først) - så vi ser gjennom alle treffene i
-  // svaret og plukker det ferskeste, i stedet for bare det første.
+  // svaret og plukker det ferskeste, i stedet for bare det første. Selskapsnavn treffer
+  // ofte globale finans-nyhetsbyråer som gjenbruker samme sak på mange språk (tysk
+  // "Finanznachrichten", fransk "Zonebourse" osv.) - saker som ikke er norsk/engelsk
+  // filtreres bort helt, uansett hvor ferske de er.
   let ferskest = null;
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let itemMatch;
@@ -116,15 +119,32 @@ async function sokNyheterOmKunde(kunde) {
     if (Number.isNaN(publisert)) continue;
     if (ferskest && publisert <= ferskest.publisert) continue;
 
+    const tittel = rensXmlTekst(titleMatch[1]);
+    if (!erTrolegNorskEllerEngelsk(tittel)) continue;
+
     const kildeMatch = /<News:Source>([\s\S]*?)<\/News:Source>/.exec(itemMatch[1]);
     ferskest = {
       selskap: kunde.navn,
-      tittel: rensXmlTekst(titleMatch[1]),
+      tittel,
       kilde: kildeMatch ? rensXmlTekst(kildeMatch[1]) : null,
       publisert
     };
   }
   return ferskest;
+}
+
+// Grov språkheuristikk - ingen ordentlig språkgjenkjenning tilgjengelig i Workers-
+// miljøet uten et eget API. Luker bort det tydeligste: ikke-latinske skrifttegn
+// (kyrillisk, kinesisk/japansk/koreansk, arabisk) og et knippe entydige franske,
+// tyske, spanske og italienske ord som ikke også finnes i norsk/engelsk. Ikke
+// vanntett, men fanger opp den vanligste støyen fra globale finansnyhetsbyråer.
+const IKKE_LATINSK_SKRIFT = /[Ѐ-ӿ一-鿿぀-ヿ가-힯؀-ۿ]/;
+const FREMMEDSPRAK_ORD = /\b(pour|avec|dans|leur|être|nous|vous|cette|après|société|publie|résultats|trimestre|und|für|nicht|auch|wird|über|durch|sowie|einem|einer|del|los|las|por|para|con|una|más|della|degli|delle|perché|anche)\b/i;
+
+function erTrolegNorskEllerEngelsk(tekst) {
+  if (IKKE_LATINSK_SKRIFT.test(tekst)) return false;
+  if (FREMMEDSPRAK_ORD.test(tekst)) return false;
+  return true;
 }
 
 async function hentTekst(url) {
