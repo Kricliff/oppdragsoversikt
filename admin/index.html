@@ -612,7 +612,11 @@
 
   async function fjernSkjerm(id) {
     try {
-      await fetch(`/api/skjermer?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      await fetch("/api/skjermer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, fjern: true })
+      });
     } catch (err) {
       console.warn("Fikk ikke fjernet skjerm:", err);
     }

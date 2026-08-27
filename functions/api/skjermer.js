@@ -44,6 +44,14 @@ export async function onRequestPost(context) {
   const alle = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
   const naa = Date.now();
 
+  // Fjerning fra admin går også via POST (samme kanal som resten) - DELETE-metoden
+  // blokkeres av Cloudflares edge før den når selve funksjonen.
+  if (body?.fjern === true) {
+    delete alle[id];
+    await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+    return json({ ok: true });
+  }
+
   for (const [eksisterendeId, s] of Object.entries(alle)) {
     if (naa - s.sistSett > MAKS_ALDER_MS) delete alle[eksisterendeId];
   }
@@ -61,20 +69,6 @@ export async function onRequestPost(context) {
   await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
 
   return json({ gjestevisning });
-}
-
-// Fjerner en skjerm fra registeret manuelt fra admin-siden. Merk: om skjermen faktisk
-// fortsatt er åpen og melder seg inn med jevne mellomrom, dukker den opp igjen ved neste
-// heartbeat - dette fjerner kun oppføringen, ikke selve skjermens lagrede navn.
-export async function onRequestDelete(context) {
-  const id = new URL(context.request.url).searchParams.get("id");
-  if (!id) return json({ error: "Mangler id" }, 400);
-
-  const alle = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
-  delete alle[id];
-  await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
-
-  return json({ ok: true });
 }
 
 function json(data, status = 200) {
