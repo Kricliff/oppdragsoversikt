@@ -20,7 +20,7 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 22;
+const CACHE_VERSION = 23;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 8; // panelet viser nå kun én sak av gangen i en karusell, så flere kan samles opp
 const FERSKHET_DAGER = 7;
