@@ -123,16 +123,18 @@ function renderGjestevisning() {
   const kandidaterIAr = kandidaterLandetIArEkte();
   const kandidatSammenligning = lagSammenligning(kandidaterIAr, kandidaterLandetIFjorEkte());
   const gjentakendeProsent = beregnGjentakendeKundeandel(alleOppdrag);
-  const dagerSnitt = dagerTilAnsettelseSnittEkte();
 
+  // Merk: dagerTilAnsettelseSnittEkte() (snitt dager fra oppstart til ansettelse) regnes
+  // ut, men vises bevisst IKKE her - vårt reelle tall lå langt over det offentlig kjente
+  // bransjesnittet (32-44 dager) da dette ble bygget, og en direkte sammenligning ville da
+  // virke mot sin hensikt i en gjestevisning. Tallet er fortsatt tilgjengelig internt.
   gjesteStatsEl.replaceChildren(
     lagGjesteStat(aktive.length, "Aktive oppdrag"),
     lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år", kandidatSammenligning),
     lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
     lagGjesteStat(kandidaterLandetTotaltEkte() ?? "–", "Kandidater landet totalt"),
     lagGjesteStat(unikeKunder, "Kunder vi jobber med nå"),
-    lagGjesteStat(gjentakendeProsent != null ? `${gjentakendeProsent}%` : "–", "Kunder som kommer tilbake"),
-    ...(dagerSnitt != null ? [lagGjesteStat(dagerSnitt, "Snitt dager til ansettelse", null, "Bransjesnitt er typisk 32-44 dager")] : [])
+    lagGjesteStat(gjentakendeProsent != null ? `${gjentakendeProsent}%` : "–", "Kunder som kommer tilbake")
   );
 
   tegnGjesteGraf(gjesteGrafKandidaterEl, kandidaterLandetPerManedEkte());
