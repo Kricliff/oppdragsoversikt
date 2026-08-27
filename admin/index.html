@@ -20,7 +20,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg-0); color: var(--text); font-family: "Poppins", -apple-system, "Segoe UI", sans-serif; }
   .side {
-    max-width: 640px;
+    max-width: 1040px;
     margin: 0 auto;
     padding: clamp(28px, 6vh, 64px) clamp(20px, 4vw, 28px) 80px;
   }
@@ -36,11 +36,18 @@
   }
   h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: -0.01em; }
   .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 2rem; max-width: 52ch; }
+  .kort-grid {
+    column-count: 2;
+    column-gap: 1.2rem;
+  }
   .kort {
     background: var(--surface);
     border: 1px solid var(--border);
     padding: 1.4rem;
     margin-bottom: 1.2rem;
+    break-inside: avoid;
+    display: inline-block;
+    width: 100%;
   }
   .kort h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.9rem; }
   .postit-forhandsvisning {
@@ -214,6 +221,9 @@
     text-decoration: none;
   }
   .tilbake:hover { color: var(--text); }
+  @media (max-width: 720px) {
+    .kort-grid { column-count: 1; }
+  }
 </style>
 </head>
 <body>
@@ -227,40 +237,44 @@
   <h1>Admin - Oppdragsoversikt</h1>
   <p class="ingress">Denne siden er kun tilgjengelig for de som er lagt til i egen tilgangspolicy - ikke alle som ser tavlen.</p>
 
-  <div class="kort">
-    <h2>Fjernstyring</h2>
-    <p class="storrelse-hint">Skjermer som har meldt seg inn. Trykk for å vise/skjule gjestevisningen på en av dem herfra.</p>
-    <div id="skjermerListe"><p class="endring-tom">Laster…</p></div>
-  </div>
+  <div class="kort-grid">
 
-  <div class="kort">
-    <h2>Post-it-lapp</h2>
-    <div class="emoji-rad" id="emojiRad"></div>
-    <div class="postit-forhandsvisning">
-      <textarea id="notatTekst" maxlength="500" placeholder="Skriv en beskjed til teamet…"></textarea>
+    <div class="kort">
+      <h2>Fjernstyring</h2>
+      <p class="storrelse-hint">Skjermer som har meldt seg inn. Trykk for å vise/skjule gjestevisningen på en av dem herfra.</p>
+      <div id="skjermerListe"><p class="endring-tom">Laster…</p></div>
     </div>
-    <p class="storrelse-hint" id="storrelseHint">Boksen over har samme størrelse som post-it-lappen på tavlen.</p>
-    <div class="statusrad">
-      <span id="statusTekst">Laster…</span>
-      <button id="lagreKnapp" class="lagreknapp">Lagre</button>
-    </div>
-  </div>
 
-  <div class="kort">
-    <h2>Siste endringer på tavlen</h2>
-    <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status</p>
-    <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
-  </div>
-
-  <div class="kort">
-    <h2>Bursdager</h2>
-    <p class="storrelse-hint">Legges inn manuelt her - Recman har ikke fødselsdato på ansatte.</p>
-    <div id="bursdagerListe"><p class="endring-tom">Laster…</p></div>
-    <div class="bursdag-ny-rad">
-      <input type="text" id="bursdagNavn" placeholder="Navn" maxlength="60">
-      <input type="date" id="bursdagDato">
-      <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
+    <div class="kort">
+      <h2>Post-it-lapp</h2>
+      <div class="emoji-rad" id="emojiRad"></div>
+      <div class="postit-forhandsvisning">
+        <textarea id="notatTekst" maxlength="500" placeholder="Skriv en beskjed til teamet…"></textarea>
+      </div>
+      <p class="storrelse-hint" id="storrelseHint">Boksen over har samme størrelse som post-it-lappen på tavlen.</p>
+      <div class="statusrad">
+        <span id="statusTekst">Laster…</span>
+        <button id="lagreKnapp" class="lagreknapp">Lagre</button>
+      </div>
     </div>
+
+    <div class="kort">
+      <h2>Siste endringer på tavlen</h2>
+      <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status</p>
+      <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
+      <h2>Bursdager</h2>
+      <p class="storrelse-hint">Legges inn manuelt her - Recman har ikke fødselsdato på ansatte.</p>
+      <div id="bursdagerListe"><p class="endring-tom">Laster…</p></div>
+      <div class="bursdag-ny-rad">
+        <input type="text" id="bursdagNavn" placeholder="Navn" maxlength="60">
+        <input type="date" id="bursdagDato">
+        <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
+      </div>
+    </div>
+
   </div>
 
   <a class="tilbake" href="/">← Tilbake til tavlen</a>
