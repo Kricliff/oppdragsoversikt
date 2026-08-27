@@ -931,8 +931,8 @@ body {
 
 .gjeste-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(12px, 1.6vw, 24px);
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(14px, 2vw, 32px);
   width: min(1100px, 92vw);
 }
 
@@ -967,12 +967,6 @@ body {
 
 .gjeste-stat .sammenligning.opp { color: #1e8a4c; }
 .gjeste-stat .sammenligning.ned { color: #c02626; }
-
-.gjeste-stat-notat {
-  margin-top: 0.3rem;
-  font-size: 0.68rem;
-  color: var(--text-faint);
-}
 
 .gjeste-grafer {
   display: grid;
@@ -1035,6 +1029,48 @@ body {
   font-size: 0.64rem;
   color: var(--text-faint);
   text-transform: uppercase;
+}
+
+.gjeste-trender-kort {
+  width: min(1100px, 92vw);
+}
+
+.gjeste-trender-kort h3 {
+  margin: 0 0 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.gjeste-trender-liste {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(12px, 1.6vw, 24px);
+}
+
+.gjeste-trend {
+  text-align: center;
+  padding: clamp(8px, 1.2vh, 14px) clamp(6px, 0.8vw, 10px);
+}
+
+/* Nøytral farge (ikke oransje) - dette er bransjefakta, ikke våre egne tall, og skal
+   lese seg tydelig annerledes enn gjeste-stat sine egne prestasjonstall. */
+.gjeste-trend .tall {
+  font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gjeste-trend .tekst {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
 }
 
 /* ---------- Feiring (kandidat landet / ny kunde) ---------- */
@@ -1112,5 +1148,6 @@ body {
   .feiring-item { font-size: 0.95rem; }
   .gjeste-stats { grid-template-columns: repeat(2, 1fr); }
   .gjeste-grafer { grid-template-columns: 1fr; }
+  .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
   .gjeste-knapp { left: 12px; bottom: 12px; width: 34px; height: 34px; }
 }

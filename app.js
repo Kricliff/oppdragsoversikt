@@ -61,6 +61,7 @@ const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
 const gjesteGrafKandidaterEl = document.getElementById("gjesteGrafKandidater");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
+const gjesteTrenderListeEl = document.getElementById("gjesteTrenderListe");
 
 async function init() {
   initTema();
@@ -122,37 +123,17 @@ function renderGjestevisning() {
 
   const kandidaterIAr = kandidaterLandetIArEkte();
   const kandidatSammenligning = lagSammenligning(kandidaterIAr, kandidaterLandetIFjorEkte());
-  const gjentakendeProsent = beregnGjentakendeKundeandel(alleOppdrag);
 
-  // Merk: dagerTilAnsettelseSnittEkte() (snitt dager fra oppstart til ansettelse) regnes
-  // ut, men vises bevisst IKKE her - vårt reelle tall lå langt over det offentlig kjente
-  // bransjesnittet (32-44 dager) da dette ble bygget, og en direkte sammenligning ville da
-  // virke mot sin hensikt i en gjestevisning. Tallet er fortsatt tilgjengelig internt.
   gjesteStatsEl.replaceChildren(
     lagGjesteStat(aktive.length, "Aktive oppdrag"),
     lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år", kandidatSammenligning),
     lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
-    lagGjesteStat(kandidaterLandetTotaltEkte() ?? "–", "Kandidater landet totalt"),
-    lagGjesteStat(unikeKunder, "Kunder vi jobber med nå"),
-    lagGjesteStat(gjentakendeProsent != null ? `${gjentakendeProsent}%` : "–", "Kunder som kommer tilbake")
+    lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
   );
 
   tegnGjesteGraf(gjesteGrafKandidaterEl, kandidaterLandetPerManedEkte());
   tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
-}
-
-// Andel av kundene vi har hatt oppdrag for (aktiv/utført/på vent) som har hatt mer enn
-// ett oppdrag hos oss - et ærlig lojalitetsmål som ikke krever data om andre byråer for
-// å være overbevisende i seg selv.
-function beregnGjentakendeKundeandel(liste) {
-  const oppdragPerKunde = new Map();
-  liste.forEach((o) => {
-    if (!o.kunde) return;
-    oppdragPerKunde.set(o.kunde, (oppdragPerKunde.get(o.kunde) ?? 0) + 1);
-  });
-  if (oppdragPerKunde.size === 0) return null;
-  const gjentakende = [...oppdragPerKunde.values()].filter((antall) => antall > 1).length;
-  return Math.round((gjentakende / oppdragPerKunde.size) * 100);
+  renderGjesteTrender();
 }
 
 function lagSammenligning(iAr, iFjor) {
@@ -236,6 +217,38 @@ function tegnGjesteGraf(containerEl, data) {
       soyle.appendChild(etikett);
 
       return soyle;
+    })
+  );
+}
+
+// Kuraterte rekrutteringstrender - research 27.08.2026 (se kildehenvisninger i
+// commit-meldingen). Statisk innhold, ikke hentet live fra noe API - bør oppdateres med
+// jevne mellomrom etter hvert som ny bransjestatistikk kommer, ikke satt opp til å friskes
+// opp automatisk siden dette er generell bransjekunnskap, ikke våre egne tall.
+const GJESTE_TRENDER = [
+  { tall: "88%", tekst: "av selskaper bruker nå AI i tidlig kandidatscreening" },
+  { tall: "70%", tekst: "av virksomheter har gått over til kompetansebasert rekruttering" },
+  { tall: "45%", tekst: "av arbeidsgivere sliter med å finne rett kompetanse" },
+  { tall: "2×", tekst: "flere søknader per stilling siden 2022 - men fortsatt vanskeligere å fylle dem" }
+];
+
+function renderGjesteTrender() {
+  gjesteTrenderListeEl.replaceChildren(
+    ...GJESTE_TRENDER.map((t) => {
+      const div = document.createElement("div");
+      div.className = "gjeste-trend";
+
+      const tallEl = document.createElement("div");
+      tallEl.className = "tall";
+      tallEl.textContent = t.tall;
+      div.appendChild(tallEl);
+
+      const tekstEl = document.createElement("div");
+      tekstEl.className = "tekst";
+      tekstEl.textContent = t.tekst;
+      div.appendChild(tekstEl);
+
+      return div;
     })
   );
 }

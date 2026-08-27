@@ -10,8 +10,6 @@ let sisteKildeErRecman = false;
 let sisteKandidaterLandetIAr = null;
 let sisteKandidaterLandetPerManed = [];
 let sisteKandidaterLandetIFjor = null;
-let sisteKandidaterLandetTotalt = null;
-let sisteDagerTilAnsettelseSnitt = null;
 
 function kildeErRecman() {
   return sisteKildeErRecman;
@@ -34,14 +32,6 @@ function kandidaterLandetIFjorEkte() {
   return sisteKandidaterLandetIFjor;
 }
 
-function kandidaterLandetTotaltEkte() {
-  return sisteKandidaterLandetTotalt;
-}
-
-function dagerTilAnsettelseSnittEkte() {
-  return sisteDagerTilAnsettelseSnitt;
-}
-
 async function hentOppdrag() {
   try {
     const res = await fetch("/api/oppdrag");
@@ -52,8 +42,6 @@ async function hentOppdrag() {
     sisteKandidaterLandetIAr = typeof data.kandidaterLandetIAr === "number" ? data.kandidaterLandetIAr : null;
     sisteKandidaterLandetPerManed = Array.isArray(data.kandidaterLandetPerManed) ? data.kandidaterLandetPerManed : [];
     sisteKandidaterLandetIFjor = typeof data.kandidaterLandetIFjor === "number" ? data.kandidaterLandetIFjor : null;
-    sisteKandidaterLandetTotalt = typeof data.kandidaterLandetTotalt === "number" ? data.kandidaterLandetTotalt : null;
-    sisteDagerTilAnsettelseSnitt = typeof data.dagerTilAnsettelseSnitt === "number" ? data.dagerTilAnsettelseSnitt : null;
     return data.oppdrag;
   } catch (err) {
     console.warn("Recman-proxy ikke tilgjengelig, viser mock-data:", err);
@@ -61,8 +49,6 @@ async function hentOppdrag() {
     sisteKandidaterLandetIAr = null;
     sisteKandidaterLandetPerManed = [];
     sisteKandidaterLandetIFjor = null;
-    sisteKandidaterLandetTotalt = null;
-    sisteDagerTilAnsettelseSnitt = null;
     return MOCK_OPPDRAG;
   }
 }
