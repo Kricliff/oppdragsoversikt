@@ -47,8 +47,11 @@ export async function onRequestPost(context) {
   // Fjerning fra admin går også via POST (samme kanal som resten) - DELETE-metoden
   // blokkeres av Cloudflares edge før den når selve funksjonen.
   if (body?.fjern === true) {
-    delete alle[id];
-    await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+    // Fellesområdet er den faste skjermen og skal alltid stå i registeret.
+    if (alle[id]?.navn !== "Fellesområde") {
+      delete alle[id];
+      await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(alle));
+    }
     return json({ ok: true });
   }
 

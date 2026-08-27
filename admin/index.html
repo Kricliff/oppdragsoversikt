@@ -573,13 +573,17 @@
         knapp.addEventListener("click", () => settSkjermGjestevisning(s.id, !s.gjestevisning));
         rad.appendChild(knapp);
 
-        const fjern = document.createElement("button");
-        fjern.type = "button";
-        fjern.className = "skjerm-knapp skjerm-fjern";
-        fjern.textContent = "Fjern";
-        fjern.setAttribute("aria-label", `Fjern ${s.navn} fra listen`);
-        fjern.addEventListener("click", () => fjernSkjerm(s.id));
-        rad.appendChild(fjern);
+        // Fellesområdet er den faste skjermen og skal alltid stå i listen - ingen
+        // fjern-knapp for den.
+        if (s.navn !== "Fellesområde") {
+          const fjern = document.createElement("button");
+          fjern.type = "button";
+          fjern.className = "skjerm-knapp skjerm-fjern";
+          fjern.textContent = "Fjern";
+          fjern.setAttribute("aria-label", `Fjern ${s.navn} fra listen`);
+          fjern.addEventListener("click", () => fjernSkjerm(s.id));
+          rad.appendChild(fjern);
+        }
 
         return rad;
       })
