@@ -11,6 +11,11 @@
 const KV_KEY = "skjermer";
 const MAKS_ALDER_MS = 24 * 60 * 60 * 1000; // fjernes helt fra registeret etter et døgn uten kontakt
 
+// "Kontor" meldte seg inn selv (en fysisk skjerm som fortsatt heartbeater), men skal
+// aldri vises i admin - fjerning derfra alene hjelper ikke siden den bare kommer tilbake
+// på neste heartbeat, så den filtreres bort her i stedet.
+const SKJULTE_NAVN = new Set(["Kontor"]);
+
 export async function onRequestGet(context) {
   const alle = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
   const naa = Date.now();
@@ -18,6 +23,7 @@ export async function onRequestGet(context) {
 
   const skjermer = Object.entries(alle)
     .filter(([, s]) => naa - s.sistSett < MAKS_ALDER_MS)
+    .filter(([, s]) => !SKJULTE_NAVN.has(s.navn))
     .map(([id, s]) => ({
       id,
       navn: s.navn,
