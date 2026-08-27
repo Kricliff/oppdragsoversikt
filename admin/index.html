@@ -275,14 +275,25 @@
     return h.type;
   }
 
+  const ENDRINGER_MAKS_VIST = 10;
+
+  // Lokal midnatt i går - "fra og med i går", ikke bare siste 24 timer.
+  function igarKlokka0000() {
+    const naa = new Date();
+    return new Date(naa.getFullYear(), naa.getMonth(), naa.getDate() - 1).getTime();
+  }
+
   function renderEndringer(hendelser) {
-    if (hendelser.length === 0) {
-      endringerListeEl.innerHTML = '<p class="endring-tom">Ingen endringer registrert ennå.</p>';
+    const grense = igarKlokka0000();
+    const relevante = hendelser.filter((h) => h.tidspunkt >= grense).slice(0, ENDRINGER_MAKS_VIST);
+
+    if (relevante.length === 0) {
+      endringerListeEl.innerHTML = '<p class="endring-tom">Ingen endringer siden i går.</p>';
       return;
     }
 
     endringerListeEl.replaceChildren(
-      ...hendelser.map((h) => {
+      ...relevante.map((h) => {
         const rad = document.createElement("div");
         rad.className = "endring-rad";
 
