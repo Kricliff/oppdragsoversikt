@@ -224,14 +224,12 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   grid-auto-rows: 1fr;
   gap: clamp(8px, 1.2vw, 20px);
-  /* Post-it/busstider/kundenytt flyter fast plassert oppå rutenettet i hjørnene
-     nederst - uten dette innrykket havnet ekte kort (kandidat-/prosjektdata) helt
-     skjult bak dem. Dekker post-it og kundenytt (~240px opp fra bunnen) fullt ut;
-     busstider kan i sjeldne tilfeller med mange avganger fortsatt vise seg litt
-     inn i siste kortrad, siden den er stablet enda høyere - vurdert som en
-     akseptabel avveining fremfor å reservere nesten det dobbelte for alle rader
-     for et tilfelle som uansett bare gjelder ett av seks transportpanel om gangen. */
-  padding-bottom: 200px;
+  /* IKKE legg til padding-bottom her for å unngå at post-it/busstider/kundenytt
+     overlapper kortene - forsøkt (200px) og reversert: tilpassKortStorrelseTilSkjerm()
+     jobber allerede i overkant av det den klarer for å få alt til å vise uten
+     skrolling, og mindre tilgjengelig høyde presset kort til å bli usynlig
+     klippet av overflow:hidden i stedet for bare dekket av et panel - reelt
+     datatap, verre enn det opprinnelige overlapp-problemet. */
 }
 
 /* Tetthet skalerer ned kort/avatar/skrift når det er mange rådgivere,
