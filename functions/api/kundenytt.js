@@ -12,10 +12,10 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 7;
-const BATCH_SIZE = 8;
+const CACHE_VERSION = 8;
+const BATCH_SIZE = 40;
 const ANTALL_VIST = 3; // holdt lavt så panelet forblir kompakt og dekker minst mulig av kortene bak
-const FERSKHET_DAGER = 30;
+const FERSKHET_DAGER = 7;
 const FERSKHET_MS = FERSKHET_DAGER * 24 * 60 * 60 * 1000;
 
 export async function onRequestGet(context) {
