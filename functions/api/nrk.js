@@ -8,7 +8,7 @@
 
 const RSS_URLER = ["https://www.nrk.no/norge/toppsaker.rss", "https://www.nrk.no/urix/toppsaker.rss"];
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const ANTALL_SAKER = 6;
 
 export async function onRequestGet(context) {
@@ -18,8 +18,8 @@ export async function onRequestGet(context) {
   if (cached) return cached;
 
   try {
-    const overskrifter = await hentOverskrifter();
-    const response = new Response(JSON.stringify({ overskrifter }), {
+    const payload = await hentOverskrifter();
+    const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": `public, max-age=${CACHE_SECONDS}`
@@ -28,7 +28,7 @@ export async function onRequestGet(context) {
     context.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err), overskrifter: [] }), {
+    return new Response(JSON.stringify({ error: String(err), overskrifter: [], logoUrl: null }), {
       status: 502,
       headers: { "Content-Type": "application/json" }
     });
@@ -37,14 +37,20 @@ export async function onRequestGet(context) {
 
 async function hentOverskrifter() {
   const feeder = await Promise.all(RSS_URLER.map(hentSaker));
-  const alle = feeder.flat().sort((a, b) => b.publisert - a.publisert);
-  return alle.slice(0, ANTALL_SAKER).map((s) => s.tittel);
+  const alle = feeder.flatMap((f) => f.saker).sort((a, b) => b.publisert - a.publisert);
+  const logoUrl = feeder.map((f) => f.logoUrl).find(Boolean) ?? null;
+  return { overskrifter: alle.slice(0, ANTALL_SAKER).map((s) => s.tittel), logoUrl };
 }
 
 async function hentSaker(url) {
   const res = await fetch(url, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
   if (!res.ok) throw new Error(`NRK RSS (${url}) svarte ${res.status}`);
   const xml = await res.text();
+
+  // NRKs eget kanal-logo, slik NRK selv publiserer den i feeden - hentes direkte fra
+  // <image> i toppen av dokumentet, ikke lastet ned/kopiert av oss.
+  const logoMatch = /<image>[\s\S]*?<url>([\s\S]*?)<\/url>[\s\S]*?<\/image>/.exec(xml);
+  const logoUrl = logoMatch ? rensXmlTekst(logoMatch[1]) : null;
 
   const saker = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
@@ -57,7 +63,7 @@ async function hentSaker(url) {
     const publisert = dateMatch ? Date.parse(dateMatch[1]) : NaN;
     saker.push({ tittel, publisert: Number.isNaN(publisert) ? 0 : publisert });
   }
-  return saker;
+  return { saker, logoUrl };
 }
 
 function rensXmlTekst(raw) {

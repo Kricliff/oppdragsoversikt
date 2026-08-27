@@ -794,13 +794,31 @@ body {
 }
 
 .feiring-tekst {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+}
+
+.feiring-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
   padding-right: 6vw;
   font-family: "Poppins", sans-serif;
   font-weight: 700;
   font-size: 1.15rem;
   color: var(--aktiv);
   letter-spacing: 0.01em;
+}
+
+.feiring-item.nyhet {
+  color: var(--text);
+}
+
+.feiring-nrk-logo {
+  height: 1.1em;
+  width: 1.1em;
+  object-fit: contain;
+  flex: none;
 }
 
 @keyframes feiring-rull {
@@ -816,5 +834,5 @@ body {
   .stats { display: none; }
   .postit { right: 12px; bottom: 64px; width: 160px; }
   .busstider { right: 12px; bottom: 232px; width: 150px; }
-  .feiring-tekst { font-size: 0.95rem; }
+  .feiring-item { font-size: 0.95rem; }
 }

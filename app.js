@@ -24,6 +24,7 @@ let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte, se lastFeiring
 let nrkOverskrifter = []; // vises i banneret når det ikke er noen aktive feiringer
+let nrkLogoUrl = null; // NRKs eget kanal-logo, hentet fra RSS-feeden via functions/api/nrk.js
 let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
 
 const lanesEl = document.getElementById("lanes");
@@ -96,12 +97,21 @@ async function lastFeiring() {
 // Siste nytt fra NRK (functions/api/nrk.js) - fyller banneret nederst når det ikke
 // er noen aktive feiringer der. Feiringer har alltid forrang over nyheter.
 async function lastNrk() {
-  nrkOverskrifter = await hentNrkNyheter();
+  const data = await hentNrkNyheter();
+  nrkOverskrifter = data.overskrifter;
+  nrkLogoUrl = data.logoUrl;
   oppdaterFeiringVisning();
 }
 
 function harBannerInnhold() {
   return feiringAktive.length > 0 || nrkOverskrifter.length > 0;
+}
+
+function feiringChips() {
+  if (feiringAktive.length > 0) {
+    return feiringAktive.map((h) => ({ type: "feiring", tekst: h.tekst }));
+  }
+  return nrkOverskrifter.map((tittel) => ({ type: "nyhet", tekst: tittel }));
 }
 
 function oppdaterFeiringVisning() {
@@ -117,23 +127,39 @@ function oppdaterFeiringVisning() {
     return;
   }
 
-  const innhold = feiringAktive.length > 0
-    ? feiringAktive.map((h) => h.tekst)
-    : nrkOverskrifter.map((tittel) => `📰 NRK: ${tittel}`);
-  const samlet = innhold.join("　　");
+  const chips = feiringChips();
+  const signatur = chips.map((c) => `${c.type}:${c.tekst}`).join("|");
 
   feiringBannerEl.hidden = false;
   requestAnimationFrame(() => feiringBannerEl.classList.add("vis"));
 
-  // Bytt tekst og start rullingen på nytt fra venstre kant kun når innholdet faktisk
+  // Bytt innhold og start rullingen på nytt fra venstre kant kun når det faktisk
   // har endret seg - ellers hopper den til et vilkårlig sted midt i teksten hver gang
   // dette kjører (hvert minutt), siden CSS-animasjonen normalt bare fortsetter å løpe.
-  if (samlet !== sisteBannerTekst) {
-    feiringTekst1El.textContent = samlet;
-    feiringTekst2El.textContent = samlet;
+  if (signatur !== sisteBannerTekst) {
+    settFeiringInnhold(feiringTekst1El, chips);
+    settFeiringInnhold(feiringTekst2El, chips);
     restartFeiringAnimasjon();
-    sisteBannerTekst = samlet;
+    sisteBannerTekst = signatur;
   }
+}
+
+function settFeiringInnhold(containerEl, chips) {
+  containerEl.replaceChildren(...chips.map(lagFeiringChip));
+}
+
+function lagFeiringChip(chip) {
+  const span = document.createElement("span");
+  span.className = chip.type === "nyhet" ? "feiring-item nyhet" : "feiring-item";
+  if (chip.type === "nyhet" && nrkLogoUrl) {
+    const logo = document.createElement("img");
+    logo.className = "feiring-nrk-logo";
+    logo.src = nrkLogoUrl;
+    logo.alt = "NRK";
+    span.appendChild(logo);
+  }
+  span.appendChild(document.createTextNode(chip.tekst));
+  return span;
 }
 
 function restartFeiringAnimasjon() {
