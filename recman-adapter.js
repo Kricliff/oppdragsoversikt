@@ -8,6 +8,8 @@
 
 let sisteKildeErRecman = false;
 let sisteKandidaterLandetIAr = null;
+let sisteKandidaterLandetPerManed = [];
+let sisteKandidaterLandetIFjor = null;
 
 function kildeErRecman() {
   return sisteKildeErRecman;
@@ -20,6 +22,16 @@ function kandidaterLandetIArEkte() {
   return sisteKandidaterLandetIAr;
 }
 
+// Kun til gjestevisningen (se visGjestevisning i app.js) - månedsfordeling i år og
+// totalsum i fjor, for grafen/sammenligningen der.
+function kandidaterLandetPerManedEkte() {
+  return sisteKandidaterLandetPerManed;
+}
+
+function kandidaterLandetIFjorEkte() {
+  return sisteKandidaterLandetIFjor;
+}
+
 async function hentOppdrag() {
   try {
     const res = await fetch("/api/oppdrag");
@@ -28,11 +40,15 @@ async function hentOppdrag() {
     if (!data || !Array.isArray(data.oppdrag)) throw new Error("Uventet svarformat fra /api/oppdrag");
     sisteKildeErRecman = true;
     sisteKandidaterLandetIAr = typeof data.kandidaterLandetIAr === "number" ? data.kandidaterLandetIAr : null;
+    sisteKandidaterLandetPerManed = Array.isArray(data.kandidaterLandetPerManed) ? data.kandidaterLandetPerManed : [];
+    sisteKandidaterLandetIFjor = typeof data.kandidaterLandetIFjor === "number" ? data.kandidaterLandetIFjor : null;
     return data.oppdrag;
   } catch (err) {
     console.warn("Recman-proxy ikke tilgjengelig, viser mock-data:", err);
     sisteKildeErRecman = false;
     sisteKandidaterLandetIAr = null;
+    sisteKandidaterLandetPerManed = [];
+    sisteKandidaterLandetIFjor = null;
     return MOCK_OPPDRAG;
   }
 }

@@ -867,6 +867,142 @@ body {
   color: var(--text-muted);
 }
 
+/* ---------- Gjestevisning (Ctrl+Shift+G) ---------- */
+
+.gjestevisning {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg-0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 3.5vh, 40px);
+  padding: clamp(24px, 4vh, 60px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.gjestevisning.vis {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gjeste-logo {
+  height: clamp(32px, 5vh, 52px);
+}
+
+.gjeste-tittel {
+  margin: 0;
+  font-size: clamp(1rem, 2vh, 1.3rem);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.gjeste-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(14px, 2vw, 32px);
+  width: min(1100px, 92vw);
+}
+
+.gjeste-stat {
+  text-align: center;
+  padding: clamp(16px, 2vh, 26px) clamp(8px, 1vw, 14px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.gjeste-stat .verdi {
+  font-size: clamp(1.8rem, 4.5vw, 3.2rem);
+  font-weight: 700;
+  color: var(--aktiv);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gjeste-stat .etikett {
+  margin-top: 0.5rem;
+  font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gjeste-stat .sammenligning {
+  margin-top: 0.3rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.gjeste-stat .sammenligning.opp { color: #1e8a4c; }
+.gjeste-stat .sammenligning.ned { color: #c02626; }
+
+.gjeste-grafer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 3vw, 56px);
+  width: min(1100px, 92vw);
+}
+
+.gjeste-graf-kort h3 {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.gjeste-graf {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 6px;
+  height: clamp(130px, 17vh, 200px);
+}
+
+.gjeste-graf-soyle {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gjeste-graf-track {
+  flex: 1 1 auto;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.gjeste-graf-bar {
+  width: 100%;
+  max-width: 30px;
+  background: var(--aktiv);
+  min-height: 3px;
+  transition: height 0.6s ease;
+}
+
+.gjeste-graf-tall {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gjeste-graf-etikett {
+  margin-top: 0.4rem;
+  font-size: 0.64rem;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
 /* ---------- Feiring (kandidat landet / ny kunde) ---------- */
 
 .feiring {
@@ -940,4 +1076,6 @@ body {
   .busstider { right: 12px; bottom: 232px; width: 150px; }
   .kundenytt { right: 12px; bottom: 100px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
+  .gjeste-stats { grid-template-columns: repeat(2, 1fr); }
+  .gjeste-grafer { grid-template-columns: 1fr; }
 }

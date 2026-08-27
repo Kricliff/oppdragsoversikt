@@ -56,6 +56,10 @@ const feiringTekst2El = document.getElementById("feiringTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
+const gjestevisningEl = document.getElementById("gjestevisning");
+const gjesteStatsEl = document.getElementById("gjesteStats");
+const gjesteGrafKandidaterEl = document.getElementById("gjesteGrafKandidater");
+const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
 
 async function init() {
   initTema();
@@ -85,6 +89,122 @@ async function init() {
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
+  document.addEventListener("keydown", handterGjesteHotkey);
+}
+
+// Ctrl+Shift+G veksler gjestevisningen av og på - Escape lukker den. Skjuler alt av
+// kandidat-/kundenavn bak en enkel "hvordan går det med oss"-oversikt, til bruk når det
+// kommer besøk. Ingen kroner/beløp vises noe sted - kun antall og trender.
+function handterGjesteHotkey(e) {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "g") {
+    e.preventDefault();
+    veksleGjestevisning();
+  } else if (e.key === "Escape" && gjestevisningEl.classList.contains("vis")) {
+    gjestevisningEl.classList.remove("vis");
+  }
+}
+
+function veksleGjestevisning() {
+  gjestevisningEl.hidden = false;
+  const visesNa = gjestevisningEl.classList.toggle("vis");
+  if (visesNa) renderGjestevisning();
+}
+
+function renderGjestevisning() {
+  const aktive = alleOppdrag.filter((o) => o.status === "aktiv");
+  const fullforteIAr = alleOppdrag.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
+  const unikeKunder = new Set(aktive.map((o) => o.kunde)).size;
+
+  const kandidaterIAr = kandidaterLandetIArEkte();
+  const kandidatSammenligning = lagSammenligning(kandidaterIAr, kandidaterLandetIFjorEkte());
+
+  gjesteStatsEl.replaceChildren(
+    lagGjesteStat(aktive.length, "Aktive oppdrag"),
+    lagGjesteStat(kandidaterIAr ?? "–", "Kandidater landet i år", kandidatSammenligning),
+    lagGjesteStat(fullforteIAr.length, "Oppdrag fullført i år"),
+    lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
+  );
+
+  tegnGjesteGraf(gjesteGrafKandidaterEl, kandidaterLandetPerManedEkte());
+  tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
+}
+
+function lagSammenligning(iAr, iFjor) {
+  if (typeof iAr !== "number" || typeof iFjor !== "number" || iFjor === 0) return null;
+  const endring = Math.round(((iAr - iFjor) / iFjor) * 100);
+  return { retning: endring >= 0 ? "opp" : "ned", tekst: `${endring >= 0 ? "↑" : "↓"} ${Math.abs(endring)}% fra i fjor` };
+}
+
+function lagGjesteStat(verdi, etikett, sammenligning) {
+  const div = document.createElement("div");
+  div.className = "gjeste-stat";
+
+  const verdiEl = document.createElement("div");
+  verdiEl.className = "verdi";
+  verdiEl.textContent = verdi;
+  div.appendChild(verdiEl);
+
+  const etikettEl = document.createElement("div");
+  etikettEl.className = "etikett";
+  etikettEl.textContent = etikett;
+  div.appendChild(etikettEl);
+
+  if (sammenligning) {
+    const sammenligningEl = document.createElement("div");
+    sammenligningEl.className = `sammenligning ${sammenligning.retning}`;
+    sammenligningEl.textContent = sammenligning.tekst;
+    div.appendChild(sammenligningEl);
+  }
+
+  return div;
+}
+
+// Samme månedsfordeling som kandidaterLandetPerManedEkte(), men for fullførte oppdrag -
+// utledet lokalt av alleOppdrag (ingen egen API-henting nødvendig, dataen er alt hentet).
+function fullforteOppdragPerManed(fullforteIAr) {
+  const naa = new Date();
+  const perManed = [];
+  for (let m = 0; m <= naa.getMonth(); m++) {
+    perManed.push({ maned: m, antall: fullforteIAr.filter((o) => o.utfortDato && new Date(o.utfortDato).getMonth() === m).length });
+  }
+  return perManed;
+}
+
+const GJESTE_MANEDSNAVN = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"];
+
+function tegnGjesteGraf(containerEl, data) {
+  if (!data || data.length === 0) {
+    containerEl.innerHTML = '<p class="endring-tom">Ingen data ennå</p>';
+    return;
+  }
+
+  const maks = Math.max(1, ...data.map((d) => d.antall));
+  containerEl.replaceChildren(
+    ...data.map((d) => {
+      const soyle = document.createElement("div");
+      soyle.className = "gjeste-graf-soyle";
+
+      const tall = document.createElement("span");
+      tall.className = "gjeste-graf-tall";
+      tall.textContent = d.antall;
+      soyle.appendChild(tall);
+
+      const track = document.createElement("div");
+      track.className = "gjeste-graf-track";
+      const bar = document.createElement("div");
+      bar.className = "gjeste-graf-bar";
+      bar.style.height = `${Math.max(4, (d.antall / maks) * 100)}%`;
+      track.appendChild(bar);
+      soyle.appendChild(track);
+
+      const etikett = document.createElement("span");
+      etikett.className = "gjeste-graf-etikett";
+      etikett.textContent = GJESTE_MANEDSNAVN[d.maned];
+      soyle.appendChild(etikett);
+
+      return soyle;
+    })
+  );
 }
 
 // Værmelding for Oslo (functions/api/vaer.js, ekte MET/Yr-data). Rent visuelt -
