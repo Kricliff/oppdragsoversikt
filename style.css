@@ -660,7 +660,7 @@ body {
 
 .postit {
   position: fixed;
-  right: 260px; /* venstre for kundenytt (220px bred + 28px kant + 12px luft) */
+  right: 290px; /* venstre for busstider/kundenytt-søylen (250px bred + 28px kant + 12px luft) */
   bottom: 80px; /* 28px opprinnelig marg + 44px feiringsbanner + 8px luft */
   width: 220px;
   min-height: 150px;
@@ -793,9 +793,9 @@ body {
 
 .kundenytt {
   position: fixed;
-  right: 28px; /* ytterst til høyre, rett ved siden av postit, samme bunnlinje */
-  bottom: 80px;
-  width: 220px; /* samme bredde som postit - et ryddig par */
+  right: 28px; /* samme høyrekant som busstider, rett under den */
+  bottom: 120px; /* busstider (bottom 276px) - 140px høyde her - 16px luft mellom dem */
+  width: 250px; /* samme bredde som busstider */
   max-height: 140px; /* viser kun én sak av gangen (karusell), ikke flere stablet */
   background: var(--surface);
   border: 1px solid var(--border);
@@ -938,6 +938,6 @@ body {
   .stats { display: none; }
   .postit { right: 170px; bottom: 64px; width: 160px; }
   .busstider { right: 12px; bottom: 232px; width: 150px; }
-  .kundenytt { right: 12px; bottom: 64px; width: 150px; max-height: 120px; }
+  .kundenytt { right: 12px; bottom: 100px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
 }
