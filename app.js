@@ -15,6 +15,7 @@ const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
 const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henting
 const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
 const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
+const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -28,6 +29,7 @@ let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte
 let nrkOverskrifter = []; // [{ tittel, logo }] - vises i banneret når det ikke er noen aktive feiringer
 let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
 let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
+let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
 let sisteKundenyttOppdatert = null;
 
@@ -77,6 +79,7 @@ async function init() {
   setInterval(lastNrk, NRK_REFRESH_MS);
   lastKundenytt();
   setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
+  setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
@@ -175,11 +178,24 @@ function restartFeiringAnimasjon() {
   feiringTrackEl.style.animation = "";
 }
 
-// Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel, ikke i bunnbanneret.
+// Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel ved siden av
+// post-it-lappen, ikke i bunnbanneret. Sjelden mange nok saker til å liste opp flere
+// samtidig, så panelet viser én sak av gangen og bytter til neste hvert 10. sekund.
 async function lastKundenytt() {
   kundenytt = await hentKundenytt();
+  if (kundenyttIndeks >= kundenytt.length) kundenyttIndeks = 0;
   sisteKundenyttOppdatert = Date.now();
   renderKundenytt();
+}
+
+function rullKundenytt() {
+  if (kundenytt.length <= 1) return; // ingenting å bytte til
+  kundenyttListeEl.classList.add("bytter");
+  setTimeout(() => {
+    kundenyttIndeks = (kundenyttIndeks + 1) % kundenytt.length;
+    renderKundenytt();
+    kundenyttListeEl.classList.remove("bytter");
+  }, 300);
 }
 
 function renderKundenytt() {
@@ -194,31 +210,29 @@ function renderKundenytt() {
   kundenyttPanelEl.hidden = false;
   requestAnimationFrame(() => kundenyttPanelEl.classList.add("vis"));
   settPanelHeader(kundenyttHeaderEl, "📣 Kundenytt", sisteKundenyttOppdatert);
-  kundenyttListeEl.replaceChildren(
-    ...kundenytt.map((funn) => {
-      const rad = document.createElement("div");
-      rad.className = "kundenytt-rad";
 
-      const selskap = document.createElement("div");
-      selskap.className = "kundenytt-selskap";
-      selskap.textContent = funn.selskap;
-      rad.appendChild(selskap);
+  const funn = kundenytt[kundenyttIndeks];
+  const rad = document.createElement("div");
+  rad.className = "kundenytt-rad";
 
-      const tittel = document.createElement("div");
-      tittel.className = "kundenytt-tittel";
-      tittel.textContent = funn.tittel;
-      rad.appendChild(tittel);
+  const selskap = document.createElement("div");
+  selskap.className = "kundenytt-selskap";
+  selskap.textContent = funn.selskap;
+  rad.appendChild(selskap);
 
-      if (funn.kilde) {
-        const kilde = document.createElement("div");
-        kilde.className = "kundenytt-kilde";
-        kilde.textContent = funn.kilde;
-        rad.appendChild(kilde);
-      }
+  const tittel = document.createElement("div");
+  tittel.className = "kundenytt-tittel";
+  tittel.textContent = funn.tittel;
+  rad.appendChild(tittel);
 
-      return rad;
-    })
-  );
+  if (funn.kilde) {
+    const kilde = document.createElement("div");
+    kilde.className = "kundenytt-kilde";
+    kilde.textContent = funn.kilde;
+    rad.appendChild(kilde);
+  }
+
+  kundenyttListeEl.replaceChildren(rad);
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
