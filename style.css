@@ -969,10 +969,12 @@ body {
 }
 
 .gjeste-grafer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(24px, 3vw, 56px);
-  width: min(1100px, 92vw);
+  display: flex;
+  justify-content: center;
+}
+
+.gjeste-graf-kort {
+  width: min(520px, 92vw);
 }
 
 .gjeste-graf-kort h3 {
@@ -1071,6 +1073,55 @@ body {
   font-size: 0.72rem;
   color: var(--text-muted);
   line-height: 1.35;
+}
+
+.gjeste-vaer-klokke {
+  position: absolute;
+  top: clamp(20px, 3.5vh, 40px);
+  right: clamp(24px, 4vw, 60px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.gjeste-vaer-rad {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.45rem, 1vw, 1.1rem);
+}
+
+.gjeste-varsel-liste {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gjeste-varsel-dag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+}
+
+.gjeste-varsel-dag .ukedag {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.gjeste-varsel-dag .ikon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.gjeste-varsel-dag .temp {
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ---------- Feiring (kandidat landet / ny kunde) ---------- */
@@ -1256,8 +1307,8 @@ body {
   .kundenytt { right: 12px; bottom: 100px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
   .gjeste-stat { flex-basis: 45%; }
-  .gjeste-grafer { grid-template-columns: 1fr; }
   .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
+  .gjeste-vaer-klokke { position: static; align-items: center; margin-top: 0.6rem; }
   .gjeste-knapp { left: 12px; bottom: 12px; width: 34px; height: 34px; }
   .bursdag-banner { height: 56px; }
   .bursdag-banner-tekst { font-size: 1.1rem; }

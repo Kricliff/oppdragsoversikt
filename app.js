@@ -66,9 +66,14 @@ const kundenyttListeEl = document.getElementById("kundenyttListe");
 const gjestevisningEl = document.getElementById("gjestevisning");
 const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
-const gjesteGrafKandidaterEl = document.getElementById("gjesteGrafKandidater");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
 const gjesteTrenderListeEl = document.getElementById("gjesteTrenderListe");
+const gjesteVaerIkonEl = document.getElementById("gjesteVaerIkon");
+const gjesteVaerTempEl = document.getElementById("gjesteVaerTemp");
+const gjesteVaerVarselEl = document.getElementById("gjesteVaerVarsel");
+const gjesteKlokkeEl = document.getElementById("gjesteKlokke");
+const gjesteDatoEl = document.getElementById("gjesteDato");
+const gjesteVarselListeEl = document.getElementById("gjesteVarselListe");
 const bursdagBannerEl = document.getElementById("bursdagBanner");
 const bursdagBannerTrackEl = document.getElementById("bursdagBannerTrack");
 const bursdagBannerTekst1El = document.getElementById("bursdagBannerTekst1");
@@ -214,7 +219,6 @@ function renderGjestevisning() {
     lagGjesteStat(unikeKunder, "Kunder vi jobber med nå")
   );
 
-  tegnGjesteGraf(gjesteGrafKandidaterEl, kandidaterLandetPerManedEkte());
   tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
   renderGjesteTrender();
 }
@@ -236,8 +240,8 @@ function lagGjesteStat(verdi, etikett) {
   return div;
 }
 
-// Samme månedsfordeling som kandidaterLandetPerManedEkte(), men for fullførte oppdrag -
-// utledet lokalt av alleOppdrag (ingen egen API-henting nødvendig, dataen er alt hentet).
+// Månedsfordeling for fullførte oppdrag - utledet lokalt av alleOppdrag (ingen egen
+// API-henting nødvendig, dataen er alt hentet).
 function fullforteOppdragPerManed(fullforteIAr) {
   const naa = new Date();
   const perManed = [];
@@ -324,6 +328,36 @@ async function lastVaer() {
   vaerIkonEl.textContent = vaerIkonForSymbol(data.symbolKode);
   vaerTempEl.textContent = `${data.temperatur}°`;
   vaerVarselEl.hidden = !data.taMedParaply;
+
+  // Gjestevisningen har sin egen kopi av vær/klokke/dato-widgeten, siden hovedtavlens
+  // ligger inni <header> som er skjult mens gjestevisningen vises over den.
+  gjesteVaerIkonEl.textContent = vaerIkonEl.textContent;
+  gjesteVaerTempEl.textContent = vaerTempEl.textContent;
+  gjesteVaerVarselEl.hidden = vaerVarselEl.hidden;
+
+  gjesteVarselListeEl.replaceChildren(
+    ...(data.varsel3dager ?? []).map((dag) => {
+      const div = document.createElement("div");
+      div.className = "gjeste-varsel-dag";
+
+      const ukedagEl = document.createElement("div");
+      ukedagEl.className = "ukedag";
+      ukedagEl.textContent = dag.ukedag;
+      div.appendChild(ukedagEl);
+
+      const ikonEl = document.createElement("div");
+      ikonEl.className = "ikon";
+      ikonEl.textContent = vaerIkonForSymbol(dag.symbolKode);
+      div.appendChild(ikonEl);
+
+      const tempEl = document.createElement("div");
+      tempEl.className = "temp";
+      tempEl.textContent = `${dag.maks}° / ${dag.min}°`;
+      div.appendChild(tempEl);
+
+      return div;
+    })
+  );
 }
 
 // Feiring av kandidat landet / ny kunde / nytt oppdrag (functions/api/feiring.js) -
@@ -635,6 +669,8 @@ function tikkKlokke() {
   const now = new Date();
   clockEl.textContent = now.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
   dateLabelEl.textContent = now.toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "long" });
+  gjesteKlokkeEl.textContent = clockEl.textContent;
+  gjesteDatoEl.textContent = dateLabelEl.textContent;
 }
 
 function render() {
