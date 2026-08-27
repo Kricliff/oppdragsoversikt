@@ -19,6 +19,9 @@ const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. seku
 const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
 const BURSDAG_VIS_MS = 20 * 1000; // hvor lenge feiringen midt på skjermen vises av gangen
 const BURSDAG_SYKLUS_MS = 3 * 60 * 1000; // hvor ofte den dukker opp igjen på selve bursdagen
+const SKJERM_ID_KEY = "skjermId";
+const SKJERM_NAVN_KEY = "skjermNavn";
+const SKJERM_HEARTBEAT_MS = 15 * 1000; // hvor ofte skjermen melder seg inn og sjekker for fjernstyring
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -70,6 +73,9 @@ const bursdagBannerEl = document.getElementById("bursdagBanner");
 const bursdagBannerTrackEl = document.getElementById("bursdagBannerTrack");
 const bursdagBannerTekst1El = document.getElementById("bursdagBannerTekst1");
 const bursdagBannerTekst2El = document.getElementById("bursdagBannerTekst2");
+const skjermNavngiEl = document.getElementById("skjermNavngi");
+const skjermNavnInputEl = document.getElementById("skjermNavnInput");
+const skjermNavnLagreKnappEl = document.getElementById("skjermNavnLagreKnapp");
 
 async function init() {
   initTema();
@@ -106,7 +112,10 @@ async function init() {
   gjesteKnappEl.addEventListener("click", veksleGjestevisning);
   // Knappen selv dekkes av gjestevisningen når den er aktiv (høyere z-index) - klikk
   // hvor som helst på den for å lukke igjen, i tillegg til Escape/hurtigtasten.
-  gjestevisningEl.addEventListener("click", () => gjestevisningEl.classList.remove("vis"));
+  gjestevisningEl.addEventListener("click", () => settGjestevisning(false));
+  skjermNavnLagreKnappEl.addEventListener("click", lagreSkjermNavn);
+  skjermNavnInputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") lagreSkjermNavn(); });
+  startSkjermRegistrering();
 }
 
 // Ctrl+Shift+G veksler gjestevisningen av og på - Escape lukker den. Skjuler alt av
@@ -117,14 +126,81 @@ function handterGjesteHotkey(e) {
     e.preventDefault();
     veksleGjestevisning();
   } else if (e.key === "Escape" && gjestevisningEl.classList.contains("vis")) {
-    gjestevisningEl.classList.remove("vis");
+    settGjestevisning(false);
   }
 }
 
 function veksleGjestevisning() {
+  settGjestevisning(!gjestevisningEl.classList.contains("vis"));
+}
+
+// Eneste sted som faktisk endrer om gjestevisningen vises - både lokale handlinger
+// (hurtigtast/knapp/Escape/klikk) og fjernstyring fra en annen skjerm via admin går
+// gjennom denne. Melder alltid den nye tilstanden til serveren (meldSkjermStatus), slik
+// at admin sin oversikt og selve fjernstyringen alltid stemmer med det som faktisk vises.
+function settGjestevisning(skalVises) {
   gjestevisningEl.hidden = false;
-  const visesNa = gjestevisningEl.classList.toggle("vis");
-  if (visesNa) renderGjestevisning();
+  gjestevisningEl.classList.toggle("vis", skalVises);
+  if (skalVises) renderGjestevisning();
+  meldSkjermStatus({ gjestevisning: skalVises, heartbeat: true });
+}
+
+// Fjernstyring fra admin-siden (functions/api/skjermer.js) - Cloudflare Access forteller
+// bare HVEM som er logget inn, ikke HVILKEN fysisk skjerm, så hver skjerm får sin egen
+// tilfeldige id lagret i localStorage (overlever innlasting på nytt, unik per enhet) og
+// et navn brukeren setter én gang. Skjermen melder seg inn med jevne mellomrom og speiler
+// tilbake ønsket gjestevisning-tilstand - se settGjestevisning over for hvordan lokale
+// handlinger går gjennom samme kanal.
+function hentEllerLagSkjermId() {
+  let id = localStorage.getItem(SKJERM_ID_KEY);
+  if (!id) {
+    id = window.crypto?.randomUUID
+      ? crypto.randomUUID()
+      : `skjerm-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+    localStorage.setItem(SKJERM_ID_KEY, id);
+  }
+  return id;
+}
+
+function startSkjermRegistrering() {
+  if (!localStorage.getItem(SKJERM_NAVN_KEY)) {
+    skjermNavngiEl.hidden = false;
+    skjermNavnInputEl.focus();
+    return;
+  }
+  meldSkjermStatus({ heartbeat: true });
+  setInterval(() => meldSkjermStatus({ heartbeat: true }), SKJERM_HEARTBEAT_MS);
+}
+
+function lagreSkjermNavn() {
+  const navn = skjermNavnInputEl.value.trim();
+  if (!navn) return;
+  localStorage.setItem(SKJERM_NAVN_KEY, navn);
+  skjermNavngiEl.hidden = true;
+  meldSkjermStatus({ heartbeat: true });
+  setInterval(() => meldSkjermStatus({ heartbeat: true }), SKJERM_HEARTBEAT_MS);
+}
+
+async function meldSkjermStatus(ekstra) {
+  const navn = localStorage.getItem(SKJERM_NAVN_KEY);
+  if (!navn) return; // ikke meld seg inn før skjermen faktisk har fått et navn
+
+  try {
+    const res = await fetch("/api/skjermer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: hentEllerLagSkjermId(), navn, ...ekstra })
+    });
+    const data = await res.json();
+    const visesNa = gjestevisningEl.classList.contains("vis");
+    if (typeof data.gjestevisning === "boolean" && data.gjestevisning !== visesNa) {
+      gjestevisningEl.hidden = false;
+      gjestevisningEl.classList.toggle("vis", data.gjestevisning);
+      if (data.gjestevisning) renderGjestevisning();
+    }
+  } catch (err) {
+    console.warn("Fikk ikke meldt inn skjermstatus:", err);
+  }
 }
 
 function renderGjestevisning() {

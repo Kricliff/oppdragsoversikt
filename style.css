@@ -1136,6 +1136,60 @@ body {
   to { transform: translateX(-50%); }
 }
 
+/* ---------- Skjerm-navngivning (førstegangsoppsett per fysisk skjerm) ---------- */
+
+.skjerm-navngi {
+  position: fixed;
+  inset: 0;
+  z-index: 2000; /* over absolutt alt - må besvares før noe annet er relevant */
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skjerm-navngi-boks {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  width: min(420px, 90vw);
+  text-align: center;
+}
+
+.skjerm-navngi-boks h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+}
+
+.skjerm-navngi-boks p {
+  margin: 0 0 1.2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.skjerm-navngi-boks input {
+  display: block;
+  width: 100%;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.95rem;
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.7rem;
+  margin-bottom: 0.9rem;
+  color: var(--text);
+  background: var(--bg-0);
+}
+
+.skjerm-navngi-boks button {
+  background: var(--aktiv);
+  color: #ffffff;
+  border: none;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1.4rem;
+  cursor: pointer;
+}
+
 /* ---------- Bursdag (midt på skjermen, kun på selve dagen) ---------- */
 
 .bursdag-banner {

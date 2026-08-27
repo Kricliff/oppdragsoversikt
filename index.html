@@ -81,6 +81,18 @@
     </div>
   </div>
 
+  <!-- Vises kun første gang tavlen åpnes på en ny fysisk skjerm/enhet - navnet lagres
+       lokalt (localStorage) og brukes til å skille skjermer fra hverandre i
+       fjernstyringen på /admin, se hentEllerLagSkjermNavn i app.js. -->
+  <div class="skjerm-navngi" id="skjermNavngi" hidden>
+    <div class="skjerm-navngi-boks">
+      <h2>Navngi denne skjermen</h2>
+      <p>Brukes til å skille denne skjermen fra andre i fjernstyringen på admin-siden.</p>
+      <input type="text" id="skjermNavnInput" placeholder="F.eks. Kontor - hovedskjerm" maxlength="60">
+      <button id="skjermNavnLagreKnapp" type="button">Lagre</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- Gjestevisning - full-skjerm erstatning som skjuler kandidat-/kundenavn når det

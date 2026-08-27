@@ -173,6 +173,37 @@
   .bursdag-ny-rad input:focus { outline: 2px solid var(--aktiv); outline-offset: -1px; }
   #bursdagNavn { flex: 1 1 auto; min-width: 0; }
   #bursdagDato { flex: none; }
+  .skjerm-rad {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .skjerm-rad:last-child { border-bottom: none; }
+  .skjerm-status {
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--text-faint);
+  }
+  .skjerm-status.aktiv { background: #1e8a4c; }
+  .skjerm-info { flex: 1 1 auto; min-width: 0; }
+  .skjerm-navn { font-weight: 600; font-size: 0.9rem; }
+  .skjerm-sett { font-size: 0.76rem; color: var(--text-muted); margin-top: 0.1rem; }
+  .skjerm-knapp {
+    flex: none;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+  }
+  .skjerm-knapp:hover { border-color: var(--aktiv); color: var(--aktiv); }
   .tilbake {
     display: inline-block;
     margin-top: 1rem;
@@ -222,6 +253,12 @@
       <input type="date" id="bursdagDato">
       <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
     </div>
+  </div>
+
+  <div class="kort">
+    <h2>Fjernstyring</h2>
+    <p class="storrelse-hint">Skjermer som har meldt seg inn. Trykk for å vise/skjule gjestevisningen på en av dem herfra.</p>
+    <div id="skjermerListe"><p class="endring-tom">Laster…</p></div>
   </div>
 
   <a class="tilbake" href="/">← Tilbake til tavlen</a>
@@ -486,6 +523,85 @@
   bursdagNavnEl.addEventListener("keydown", (e) => { if (e.key === "Enter") leggTilBursdag(); });
   bursdagDatoEl.addEventListener("keydown", (e) => { if (e.key === "Enter") leggTilBursdag(); });
   lastBursdager();
+
+  const skjermerListeEl = document.getElementById("skjermerListe");
+
+  function relativTid(ms) {
+    const sekunder = Math.round((Date.now() - ms) / 1000);
+    if (sekunder < 60) return "akkurat nå";
+    const minutter = Math.round(sekunder / 60);
+    if (minutter < 60) return `${minutter} min siden`;
+    const timer = Math.round(minutter / 60);
+    if (timer < 24) return `${timer} t siden`;
+    const dager = Math.round(timer / 24);
+    return `${dager} d siden`;
+  }
+
+  function renderSkjermer(skjermer) {
+    if (skjermer.length === 0) {
+      skjermerListeEl.innerHTML = '<p class="endring-tom">Ingen skjermer har meldt seg inn ennå.</p>';
+      return;
+    }
+
+    skjermerListeEl.replaceChildren(
+      ...skjermer.map((s) => {
+        const rad = document.createElement("div");
+        rad.className = "skjerm-rad";
+
+        const status = document.createElement("span");
+        status.className = "skjerm-status" + (s.aktiv ? " aktiv" : "");
+        rad.appendChild(status);
+
+        const info = document.createElement("div");
+        info.className = "skjerm-info";
+        const navn = document.createElement("div");
+        navn.className = "skjerm-navn";
+        navn.textContent = s.navn;
+        info.appendChild(navn);
+        const sett = document.createElement("div");
+        sett.className = "skjerm-sett";
+        sett.textContent = (s.aktiv ? "Aktiv" : "Offline") + " · sist sett " + relativTid(s.sistSett);
+        info.appendChild(sett);
+        rad.appendChild(info);
+
+        const knapp = document.createElement("button");
+        knapp.type = "button";
+        knapp.className = "skjerm-knapp";
+        knapp.textContent = s.gjestevisning ? "Skru av gjestevisning" : "Vis gjestevisning";
+        knapp.addEventListener("click", () => settSkjermGjestevisning(s.id, !s.gjestevisning));
+        rad.appendChild(knapp);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastSkjermer() {
+    try {
+      const res = await fetch("/api/skjermer");
+      const data = await res.json();
+      renderSkjermer(Array.isArray(data.skjermer) ? data.skjermer : []);
+    } catch (err) {
+      skjermerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet skjermer.</p>';
+      console.warn(err);
+    }
+  }
+
+  async function settSkjermGjestevisning(id, gjestevisning) {
+    try {
+      await fetch("/api/skjermer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, gjestevisning })
+      });
+    } catch (err) {
+      console.warn("Fikk ikke sendt fjernstyringskommando:", err);
+    }
+    lastSkjermer();
+  }
+
+  lastSkjermer();
+  setInterval(lastSkjermer, 15 * 1000);
 </script>
 </body>
 </html>
