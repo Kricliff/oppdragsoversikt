@@ -7,11 +7,12 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
 const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henting
+const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
 
 let alleOppdrag = [];
 let sisteAvganger = [];
@@ -22,6 +23,8 @@ let visPanel = "buss"; // buss | togOslo | togDrammen | trikk | tbaneVest | tban
 let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte, se lastFeiring
+let nrkOverskrifter = []; // vises i banneret når det ikke er noen aktive feiringer
+let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -40,6 +43,7 @@ const vaerIkonEl = document.getElementById("vaerIkon");
 const vaerTempEl = document.getElementById("vaerTemp");
 const vaerVarselEl = document.getElementById("vaerVarsel");
 const feiringBannerEl = document.getElementById("feiringBanner");
+const feiringTrackEl = document.getElementById("feiringTrack");
 const feiringTekst1El = document.getElementById("feiringTekst1");
 const feiringTekst2El = document.getElementById("feiringTekst2");
 
@@ -61,6 +65,8 @@ async function init() {
   setInterval(lastVaer, VAER_REFRESH_MS);
   lastFeiring();
   setInterval(lastFeiring, FEIRING_REFRESH_MS);
+  lastNrk();
+  setInterval(lastNrk, NRK_REFRESH_MS);
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
@@ -87,23 +93,53 @@ async function lastFeiring() {
   oppdaterFeiringVisning();
 }
 
+// Siste nytt fra NRK (functions/api/nrk.js) - fyller banneret nederst når det ikke
+// er noen aktive feiringer der. Feiringer har alltid forrang over nyheter.
+async function lastNrk() {
+  nrkOverskrifter = await hentNrkNyheter();
+  oppdaterFeiringVisning();
+}
+
+function harBannerInnhold() {
+  return feiringAktive.length > 0 || nrkOverskrifter.length > 0;
+}
+
 function oppdaterFeiringVisning() {
   const naa = Date.now();
   feiringAktive = feiringAktive.filter((h) => h.utloper > naa);
 
-  if (feiringAktive.length === 0) {
+  if (!harBannerInnhold()) {
     feiringBannerEl.classList.remove("vis");
     setTimeout(() => {
-      if (feiringAktive.length === 0) feiringBannerEl.hidden = true;
+      if (!harBannerInnhold()) feiringBannerEl.hidden = true;
     }, 500);
+    sisteBannerTekst = null;
     return;
   }
 
-  const samlet = feiringAktive.map((h) => h.tekst).join("　　");
-  feiringTekst1El.textContent = samlet;
-  feiringTekst2El.textContent = samlet;
+  const innhold = feiringAktive.length > 0
+    ? feiringAktive.map((h) => h.tekst)
+    : nrkOverskrifter.map((tittel) => `📰 NRK: ${tittel}`);
+  const samlet = innhold.join("　　");
+
   feiringBannerEl.hidden = false;
   requestAnimationFrame(() => feiringBannerEl.classList.add("vis"));
+
+  // Bytt tekst og start rullingen på nytt fra venstre kant kun når innholdet faktisk
+  // har endret seg - ellers hopper den til et vilkårlig sted midt i teksten hver gang
+  // dette kjører (hvert minutt), siden CSS-animasjonen normalt bare fortsetter å løpe.
+  if (samlet !== sisteBannerTekst) {
+    feiringTekst1El.textContent = samlet;
+    feiringTekst2El.textContent = samlet;
+    restartFeiringAnimasjon();
+    sisteBannerTekst = samlet;
+  }
+}
+
+function restartFeiringAnimasjon() {
+  feiringTrackEl.style.animation = "none";
+  void feiringTrackEl.offsetWidth; // tving reflow slik at "none" faktisk får effekt
+  feiringTrackEl.style.animation = "";
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
