@@ -930,13 +930,15 @@ body {
 }
 
 .gjeste-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: clamp(14px, 2vw, 32px);
   width: min(1100px, 92vw);
 }
 
 .gjeste-stat {
+  flex: 0 1 260px;
   text-align: center;
   padding: clamp(16px, 2vh, 26px) clamp(8px, 1vw, 14px);
   background: var(--surface);
@@ -1137,7 +1139,7 @@ body {
   .busstider { right: 12px; bottom: 232px; width: 150px; }
   .kundenytt { right: 12px; bottom: 100px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
-  .gjeste-stats { grid-template-columns: repeat(2, 1fr); }
+  .gjeste-stat { flex-basis: 45%; }
   .gjeste-grafer { grid-template-columns: 1fr; }
   .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
   .gjeste-knapp { left: 12px; bottom: 12px; width: 34px; height: 34px; }
