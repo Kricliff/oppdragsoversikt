@@ -1,7 +1,15 @@
 // Cloudflare Pages Function - sjekker om noen av kundene (Recman company type=customer)
-// er omtalt i nyhetene, via Google News' offentlige RSS-søk. Vises i et eget panel på
+// er omtalt i nyhetene, via Bing News sitt offentlige RSS-søk. Vises i et eget panel på
 // tavlen (functions/api/nrk.js dekker kun store nasjonale saker og treffer sjelden noe
 // om de fleste kundeselskapene).
+//
+// Google News' RSS-søk ble forsøkt først, men Google svarer konsekvent med 503 "Sorry..."
+// (anti-bot-blokkering) på ALLE forespørsler fra Cloudflare Workers sine utgående IP-er -
+// bekreftet ved feilsøking 2026-08-27, også med nettleser-aktige headere. Bing sitt
+// RSS-søk fungerer fra samme miljø, men krever eksplisitte markeds-parametre
+// (setmkt=nb-NO&cc=NO) for å få norske treff i det hele tatt - uten dem svarer Bing med
+// en tom, engelskspråklig respons i stedet for en feil, noe som lett kan feiltolkes som
+// "ingen nyheter" heller enn en lokaliseringsfeil.
 //
 // Kundelisten kan fort bli 100+ selskaper, og hvert søk er et eksternt HTTP-kall - for
 // mange til å gjøre på én gang innenfor en respons. Derfor roterer vi: hvert kall sjekker
@@ -12,8 +20,8 @@
 
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 8;
-const BATCH_SIZE = 40;
+const CACHE_VERSION = 16;
+const BATCH_SIZE = 8;
 const ANTALL_VIST = 3; // holdt lavt så panelet forblir kompakt og dekker minst mulig av kortene bak
 const FERSKHET_DAGER = 7;
 const FERSKHET_MS = FERSKHET_DAGER * 24 * 60 * 60 * 1000;
@@ -90,37 +98,43 @@ async function hentKundeliste(apiKey) {
 }
 
 async function sokNyheterOmKunde(kunde) {
-  // Merk: q=%22...%22 (anførselstegn for eksakt frase) gir null treff hos Google News
-  // sitt RSS-søk, selv for kjente selskaper - bekreftet ved testing. Uten anførselstegn
-  // fungerer søket, på bekostning av litt mer upresis treffsikkerhet.
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(kunde.navn)}&hl=no&gl=NO&ceid=NO:no`;
+  const url = `https://www.bing.com/news/search?q=${encodeURIComponent(kunde.navn)}&format=RSS&setmkt=nb-NO&cc=NO`;
   const xml = await hentTekst(url);
   if (!xml) return null;
 
-  const itemMatch = /<item>([\s\S]*?)<\/item>/.exec(xml);
-  if (!itemMatch) return null;
+  // Bing sorterer IKKE etter dato (relevans først) - så vi ser gjennom alle treffene i
+  // svaret og plukker det ferskeste, i stedet for bare det første.
+  let ferskest = null;
+  const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+  let itemMatch;
+  while ((itemMatch = itemRegex.exec(xml))) {
+    const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(itemMatch[1]);
+    const dateMatch = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemMatch[1]);
+    if (!titleMatch || !dateMatch) continue;
 
-  const titleMatch = /<title>([\s\S]*?)<\/title>/.exec(itemMatch[1]);
-  const dateMatch = /<pubDate>([\s\S]*?)<\/pubDate>/.exec(itemMatch[1]);
-  if (!titleMatch || !dateMatch) return null;
+    const publisert = Date.parse(dateMatch[1]);
+    if (Number.isNaN(publisert)) continue;
+    if (ferskest && publisert <= ferskest.publisert) continue;
 
-  const publisert = Date.parse(dateMatch[1]);
-  if (Number.isNaN(publisert)) return null;
-
-  const kildeMatch = /<source[^>]*>([\s\S]*?)<\/source>/.exec(itemMatch[1]);
-  const kilde = kildeMatch ? rensXmlTekst(kildeMatch[1]) : null;
-
-  let tittel = rensXmlTekst(titleMatch[1]);
-  if (kilde && tittel.endsWith(` - ${kilde}`)) {
-    tittel = tittel.slice(0, tittel.length - kilde.length - 3);
+    const kildeMatch = /<News:Source>([\s\S]*?)<\/News:Source>/.exec(itemMatch[1]);
+    ferskest = {
+      selskap: kunde.navn,
+      tittel: rensXmlTekst(titleMatch[1]),
+      kilde: kildeMatch ? rensXmlTekst(kildeMatch[1]) : null,
+      publisert
+    };
   }
-
-  return { selskap: kunde.navn, tittel, kilde, publisert };
+  return ferskest;
 }
 
 async function hentTekst(url) {
   try {
-    const res = await fetch(url, { headers: { "User-Agent": "oppdragsoversikt-tavle" } });
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "Accept-Language": "nb-NO,nb;q=0.9,no;q=0.8,en;q=0.7"
+      }
+    });
     if (!res.ok) return null;
     return await res.text();
   } catch {
