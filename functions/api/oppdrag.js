@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 18;
+const CACHE_VERSION = 19;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -204,8 +204,10 @@ async function hentOgNormaliser(apiKey) {
         ansvarlig,
         status,
         fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
-        utfortDato: status === "utfort" && p.updated ? p.updated.slice(0, 10) : undefined,
-        paVentDato: status === "paVent" && p.updated ? p.updated.slice(0, 10) : undefined
+        // Full presisjon (ikke bare datoen) - trengs for å kunne skille "fullført før
+        // eller etter et gitt tidspunkt", se UTFORT_BASISDATO i app.js.
+        utfortDato: status === "utfort" && p.updated ? p.updated.replace(" ", "T") + "Z" : undefined,
+        paVentDato: status === "paVent" && p.updated ? p.updated.replace(" ", "T") + "Z" : undefined
       };
     })
     .filter(Boolean);

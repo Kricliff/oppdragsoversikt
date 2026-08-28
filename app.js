@@ -1,5 +1,10 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
+// Rydder engangs-bort hele den daværende "Utført"-bunken på tavlen (28.08.2026) - alt som
+// var fullført FØR dette tidspunktet vises ikke lenger, uansett hvor nytt det er. Kun
+// oppdrag som blir satt til utført ETTER dette dukker opp, og følger deretter den vanlige
+// UTFORT_SYNLIG_DAGER-regelen som før.
+const UTFORT_BASISDATO = new Date("2026-08-28T12:30:00Z");
 const PA_VENT_SYNLIG_DAGER = 7; // et "På vent"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, paVent: 1, utfort: 2 };
@@ -729,7 +734,9 @@ function render() {
 
 function erSynligPaTavle(o) {
   if (o.status === "aktiv") return true;
-  if (o.status === "utfort") return dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
+  if (o.status === "utfort") {
+    return new Date(o.utfortDato) > UTFORT_BASISDATO && dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
+  }
   if (o.status === "paVent") return dagerSiden(o.paVentDato) <= PA_VENT_SYNLIG_DAGER;
   return false;
 }
