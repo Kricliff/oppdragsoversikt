@@ -149,7 +149,7 @@ body {
 /* Navn + dato tar mer plass enn et rent tall - holdt mindre enn de vanlige tallene
    slik at den ikke dominerer resten av statslinjen. */
 .stat-card.bursdag .value {
-  font-size: clamp(0.72rem, 0.95vw, 0.92rem);
+  font-size: clamp(0.6rem, 0.78vw, 0.76rem);
   white-space: nowrap;
 }
 
