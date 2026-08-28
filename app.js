@@ -778,8 +778,18 @@ function finnNesteBursdag(liste) {
 
 const BURSDAG_MANEDSNAVN = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"];
 
+// Kun fornavn + forbokstaven i etternavnet (stor bokstav) på selve tavlen - fullt navn
+// ligger fortsatt i admin. "Anne-Sophie Tvegård" -> "Anne-Sophie T.".
+function formaterKortNavn(navn) {
+  const deler = navn.trim().split(/\s+/);
+  if (deler.length < 2) return deler[0] ?? navn;
+  const fornavn = deler[0];
+  const etternavn = deler[deler.length - 1];
+  return `${fornavn} ${etternavn[0].toUpperCase()}.`;
+}
+
 function formaterBursdagTekst(neste) {
-  const navnTekst = neste.navn.join(" & ");
+  const navnTekst = neste.navn.map(formaterKortNavn).join(" & ");
   if (neste.dagerTil === 0) return `${navnTekst} i dag!`;
   return `${navnTekst} (${neste.dato.getDate()}. ${BURSDAG_MANEDSNAVN[neste.dato.getMonth()]})`;
 }
@@ -802,7 +812,7 @@ function sjekkBursdagBanner() {
   }
 
   const samlet = iDagNavn
-    .map((navn) => `🎉🎂 Gratulerer med dagen, ${navn}! 🎂🎉`)
+    .map((navn) => `🎉🎂 Gratulerer med dagen, ${formaterKortNavn(navn)}! 🎂🎉`)
     .join("　　");
   bursdagBannerTekst1El.textContent = samlet;
   bursdagBannerTekst2El.textContent = samlet;
