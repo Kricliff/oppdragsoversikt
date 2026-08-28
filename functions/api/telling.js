@@ -67,7 +67,15 @@ async function oppdaterOgHentTelling(apiKey, kv) {
       if (r.type === "salesMeeting") tilstand.moter++;
     });
 
-  await kv.put(KV_KEY, JSON.stringify(tilstand));
+  // Skriv-feil (f.eks. KV sin daglige gratiskvote brukt opp) skal ikke hindre selve
+  // svaret - uten dette ville en feilet skriving forhindre responsen i å bli
+  // edge-cachet (se catch i onRequestGet), som gjør at hvert klientpoll treffer
+  // origin på nytt og prøver (og feiler) en ny skriving igjen.
+  try {
+    await kv.put(KV_KEY, JSON.stringify(tilstand));
+  } catch (err) {
+    console.warn("Fikk ikke skrevet telling-tilstand til KV:", err);
+  }
   return { telefoner: tilstand.telefoner, moter: tilstand.moter };
 }
 

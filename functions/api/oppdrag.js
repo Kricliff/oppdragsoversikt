@@ -113,7 +113,14 @@ async function loggEndringer(oppdrag, kv) {
   const grense = naa - ENDRINGSLOGG_VIS_DAGER * 24 * 60 * 60 * 1000;
   const beholdt = hendelser.filter((h) => h.tidspunkt > grense);
 
-  await kv.put(ENDRINGSLOGG_KV_KEY, JSON.stringify({ forrige: naaKart, hendelser: beholdt }));
+  // Kjøres via context.waitUntil (se onRequestGet) og påvirker derfor ikke selve
+  // svaret om den feiler - fanges likevel her for å unngå støy i loggene ved en
+  // feilet skriving (f.eks. KV sin daglige gratiskvote brukt opp).
+  try {
+    await kv.put(ENDRINGSLOGG_KV_KEY, JSON.stringify({ forrige: naaKart, hendelser: beholdt }));
+  } catch (err) {
+    console.warn("Fikk ikke skrevet endringslogg til KV:", err);
+  }
 }
 
 async function hentOgNormaliser(apiKey) {

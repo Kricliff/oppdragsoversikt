@@ -174,15 +174,24 @@ async function hentAktiveFeiringer(apiKey, kv) {
   const nyAktive = nyeHendelser.map((h) => ({ tekst: feiringTekst(h), utloper: naa + FEIRING_VIS_MS }));
   const aktive = [...fortsattAktive, ...nyAktive];
 
-  await kv.put(
-    KV_KEY,
-    JSON.stringify({
-      kjenteHired: hired.map((h) => h.id),
-      kjenteKunder: nyeKunder.map((k) => k.id),
-      kjenteOppdrag: nyeOppdrag.map((o) => o.id),
-      aktive
-    })
-  );
+  // Skriv-feil (f.eks. KV sin daglige gratiskvote brukt opp) skal ikke hindre selve
+  // svaret - klienten poller denne siden hvert minutt, og uten dette ville en feilet
+  // skriving forhindret responsen i å bli edge-cachet i det hele tatt (se catch i
+  // onRequestGet), som igjen gjør at HVERT minuttpoll treffer origin på nytt og prøver
+  // (og feiler) en ny skriving - en selvforsterkende spiral rett når kvoten er brukt opp.
+  try {
+    await kv.put(
+      KV_KEY,
+      JSON.stringify({
+        kjenteHired: hired.map((h) => h.id),
+        kjenteKunder: nyeKunder.map((k) => k.id),
+        kjenteOppdrag: nyeOppdrag.map((o) => o.id),
+        aktive
+      })
+    );
+  } catch (err) {
+    console.warn("Fikk ikke skrevet feiring-tilstand til KV:", err);
+  }
 
   return { aktive };
 }
