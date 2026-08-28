@@ -22,8 +22,11 @@ const BURSDAG_SYKLUS_MS = 3 * 60 * 1000; // hvor ofte den dukker opp igjen på s
 const SKJERM_ID_KEY = "skjermId";
 const SKJERM_NAVN_KEY = "skjermNavn";
 const SKJERM_HEARTBEAT_MS = 15 * 1000; // hvor ofte skjermen melder seg inn og sjekker for fjernstyring
+const INNSTILLINGER_SJEKK_MS = 5 * 60 * 1000; // hvor ofte skjermen sjekker om en av/på-bryter i admin har endret seg
 
 let alleOppdrag = [];
+let innstillinger = { kundenytt: true, feiring: true, bursdager: true };
+let sisteInnstillingerInnhold = null; // for å vite når en bryter faktisk har endret seg, se sjekkInnstillinger
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
 let sisteTrikk = [];
@@ -84,6 +87,7 @@ const skjermNavnLagreKnappEl = document.getElementById("skjermNavnLagreKnapp");
 
 async function init() {
   initTema();
+  await lastInnstillinger();
   await lastTelling();
   await lastOppdrag();
   tikkKlokke();
@@ -98,19 +102,26 @@ async function init() {
   setInterval(byttTransportPanel, PANEL_BYTT_MS);
   setInterval(lastTelling, TELLING_REFRESH_MS);
   setInterval(lastVaer, VAER_REFRESH_MS);
-  lastFeiring();
-  setInterval(lastFeiring, FEIRING_REFRESH_MS);
+  if (innstillinger.feiring) {
+    lastFeiring();
+    setInterval(lastFeiring, FEIRING_REFRESH_MS);
+  }
   lastNrk();
   setInterval(lastNrk, NRK_REFRESH_MS);
-  lastKundenytt();
-  setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
-  setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
+  if (innstillinger.kundenytt) {
+    lastKundenytt();
+    setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
+    setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
+  }
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
-  lastBursdager();
-  setInterval(lastBursdager, BURSDAG_REFRESH_MS);
-  setInterval(sjekkBursdagBanner, BURSDAG_SYKLUS_MS);
+  if (innstillinger.bursdager) {
+    lastBursdager();
+    setInterval(lastBursdager, BURSDAG_REFRESH_MS);
+    setInterval(sjekkBursdagBanner, BURSDAG_SYKLUS_MS);
+  }
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
+  setInterval(sjekkInnstillinger, INNSTILLINGER_SJEKK_MS);
   refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
   document.addEventListener("keydown", handterGjesteHotkey);
@@ -545,6 +556,39 @@ async function sjekkNyVersjon() {
     }
   } catch (err) {
     console.warn("Fikk ikke sjekket ny versjon:", err);
+  }
+}
+
+// Av/på-bryterne for kundenytt/feiring/bursdager settes fra admin (functions/api/
+// innstillinger.js) og avgjør ved oppstart hvilke setInterval-løkker som i det hele
+// tatt startes (se init) - feiler henting, kjører alt som normalt (alt på er standard).
+async function lastInnstillinger() {
+  try {
+    const res = await fetch("/api/innstillinger");
+    const data = await res.json();
+    innstillinger = { ...innstillinger, ...data };
+  } catch (err) {
+    console.warn("Fikk ikke hentet innstillinger, bruker standardverdier (alt på):", err);
+  }
+}
+
+// Skjermen står ubetjent, så en endret bryter i admin må oppdages av seg selv - samme
+// "sjekk og last siden på nytt ved endring"-mønster som sjekkNyVersjon over, siden det
+// er en enkel og allerede utprøvd måte å få de riktige setInterval-løkkene til å starte/
+// stoppe på, uten å bygge egen live av/på-logikk for hver enkelt funksjon.
+async function sjekkInnstillinger() {
+  try {
+    const res = await fetch("/api/innstillinger", { cache: "no-store" });
+    const tekst = await res.text();
+    if (sisteInnstillingerInnhold === null) {
+      sisteInnstillingerInnhold = tekst;
+      return;
+    }
+    if (tekst !== sisteInnstillingerInnhold) {
+      location.reload();
+    }
+  } catch (err) {
+    console.warn("Fikk ikke sjekket innstillinger:", err);
   }
 }
 

@@ -2,6 +2,8 @@
 // at alle som ser på/redigerer skjermen ser samme melding, uansett enhet.
 // Ingen historikk, ingen forfatter - bare én tekst alle kan overskrive.
 
+import { loggAdminHandling } from "../_lib/adminlogg.js";
+
 const NOTAT_KEY = "notat";
 const MAKS_LENGDE = 500;
 
@@ -19,7 +21,15 @@ export async function onRequestPost(context) {
   }
 
   const tekst = String(body?.tekst ?? "").slice(0, MAKS_LENGDE);
+  const forrige = (await context.env.NOTAT_KV.get(NOTAT_KEY)) ?? "";
   await context.env.NOTAT_KV.put(NOTAT_KEY, tekst);
+
+  // Post-it-en lagres på hver pause i skrivingen (debounce) mens noen redigerer - logg
+  // derfor kun når teksten faktisk endte opp annerledes enn sist, ikke på hvert kall.
+  if (tekst !== forrige) {
+    context.waitUntil(loggAdminHandling(context.env.NOTAT_KV, context.request, "Endret post-it-lappen"));
+  }
+
   return json({ success: true, tekst });
 }
 

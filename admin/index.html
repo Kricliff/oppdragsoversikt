@@ -213,6 +213,52 @@
   .skjerm-knapp:hover { border-color: var(--aktiv); color: var(--aktiv); }
   .skjerm-fjern { color: var(--text-muted); }
   .skjerm-fjern:hover { border-color: #c0392b; color: #c0392b; }
+  .bryter-rad {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .bryter-rad:last-child { border-bottom: none; }
+  .bryter-navn { font-weight: 600; font-size: 0.9rem; }
+  .bryter {
+    position: relative;
+    flex: none;
+    width: 40px;
+    height: 22px;
+    border: none;
+    border-radius: 11px;
+    background: #d8d8d8;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+  .bryter.pa { background: var(--aktiv); }
+  .bryter::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    transition: transform 0.15s ease;
+  }
+  .bryter.pa::after { transform: translateX(18px); }
+  .aktivitet-rad {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .aktivitet-rad:last-child { border-bottom: none; }
+  .aktivitet-innhold { flex: 1 1 auto; min-width: 0; }
+  .aktivitet-handling { font-weight: 600; }
+  .aktivitet-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
+  .aktivitet-tid { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; flex: none; }
   .tilbake {
     display: inline-block;
     margin-top: 1rem;
@@ -273,6 +319,18 @@
         <input type="date" id="bursdagDato">
         <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
       </div>
+    </div>
+
+    <div class="kort">
+      <h2>Innstillinger</h2>
+      <p class="storrelse-hint">Skru funksjoner på tavlen midlertidig av og på - f.eks. under feilsøking eller en demo.</p>
+      <div id="innstillingerListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
+      <h2>Aktivitet</h2>
+      <p class="storrelse-hint">Hvem som sist gjorde endringer herfra på admin-siden.</p>
+      <div id="aktivitetListe"><p class="endring-tom">Laster…</p></div>
     </div>
 
   </div>
@@ -514,6 +572,9 @@
     } catch (err) {
       console.warn("Fikk ikke lagret bursdager:", err);
     }
+    // Litt forsinkelse - loggingen skjer i en context.waitUntil på serveren, som kan
+    // henge litt igjen etter at selve svaret allerede er kommet tilbake hit.
+    setTimeout(lastAktivitet, 500);
   }
 
   function leggTilBursdag() {
@@ -626,6 +687,7 @@
       console.warn("Fikk ikke sendt fjernstyringskommando:", err);
     }
     lastSkjermer();
+    setTimeout(lastAktivitet, 500);
   }
 
   async function fjernSkjerm(id) {
@@ -639,10 +701,126 @@
       console.warn("Fikk ikke fjernet skjerm:", err);
     }
     lastSkjermer();
+    setTimeout(lastAktivitet, 500);
   }
 
   lastSkjermer();
   setInterval(lastSkjermer, 15 * 1000);
+
+  const innstillingerListeEl = document.getElementById("innstillingerListe");
+  const BRYTER_NAVN = { kundenytt: "Kundenytt", feiring: "Feiring", bursdager: "Bursdager" };
+
+  function renderInnstillinger(innstillinger) {
+    innstillingerListeEl.replaceChildren(
+      ...Object.keys(BRYTER_NAVN).map((felt) => {
+        const rad = document.createElement("div");
+        rad.className = "bryter-rad";
+
+        const navn = document.createElement("span");
+        navn.className = "bryter-navn";
+        navn.textContent = BRYTER_NAVN[felt];
+        rad.appendChild(navn);
+
+        const pa = !!innstillinger[felt];
+        const bryter = document.createElement("button");
+        bryter.type = "button";
+        bryter.className = "bryter" + (pa ? " pa" : "");
+        bryter.setAttribute("role", "switch");
+        bryter.setAttribute("aria-checked", String(pa));
+        bryter.setAttribute("aria-label", BRYTER_NAVN[felt]);
+        bryter.addEventListener("click", () => settInnstilling(felt, !pa));
+        rad.appendChild(bryter);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastInnstillinger() {
+    try {
+      const res = await fetch("/api/innstillinger");
+      const data = await res.json();
+      renderInnstillinger(data);
+    } catch (err) {
+      innstillingerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
+      console.warn(err);
+    }
+  }
+
+  async function settInnstilling(felt, verdi) {
+    try {
+      const res = await fetch("/api/innstillinger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [felt]: verdi })
+      });
+      const data = await res.json();
+      renderInnstillinger(data);
+    } catch (err) {
+      console.warn("Fikk ikke lagret innstilling:", err);
+    }
+    lastAktivitet();
+  }
+
+  lastInnstillinger();
+
+  const aktivitetListeEl = document.getElementById("aktivitetListe");
+  const AKTIVITET_MAKS_VIST = 15;
+
+  function relativTidAktivitet(ms) {
+    const minutter = Math.round((Date.now() - ms) / 60000);
+    if (minutter < 1) return "akkurat nå";
+    if (minutter < 60) return `${minutter} min siden`;
+    const timer = Math.round(minutter / 60);
+    if (timer < 24) return `${timer} t siden`;
+    return `${Math.round(timer / 24)} d siden`;
+  }
+
+  function renderAktivitet(hendelser) {
+    if (hendelser.length === 0) {
+      aktivitetListeEl.innerHTML = '<p class="endring-tom">Ingen registrerte endringer ennå.</p>';
+      return;
+    }
+
+    aktivitetListeEl.replaceChildren(
+      ...hendelser.slice(0, AKTIVITET_MAKS_VIST).map((h) => {
+        const rad = document.createElement("div");
+        rad.className = "aktivitet-rad";
+
+        const innhold = document.createElement("div");
+        innhold.className = "aktivitet-innhold";
+        const handlingEl = document.createElement("div");
+        handlingEl.className = "aktivitet-handling";
+        handlingEl.textContent = h.handling;
+        const metaEl = document.createElement("div");
+        metaEl.className = "aktivitet-meta";
+        metaEl.textContent = h.epost;
+        innhold.append(handlingEl, metaEl);
+        rad.appendChild(innhold);
+
+        const tidEl = document.createElement("span");
+        tidEl.className = "aktivitet-tid";
+        tidEl.textContent = relativTidAktivitet(h.tidspunkt);
+        rad.appendChild(tidEl);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastAktivitet() {
+    try {
+      const res = await fetch("/api/adminlogg");
+      const data = await res.json();
+      renderAktivitet(Array.isArray(data.hendelser) ? data.hendelser : []);
+    } catch (err) {
+      aktivitetListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet aktivitetsloggen.</p>';
+      console.warn(err);
+    }
+  }
+
+  lastAktivitet();
+  setInterval(lastAktivitet, 60 * 1000);
 </script>
 </body>
 </html>
