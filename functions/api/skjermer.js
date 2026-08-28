@@ -8,8 +8,6 @@
 // i admin), og ønsket tilstand (akkurat nå bare gjestevisning på/av) som skjermen selv
 // speiler - samme "server eier tilstanden, klienten følger etter"-mønster som feiring.js.
 
-import { loggAdminHandling } from "../_lib/adminlogg.js";
-
 const KV_KEY = "skjermer";
 const MAKS_ALDER_MS = 24 * 60 * 60 * 1000; // fjernes helt fra registeret etter et døgn uten kontakt
 // Hver skjerm heartbeater hvert 15. sekund (se SKJERM_HEARTBEAT_MS i app.js), men et
@@ -67,10 +65,8 @@ export async function onRequestPost(context) {
   if (body?.fjern === true) {
     // Fellesområdet er den faste skjermen og skal alltid stå i registeret.
     if (alle[id]?.navn !== "Fellesområde") {
-      const fjernetNavn = alle[id]?.navn ?? "ukjent skjerm";
       delete alle[id];
       await skrivTrygt(context.env.NOTAT_KV, alle);
-      context.waitUntil(loggAdminHandling(context.env.NOTAT_KV, context.request, `Fjernet skjerm fra fjernstyring: ${fjernetNavn}`));
     }
     return json({ ok: true });
   }
@@ -98,17 +94,6 @@ export async function onRequestPost(context) {
   if (noeEndret || tidForNyttSkriv) {
     alle[id] = { navn, sistSett, gjestevisning };
     await skrivTrygt(context.env.NOTAT_KV, alle);
-  }
-
-  // Skiller en fjernstyringskommando fra admin fra skjermens egne lokale handlinger:
-  // en lokal handling (hurtigtast/knapp) sender ALLTID heartbeat:true sammen med
-  // gjestevisning (se settGjestevisning i app.js) - admin sin fjernkommando gjør det
-  // aldri. Kun det siste skal havne i aktivitetsloggen.
-  const erFjernkommandoFraAdmin = typeof body?.gjestevisning === "boolean" && !body?.heartbeat;
-  if (erFjernkommandoFraAdmin && gjestevisning !== (eksisterende?.gjestevisning ?? false)) {
-    context.waitUntil(
-      loggAdminHandling(context.env.NOTAT_KV, context.request, `Skrudde ${gjestevisning ? "på" : "av"} gjestevisning på ${navn} (fjernstyring)`)
-    );
   }
 
   return json({ gjestevisning });
