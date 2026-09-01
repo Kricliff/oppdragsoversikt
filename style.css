@@ -1196,8 +1196,12 @@ body {
 }
 
 @keyframes feiring-rull {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  /* Kort pause helt i starten (fastlåst ved venstre kant) før den ruller videre - uten
+     denne var teksten praktisk talt ALLTID midt i en rullesyklus når noen faktisk så på
+     skjermen, siden den kun restarter ved innholdsendring og ellers bare løper i ring
+     i opptil 2 timer (se FEIRING_VIS_MS i functions/api/feiring.js). */
+  0%, 15% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 /* ---------- Nyheter (NRK/TV2-overskrifter) - egen linje nederst, under feiringslinjen ---------- */
