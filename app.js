@@ -1014,13 +1014,13 @@ function byggKort(o) {
   const kunde = storForbokstav(o.kunde);
   div.innerHTML = `
     ${o.erNytt ? '<span class="ny-merke">Ny</span>' : ""}
-    <div class="tittel">${escapeHtml(rolle)}</div>
-    <div class="kunde">${escapeHtml(kunde)}</div>
-    <div class="meta-row">
+    <div class="tittel-rad">
+      <span class="tittel">${escapeHtml(rolle)}</span>
       <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
-      <span class="card-right">
-        ${kortHoyreTekst(o)}
-      </span>
+    </div>
+    <div class="kunde-rad">
+      <span class="kunde">${escapeHtml(kunde)}</span>
+      <span class="card-right">${kortHoyreTekst(o)}</span>
     </div>
     ${fremdriftBarHtml(o)}
   `;
