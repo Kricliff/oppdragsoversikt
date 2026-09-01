@@ -295,179 +295,127 @@ body {
 }
 
 /* Kort-skala styrer hvor kompakt ETT kort er, uavhengig av tetthet (som styrer
-   kolonner/rådgivere). Valgt PER RÅDGIVER (klassen settes på selve .lane, ikke på hele
-   .lanes) - en rådgiver med få oppdrag skal ikke få unødvendig små kort bare fordi en
-   annen rådgiver har mange, se tilpassKortStorrelseTilSkjerm() i app.js. */
-.lane.card-scale-1 .card {
+   kolonner/rådgivere). app.js velger nivå etter hvor mange oppdrag den fulleste
+   rådgiveren har, slik at alle oppdrag alltid får plass uten skrolling. */
+.lanes.card-scale-1 .card {
   padding: 0.5rem 0.65rem;
 }
 
-.lane.card-scale-1 .card .tittel {
+.lanes.card-scale-1 .card .tittel {
   font-size: 0.78rem;
 }
 
-.lane.card-scale-1 .card .kunde {
+.lanes.card-scale-1 .card .kunde {
   font-size: 0.68rem;
   margin-bottom: 0.4rem;
 }
 
-.lane.card-scale-1 .lane-body {
+.lanes.card-scale-1 .lane-body {
   gap: 0.4rem;
 }
 
-.lane.card-scale-2 .card {
+.lanes.card-scale-2 .card {
   padding: 0.35rem 0.5rem;
 }
 
-.lane.card-scale-2 .card .tittel {
+.lanes.card-scale-2 .card .tittel {
   font-size: 0.72rem;
   margin-bottom: 0.1rem;
 }
 
-.lane.card-scale-2 .card .kunde {
+.lanes.card-scale-2 .card .kunde {
   font-size: 0.62rem;
   margin-bottom: 0.25rem;
 }
 
-.lane.card-scale-2 .status-pill {
+.lanes.card-scale-2 .status-pill {
   font-size: 0.6rem;
   padding: 0.1rem 0.4rem;
 }
 
-.lane.card-scale-2 .card-right {
+.lanes.card-scale-2 .card-right {
   font-size: 0.6rem;
 }
 
-.lane.card-scale-2 .lane-body {
+.lanes.card-scale-2 .lane-body {
   gap: 0.25rem;
 }
 
-.lane.card-scale-3 .card {
+.lanes.card-scale-3 .card {
   padding: 0.12rem 0.35rem;
 }
 
-.lane.card-scale-3 .card .tittel {
+.lanes.card-scale-3 .card .tittel {
   font-size: 0.62rem;
   line-height: 1.15;
   margin-bottom: 0.03rem;
 }
 
-.lane.card-scale-3 .card .kunde {
+.lanes.card-scale-3 .card .kunde {
   font-size: 0.56rem;
   line-height: 1.1;
   margin-bottom: 0.12rem;
 }
 
-.lane.card-scale-3 .status-pill {
+.lanes.card-scale-3 .status-pill {
   font-size: 0.55rem;
   padding: 0.05rem 0.35rem;
 }
 
-.lane.card-scale-3 .status-pill::before {
+.lanes.card-scale-3 .status-pill::before {
   display: none;
 }
 
-.lane.card-scale-3 .card-right {
+.lanes.card-scale-3 .card-right {
   font-size: 0.55rem;
   gap: 0.35rem;
 }
 
-.lane.card-scale-3 .lane-body {
+.lanes.card-scale-3 .lane-body {
   padding: 5px;
   gap: 0.08rem;
 }
 
-/* Tetteste FELLES nivå: alt krympes til et minimum, men rolle og kunde beholder hver
-   sin linje - ingen av dem skal skjules eller klippes bort for å spare høyde (se
-   toppkommentaren over .card .tittel). Er selv dette ikke nok for en spesifikk
-   rådgiver, se .lane-ekstra-kompakt under - den egentlige siste utveien. */
-.lane.card-scale-4 .card {
+/* Siste utvei for rådgivere med et virkelig stort antall oppdrag: alt krympes til et
+   minimum, men rolle og kunde beholder hver sin linje - ingen av dem skal skjules
+   eller klippes bort for å spare høyde (se toppkommentaren over .card .tittel). */
+.lanes.card-scale-4 .card {
   padding: 0.03rem 0.3rem;
 }
 
-.lane.card-scale-4 .card .tittel {
+.lanes.card-scale-4 .card .tittel {
   font-size: 0.58rem;
   line-height: 1.15;
   margin-bottom: 0.02rem;
 }
 
-.lane.card-scale-4 .card .kunde {
+.lanes.card-scale-4 .card .kunde {
   font-size: 0.52rem;
   line-height: 1.1;
   margin-bottom: 0.08rem;
 }
 
-.lane.card-scale-4 .meta-row {
+.lanes.card-scale-4 .meta-row {
   gap: 0.35rem;
 }
 
-.lane.card-scale-4 .status-pill {
+.lanes.card-scale-4 .status-pill {
   font-size: 0.52rem;
   padding: 0.04rem 0.3rem;
 }
 
-.lane.card-scale-4 .status-pill::before {
+.lanes.card-scale-4 .status-pill::before {
   display: none;
 }
 
-.lane.card-scale-4 .card-right {
+.lanes.card-scale-4 .card-right {
   font-size: 0.52rem;
   gap: 0.3rem;
 }
 
-.lane.card-scale-4 .lane-body {
+.lanes.card-scale-4 .lane-body {
   padding: 3px;
   gap: 0.03rem;
-}
-
-/* Egentlig siste utvei, kun for de spesifikke rådgiverne der selv card-scale-4 ikke
-   holder (satt per-rådgiver i tilpassKortStorrelseTilSkjerm(), ikke felles for tavlen) -
-   rolle og status slås sammen til én linje, kundenavn skjules. Kommer etter
-   .lane.card-scale-4 i fila slik at den vinner uansett hvilket felles nivå som er
-   aktivt samtidig (samme antall class-selektorer i begge, så rekkefølgen avgjør). */
-.lane.lane-ekstra-kompakt .card {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.03rem 0.3rem;
-}
-
-.lane.lane-ekstra-kompakt .card .tittel {
-  flex: 1 1 auto;
-  font-size: 0.58rem;
-  line-height: 1.3;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lane.lane-ekstra-kompakt .card .kunde {
-  display: none;
-}
-
-.lane.lane-ekstra-kompakt .meta-row {
-  flex: 0 0 auto;
-  gap: 0.3rem;
-}
-
-.lane.lane-ekstra-kompakt .status-pill {
-  font-size: 0.5rem;
-  padding: 0.03rem 0.28rem;
-}
-
-.lane.lane-ekstra-kompakt .status-pill::before {
-  display: none;
-}
-
-.lane.lane-ekstra-kompakt .card-right {
-  font-size: 0.5rem;
-  gap: 0.28rem;
-}
-
-.lane.lane-ekstra-kompakt .lane-body {
-  padding: 2px;
-  gap: 0.02rem;
 }
 
 .lane {
@@ -675,10 +623,9 @@ body {
 
 /* I tetteste kort-modus (mange oppdrag på én rådgiver) prioriteres plass
    fremfor progresjonslinjen - prosenttallet i card-right vises fortsatt. */
-.lane.card-scale-2 .progress-bar,
-.lane.card-scale-3 .progress-bar,
-.lane.card-scale-4 .progress-bar,
-.lane.lane-ekstra-kompakt .progress-bar {
+.lanes.card-scale-2 .progress-bar,
+.lanes.card-scale-3 .progress-bar,
+.lanes.card-scale-4 .progress-bar {
   display: none;
 }
 

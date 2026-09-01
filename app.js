@@ -967,28 +967,22 @@ function tetthetForAntall(antallRadgivere) {
   return "dense";
 }
 
-// Alle oppdrag skal vises uten skrolling. Etter at tavlen er tegnet, prøver vi stadig
-// mer kompakte kort-skalaer PER RÅDGIVER (klassen settes på selve .lane) til kolonnen
-// ikke flyter over lenger - en rådgiver med få oppdrag skal ikke få unødvendig små
-// kort bare fordi en annen rådgiver har mange.
+// Alle oppdrag skal vises uten skrolling. Etter at tavlen er tegnet, prøver vi
+// stadig mer kompakte kort-skalaer til ingen rådgiver-kolonne flyter over.
 const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2", "card-scale-3", "card-scale-4"];
 
 function tilpassKortStorrelseTilSkjerm() {
-  lanesEl.querySelectorAll(".lane").forEach((lane) => {
-    const kropp = lane.querySelector(".lane-body");
+  for (const nivå of KORT_SKALA_NIVAER) {
+    KORT_SKALA_NIVAER.forEach((n) => n && lanesEl.classList.remove(n));
+    if (nivå) lanesEl.classList.add(nivå);
+    if (!harOverflow()) return;
+  }
+  // Selv på tettest nivå er det ikke garantert plass til absolutt alt i ekstreme
+  // tilfeller - da vinner "ingen skrolling" og resten klippes visuelt av overflow:hidden.
+}
 
-    for (const nivå of KORT_SKALA_NIVAER) {
-      KORT_SKALA_NIVAER.forEach((n) => n && lane.classList.remove(n));
-      if (nivå) lane.classList.add(nivå);
-      if (kropp.scrollHeight <= kropp.clientHeight + 1) break;
-    }
-
-    // Selv på tettest nivå for DENNE rådgiveren er det ikke alltid nok - i ekstreme
-    // tilfeller får kolonnen da en ekstra kompakt visning (rolle+status på én linje,
-    // kundenavn skjult - den gamle "siste utvei"-varianten, se .lane-ekstra-kompakt
-    // i style.css), i stedet for å klippe bort resten av oppdragene usynlig.
-    lane.classList.toggle("lane-ekstra-kompakt", kropp.scrollHeight > kropp.clientHeight + 1);
-  });
+function harOverflow() {
+  return [...lanesEl.querySelectorAll(".lane-body")].some((el) => el.scrollHeight > el.clientHeight + 1);
 }
 
 function grupperPerAnsvarlig(liste) {
