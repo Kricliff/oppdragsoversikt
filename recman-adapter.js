@@ -7,17 +7,9 @@
 // tilbake til mock-data. app.js viser hvilken kilde som faktisk ble brukt via kildeErRecman().
 
 let sisteKildeErRecman = false;
-let sisteKandidaterLandetIAr = null;
 
 function kildeErRecman() {
   return sisteKildeErRecman;
-}
-
-// Ekte antall kandidater "hired" i år (fra Recman sin jobApplication-scope) - null hvis
-// vi kjører på mock-data eller oppslaget skulle feile. app.js faller da tilbake til en
-// egen tilnærming i stedet for å vise et manglende tall (se renderStats i app.js).
-function kandidaterLandetIArEkte() {
-  return sisteKandidaterLandetIAr;
 }
 
 async function hentOppdrag() {
@@ -27,12 +19,10 @@ async function hentOppdrag() {
     const data = await res.json();
     if (!data || !Array.isArray(data.oppdrag)) throw new Error("Uventet svarformat fra /api/oppdrag");
     sisteKildeErRecman = true;
-    sisteKandidaterLandetIAr = typeof data.kandidaterLandetIAr === "number" ? data.kandidaterLandetIAr : null;
     return data.oppdrag;
   } catch (err) {
     console.warn("Recman-proxy ikke tilgjengelig, viser mock-data:", err);
     sisteKildeErRecman = false;
-    sisteKandidaterLandetIAr = null;
     return MOCK_OPPDRAG;
   }
 }

@@ -22,6 +22,7 @@ const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nr
 const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
 const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
 const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
+const TILBUD_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/tilbud.js
 const BURSDAG_VIS_MS = 20 * 1000; // hvor lenge feiringen midt på skjermen vises av gangen
 const BURSDAG_SYKLUS_MS = 3 * 60 * 1000; // hvor ofte den dukker opp igjen på selve bursdagen
 const SKJERM_ID_KEY = "skjermId";
@@ -47,6 +48,7 @@ let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
 let sisteKundenyttOppdatert = null;
 let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
+let sisteSignerteTilbud = 0; // "Signerte tilbud denne mnd", se lastSignerteTilbud
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -124,6 +126,8 @@ async function init() {
     setInterval(lastBursdager, BURSDAG_REFRESH_MS);
     setInterval(sjekkBursdagBanner, BURSDAG_SYKLUS_MS);
   }
+  lastSignerteTilbud();
+  setInterval(lastSignerteTilbud, TILBUD_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   setInterval(sjekkInnstillinger, INNSTILLINGER_SJEKK_MS);
@@ -745,15 +749,12 @@ function renderStats(liste) {
   const utfortIArListe = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const aktive = liste.filter((o) => o.status === "aktiv").length;
   const utfortIAr = utfortIArListe.length;
-  // Ekte tall fra Recman sin jobApplication-scope (status "hired") når tilgjengelig -
-  // faller tilbake til den gamle tilnærmingen (antallKandidater på mock-data) hvis ikke.
-  const kandidaterLandet = kandidaterLandetIArEkte() ?? utfortIArListe.reduce((sum, o) => sum + (o.antallKandidater ?? 0), 0);
 
   statsRow.innerHTML = "";
   [
     { label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
-    { label: "Kandidater Landet", value: kandidaterLandet },
+    { label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
     { label: "Telefoner", value: sisteTelling.telefoner },
     { label: "Salgsmøter", value: sisteTelling.moter }
   ].forEach(({ label, value, accent }) => {
@@ -772,6 +773,19 @@ async function lastBursdager() {
   bursdager = await hentBursdager();
   renderStats(alleOppdrag); // statslinjen må friskes opp selv om ikke oppdragslisten har endret seg
   sjekkBursdagBanner();
+}
+
+// "Signerte tilbud denne mnd" (functions/api/tilbud.js) - se kommentar der for hvordan
+// tallet faktisk regnes ut (RecMan eksponerer ikke selve tilbudsstatusen via API).
+async function lastSignerteTilbud() {
+  try {
+    const res = await fetch("/api/tilbud");
+    const data = await res.json();
+    sisteSignerteTilbud = typeof data.signerteTilbud === "number" ? data.signerteTilbud : 0;
+  } catch (err) {
+    console.warn("Fikk ikke hentet signerte tilbud:", err);
+  }
+  renderStats(alleOppdrag);
 }
 
 function leggTilBursdagStat() {

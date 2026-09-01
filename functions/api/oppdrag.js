@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 19;
+const CACHE_VERSION = 20;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -212,28 +212,7 @@ async function hentOgNormaliser(apiKey) {
     })
     .filter(Boolean);
 
-  return {
-    oppdrag,
-    kandidaterLandetIAr: await hentKandidaterLandetIAr(apiKey)
-  };
-}
-
-// Ekte antall kandidater "landet" (ansatt) i år, fra "jobApplication"-scopen (status
-// "hired"). Dette er IKKE koblet til enkeltoppdrag - det krever "job post"-tilgang vi
-// ikke har (jobApplication peker på jobPostId, ikke projectId) - men gir et pålitelig
-// totaltall for statslinjen, i stedet for den gamle tilnærmingen som talte
-// teammedlemmer/kundekontakter på fullførte prosjekter.
-async function hentKandidaterLandetIAr(apiKey) {
-  try {
-    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`;
-    const json = await fetch(url).then((r) => r.json());
-    if (!json.success) return null;
-
-    const iAr = new Date().getFullYear();
-    return json.data.filter((a) => a.updated && new Date(a.updated.replace(" ", "T") + "Z").getFullYear() === iAr).length;
-  } catch {
-    return null;
-  }
+  return { oppdrag };
 }
 
 function erForGammelTilAVaereAktiv(updated) {
