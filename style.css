@@ -1165,6 +1165,11 @@ body {
   transform: translateY(0);
 }
 
+/* display:flex over slår ellers ut den native [hidden]-skjulingen (se .skjerm-navngi[hidden]) */
+.feiring[hidden] {
+  display: none;
+}
+
 .feiring-track {
   display: flex;
   align-items: center;
@@ -1215,6 +1220,11 @@ body {
 
 .nyheter-banner.vis {
   transform: translateY(0);
+}
+
+/* display:flex over slår ellers ut den native [hidden]-skjulingen (se .skjerm-navngi[hidden]) */
+.nyheter-banner[hidden] {
+  display: none;
 }
 
 .nyheter-banner-track {
