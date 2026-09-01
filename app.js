@@ -776,7 +776,6 @@ function renderStats(liste) {
     { label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
-    { label: "Telefoner", value: sisteTelling.telefoner },
     { label: "Salgsmøter", value: sisteTelling.moter }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
