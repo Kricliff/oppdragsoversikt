@@ -758,7 +758,6 @@ function render() {
   renderStats(alleOppdrag);
   renderLanes(pagaende);
   tilpassKortStorrelseTilSkjerm();
-  oppdaterRullendeTitler();
   emptyState.hidden = pagaende.length > 0;
 }
 
@@ -986,25 +985,6 @@ function harOverflow() {
   return [...lanesEl.querySelectorAll(".lane-body")].some((el) => el.scrollHeight > el.clientHeight + 1);
 }
 
-// Rolle + kundenavn skal begge få plass til å bli lest, i stedet for å klippes med
-// "..." - kortene som faktisk er for smale til å vise alt får derfor en rullende
-// tekst i stedet (samme dupliser-og-loop-teknikk som feirings-/nyhetsbanneret nederst).
-// Kjøres etter tilpassKortStorrelseTilSkjerm() siden skriftstørrelsen (og dermed
-// hvor mye som faktisk får plass) avhenger av hvilken kort-skala som endte opp valgt.
-const TITTEL_RULL_PIKSLER_PER_SEK = 40;
-
-function oppdaterRullendeTitler() {
-  lanesEl.querySelectorAll(".card .tittel").forEach((tittelEl) => {
-    const trackEl = tittelEl.querySelector(".tittel-track");
-    const innholdEl = trackEl.querySelector(".tittel-innhold");
-    if (innholdEl.offsetWidth <= tittelEl.clientWidth) return; // får plass som den er
-
-    trackEl.appendChild(innholdEl.cloneNode(true));
-    tittelEl.classList.add("rullende");
-    trackEl.style.animationDuration = `${innholdEl.offsetWidth / TITTEL_RULL_PIKSLER_PER_SEK}s`;
-  });
-}
-
 function grupperPerAnsvarlig(liste) {
   const map = new Map();
   liste.forEach((o) => {
@@ -1030,7 +1010,8 @@ function byggKort(o) {
   const kunde = storForbokstav(o.kunde);
   div.innerHTML = `
     ${o.erNytt ? '<span class="ny-merke">Ny</span>' : ""}
-    <div class="tittel"><span class="tittel-track"><span class="tittel-innhold">${escapeHtml(rolle)} · <span class="kunde-navn">${escapeHtml(kunde)}</span></span></span></div>
+    <div class="tittel">${escapeHtml(rolle)}</div>
+    <div class="kunde">${escapeHtml(kunde)}</div>
     <div class="meta-row">
       <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
       <span class="card-right">
