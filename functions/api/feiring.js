@@ -26,9 +26,11 @@
 // - aktive: ferdigbygde {tekst, utloper}-poster som fortsatt skal vises, uavhengig av om
 //   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
+import { hentSignerteOppdrag } from "../_lib/tilbud.js";
+
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 13;
+const CACHE_VERSION = 14;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 export async function onRequestGet(context) {
@@ -71,12 +73,12 @@ function feiringTekst(h) {
 }
 
 async function hentAktiveFeiringer(apiKey, kv) {
-  const [projectJson, userJson, jobPostJson, hiredJson, forsteFakturaPrProsjekt] = await Promise.all([
+  const [projectJson, userJson, jobPostJson, hiredJson, nyeOppdrag] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=title,projectId`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`),
-    hentForsteFakturaPrProsjekt(apiKey)
+    hentSignerteOppdrag(apiKey)
   ]);
 
   const navnForUserId = {};
@@ -114,19 +116,6 @@ async function hentAktiveFeiringer(apiKey, kv) {
     const kundenavn = companyById[project.companyId]?.name;
     return companyById[project.companyId]?.type === "ownCompany" || inneholderGreatPeople(kundenavn);
   };
-
-  // --- Nytt oppdrag: prosjektets første faktura -> project -> kunde/rolle/ansvarlig ---
-  // Prosjekt som ikke lar seg slå opp (arkivert/slettet) hoppes rett og slett over her -
-  // uten et prosjekt har vi verken kunde, rolle eller ansvarlig å vise uansett.
-  const nyeOppdrag = Object.entries(forsteFakturaPrProsjekt)
-    .map(([projectId, dato]) => ({ projectId, dato, project: projectById[projectId] }))
-    .filter(({ project }) => project && !erInternKunde(project) && !inneholderGreatPeople(project.name))
-    .map(({ projectId, project }) => ({
-      id: String(projectId),
-      rolle: project.name,
-      kunde: companyById[project.companyId]?.name ?? null,
-      ansvarlig: navnForUserId[String(project.responsibleUserId)] ?? null
-    }));
 
   // --- Kandidat landet: jobApplication -> jobPost -> project -> kunde/ansvarlig ---
   const hiredRader = hiredJson?.success ? hiredJson.data : [];
@@ -203,33 +192,6 @@ async function hentAktiveFeiringer(apiKey, kv) {
   }
 
   return { aktive };
-}
-
-// Samme tilnærming som functions/api/tilbud.js: prosjektets aller første faktura
-// noensinne brukes som stedfortreder for "tilbudet er signert", siden RecMan ikke
-// eksponerer selve tilbudsstatusen via API. Returnerer { projectId: tidligsteDato }.
-async function hentForsteFakturaPrProsjekt(apiKey) {
-  const alleFakturaer = [];
-  for (let side = 1; side <= 10; side++) {
-    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=invoice&page=${side}`;
-    const json = await hentJson(url);
-    if (!json?.success || !json.data) break;
-    const rader = Object.values(json.data);
-    if (rader.length === 0) break;
-    alleFakturaer.push(...rader);
-    if (rader.length < 1000) break;
-  }
-
-  const forsteFakturaPrProsjekt = {};
-  alleFakturaer.forEach((r) => {
-    const pid = r.projectId;
-    if (!pid || !r.created) return;
-    if (!forsteFakturaPrProsjekt[pid] || r.created < forsteFakturaPrProsjekt[pid]) {
-      forsteFakturaPrProsjekt[pid] = r.created;
-    }
-  });
-
-  return forsteFakturaPrProsjekt;
 }
 
 async function hentJson(url) {

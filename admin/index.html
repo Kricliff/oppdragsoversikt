@@ -315,6 +315,12 @@
     </div>
 
     <div class="kort">
+      <h2>Signerte tilbud</h2>
+      <p class="storrelse-hint">Basert på når prosjektet fikk sin første faktura - RecMan eksponerer ikke selve tilbudsstatusen via API (krever Task-tilgang).</p>
+      <div id="tilbudListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
       <h2>Bursdager</h2>
       <p class="storrelse-hint">Legges inn manuelt her - Recman har ikke fødselsdato på ansatte.</p>
       <div id="bursdagerListe"><p class="endring-tom">Laster…</p></div>
@@ -490,6 +496,58 @@
 
   lastEndringer();
   setInterval(lastEndringer, 5 * 60 * 1000);
+
+  const tilbudListeEl = document.getElementById("tilbudListe");
+
+  function renderTilbud(nylige) {
+    if (nylige.length === 0) {
+      tilbudListeEl.innerHTML = '<p class="endring-tom">Ingen nye signerte tilbud siste 30 dager.</p>';
+      return;
+    }
+
+    tilbudListeEl.replaceChildren(
+      ...nylige.map((t) => {
+        const rad = document.createElement("div");
+        rad.className = "endring-rad";
+
+        const merke = document.createElement("span");
+        merke.className = "endring-merke nytt";
+        rad.appendChild(merke);
+
+        const innhold = document.createElement("div");
+        innhold.className = "endring-innhold";
+        const tittelEl = document.createElement("div");
+        tittelEl.className = "endring-tittel";
+        tittelEl.textContent = t.rolle;
+        const metaEl = document.createElement("div");
+        metaEl.className = "endring-meta";
+        metaEl.textContent = [t.kunde, t.ansvarlig].filter(Boolean).join(" · ");
+        innhold.append(tittelEl, metaEl);
+        rad.appendChild(innhold);
+
+        const tidEl = document.createElement("span");
+        tidEl.className = "endring-tid";
+        tidEl.textContent = new Date(t.dato.replace(" ", "T") + "Z").toLocaleString("no-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        rad.appendChild(tidEl);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastTilbud() {
+    try {
+      const res = await fetch("/api/tilbud");
+      const data = await res.json();
+      renderTilbud(Array.isArray(data.nylige) ? data.nylige : []);
+    } catch (err) {
+      tilbudListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet signerte tilbud.</p>';
+      console.warn(err);
+    }
+  }
+
+  lastTilbud();
+  setInterval(lastTilbud, 20 * 60 * 1000);
 
   const bursdagerListeEl = document.getElementById("bursdagerListe");
   const bursdagNavnEl = document.getElementById("bursdagNavn");
