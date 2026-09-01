@@ -42,7 +42,8 @@ let sisteTelling = { telefoner: 0, moter: 0 };
 let sisteKodeInnhold = null;
 let feiringAktive = []; // [{ tekst, utloper }] - speiler serverens svar direkte, se lastFeiring
 let nrkOverskrifter = []; // [{ tittel, logo }] - vises i banneret når det ikke er noen aktive feiringer
-let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartFeiringAnimasjon
+let sisteBannerTekst = null; // for å vite når rulleteksten faktisk har endret seg, se restartRullebannerAnimasjon
+let sisteNyheterTekst = null; // samme som over, men for den egne nyhetslinjen
 let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
@@ -70,6 +71,10 @@ const feiringBannerEl = document.getElementById("feiringBanner");
 const feiringTrackEl = document.getElementById("feiringTrack");
 const feiringTekst1El = document.getElementById("feiringTekst1");
 const feiringTekst2El = document.getElementById("feiringTekst2");
+const nyheterBannerEl = document.getElementById("nyheterBanner");
+const nyheterTrackEl = document.getElementById("nyheterTrack");
+const nyheterTekst1El = document.getElementById("nyheterTekst1");
+const nyheterTekst2El = document.getElementById("nyheterTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
@@ -384,44 +389,28 @@ async function lastVaer() {
 // serveren regner ut både tekst og resterende varighet, klienten speiler bare svaret.
 // Det gjør at banneret overlever en sideoppdatering (F5, eller tavlens egen auto-reload)
 // i stedet for å forsvinne fordi serveren kun leverer NYE hendelser én gang.
+//
+// Egen linje, stablet over nyhetslinjen (se lastNrk/oppdaterNyheterVisning under) -
+// de to vises uavhengig av hverandre, ikke som fallback for hverandre lenger.
 async function lastFeiring() {
   feiringAktive = await hentFeiring();
   oppdaterFeiringVisning();
-}
-
-// Siste toppsaker fra NRK og TV2 (functions/api/nrk.js) - fyller banneret nederst når
-// det ikke er noen aktive feiringer der. Feiringer har alltid forrang over nyheter.
-async function lastNrk() {
-  nrkOverskrifter = await hentNrkNyheter();
-  oppdaterFeiringVisning();
-}
-
-function harBannerInnhold() {
-  return feiringAktive.length > 0 || nrkOverskrifter.length > 0;
-}
-
-function feiringChips() {
-  if (feiringAktive.length > 0) {
-    return feiringAktive.map((h) => ({ type: "feiring", tekst: h.tekst }));
-  }
-  return nrkOverskrifter.map((s) => ({ type: "nyhet", tekst: s.tittel, logo: s.logo }));
 }
 
 function oppdaterFeiringVisning() {
   const naa = Date.now();
   feiringAktive = feiringAktive.filter((h) => h.utloper > naa);
 
-  if (!harBannerInnhold()) {
+  if (feiringAktive.length === 0) {
     feiringBannerEl.classList.remove("vis");
     setTimeout(() => {
-      if (!harBannerInnhold()) feiringBannerEl.hidden = true;
+      if (feiringAktive.length === 0) feiringBannerEl.hidden = true;
     }, 500);
     sisteBannerTekst = null;
     return;
   }
 
-  const chips = feiringChips();
-  const signatur = chips.map((c) => `${c.type}:${c.tekst}`).join("|");
+  const signatur = feiringAktive.map((h) => h.tekst).join("|");
 
   feiringBannerEl.hidden = false;
   requestAnimationFrame(() => feiringBannerEl.classList.add("vis"));
@@ -430,35 +419,67 @@ function oppdaterFeiringVisning() {
   // har endret seg - ellers hopper den til et vilkårlig sted midt i teksten hver gang
   // dette kjører (hvert minutt), siden CSS-animasjonen normalt bare fortsetter å løpe.
   if (signatur !== sisteBannerTekst) {
-    settFeiringInnhold(feiringTekst1El, chips);
-    settFeiringInnhold(feiringTekst2El, chips);
-    restartFeiringAnimasjon();
+    settRullebannerInnhold(feiringTekst1El, feiringAktive.map((h) => h.tekst), "feiring-item");
+    settRullebannerInnhold(feiringTekst2El, feiringAktive.map((h) => h.tekst), "feiring-item");
+    restartRullebannerAnimasjon(feiringTrackEl);
     sisteBannerTekst = signatur;
   }
 }
 
-function settFeiringInnhold(containerEl, chips) {
-  containerEl.replaceChildren(...chips.map(lagFeiringChip));
+// Siste toppsaker fra NRK og TV2 (functions/api/nrk.js) - egen linje nederst, under
+// feiringslinjen. Vises uavhengig av om det er noen aktive feiringer eller ikke.
+async function lastNrk() {
+  nrkOverskrifter = await hentNrkNyheter();
+  oppdaterNyheterVisning();
 }
 
-function lagFeiringChip(chip) {
-  const span = document.createElement("span");
-  span.className = chip.type === "nyhet" ? "feiring-item nyhet" : "feiring-item";
-  if (chip.type === "nyhet" && chip.logo) {
-    const logo = document.createElement("img");
-    logo.className = "feiring-kilde-logo";
-    logo.src = chip.logo;
-    logo.alt = "";
-    span.appendChild(logo);
+function oppdaterNyheterVisning() {
+  if (nrkOverskrifter.length === 0) {
+    nyheterBannerEl.classList.remove("vis");
+    setTimeout(() => {
+      if (nrkOverskrifter.length === 0) nyheterBannerEl.hidden = true;
+    }, 500);
+    sisteNyheterTekst = null;
+    return;
   }
-  span.appendChild(document.createTextNode(chip.tekst));
-  return span;
+
+  const signatur = nrkOverskrifter.map((s) => s.tittel).join("|");
+
+  nyheterBannerEl.hidden = false;
+  requestAnimationFrame(() => nyheterBannerEl.classList.add("vis"));
+
+  if (signatur !== sisteNyheterTekst) {
+    settRullebannerInnhold(nyheterTekst1El, nrkOverskrifter, "nyheter-item", "nyheter-kilde-logo");
+    settRullebannerInnhold(nyheterTekst2El, nrkOverskrifter, "nyheter-item", "nyheter-kilde-logo");
+    restartRullebannerAnimasjon(nyheterTrackEl);
+    sisteNyheterTekst = signatur;
+  }
 }
 
-function restartFeiringAnimasjon() {
-  feiringTrackEl.style.animation = "none";
-  void feiringTrackEl.offsetWidth; // tving reflow slik at "none" faktisk får effekt
-  feiringTrackEl.style.animation = "";
+// Delt av begge bannerlinjene - tar enten en liste med rene tekststrenger (feiring)
+// eller {tittel, logo}-objekter (nyheter, se hentNrkNyheter).
+function settRullebannerInnhold(containerEl, elementer, itemClass, logoClass) {
+  containerEl.replaceChildren(
+    ...elementer.map((e) => {
+      const span = document.createElement("span");
+      span.className = itemClass;
+      if (logoClass && e.logo) {
+        const logo = document.createElement("img");
+        logo.className = logoClass;
+        logo.src = e.logo;
+        logo.alt = "";
+        span.appendChild(logo);
+      }
+      span.appendChild(document.createTextNode(logoClass ? e.tittel : e));
+      return span;
+    })
+  );
+}
+
+function restartRullebannerAnimasjon(trackEl) {
+  trackEl.style.animation = "none";
+  void trackEl.offsetWidth; // tving reflow slik at "none" faktisk får effekt
+  trackEl.style.animation = "";
 }
 
 // Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel ved siden av

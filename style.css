@@ -69,9 +69,10 @@ body {
   display: flex;
   flex-direction: column;
   padding: clamp(14px, 2vh, 28px) clamp(18px, 2.4vw, 40px);
-  /* ekstra bunnmarg reservert til feiringsbanneret (44px + 8px luft), permanent slik at
-     statuslinjen aldri havner under den når banneret dukker opp */
-  padding-bottom: calc(clamp(14px, 2vh, 28px) + 52px);
+  /* ekstra bunnmarg reservert til feirings- OG nyhetsbanneren (44px hver + 8px luft),
+     permanent slik at statuslinjen aldri havner under dem når feiringsbanneret dukker
+     opp oppå den alltid synlige nyhetslinjen */
+  padding-bottom: calc(clamp(14px, 2vh, 28px) + 96px);
   gap: clamp(10px, 1.4vh, 16px);
 }
 
@@ -714,7 +715,7 @@ body {
 .postit {
   position: fixed;
   right: 290px; /* venstre for busstider/kundenytt-søylen (250px bred + 28px kant + 12px luft) */
-  bottom: 80px; /* 28px opprinnelig marg + 44px feiringsbanner + 8px luft */
+  bottom: 124px; /* 28px opprinnelig marg + 44px feiringsbanner + 44px nyhetsbanner + 8px luft */
   width: 220px;
   min-height: 150px;
   background: #fde68a;
@@ -766,7 +767,7 @@ body {
 .busstider {
   position: fixed;
   right: 28px; /* samme høyrekant som kundenytt, stablet rett over den */
-  bottom: 276px; /* kundenytt (~140px høy) + 80px bunnmarg (inkl. feiringsbanner) + 56px luft */
+  bottom: 320px; /* kundenytt (~140px høy) + 124px bunnmarg (inkl. begge bannerlinjene) + 56px luft */
   width: 250px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -847,7 +848,7 @@ body {
 .kundenytt {
   position: fixed;
   right: 28px; /* samme høyrekant som busstider, rett under den */
-  bottom: 120px; /* busstider (bottom 276px) - 140px høyde her - 16px luft mellom dem */
+  bottom: 164px; /* busstider (bottom 320px) - 140px høyde her - 16px luft mellom dem */
   width: 250px; /* samme bredde som busstider */
   max-height: 140px; /* viser kun én sak av gangen (karusell), ikke flere stablet */
   background: var(--surface);
@@ -1142,13 +1143,13 @@ body {
   white-space: nowrap;
 }
 
-/* ---------- Feiring (kandidat landet / ny kunde) ---------- */
+/* ---------- Feiring (kandidat landet / ny kunde) - egen linje, over nyhetslinjen ---------- */
 
 .feiring {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 44px;
   height: 44px;
   z-index: 100;
   overflow: hidden;
@@ -1189,20 +1190,63 @@ body {
   letter-spacing: 0.01em;
 }
 
-.feiring-item.nyhet {
-  color: var(--text);
+@keyframes feiring-rull {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
-.feiring-kilde-logo {
+/* ---------- Nyheter (NRK/TV2-overskrifter) - egen linje nederst, under feiringslinjen ---------- */
+
+.nyheter-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44px;
+  z-index: 100;
+  overflow: hidden;
+  background: none;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nyheter-banner.vis {
+  transform: translateY(0);
+}
+
+.nyheter-banner-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: feiring-rull 45s linear infinite;
+  will-change: transform;
+}
+
+.nyheter-banner-tekst {
+  display: inline-flex;
+  align-items: center;
+}
+
+.nyheter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding-right: 6vw;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.nyheter-kilde-logo {
   height: 1.1em;
   width: 1.1em;
   object-fit: contain;
   flex: none;
-}
-
-@keyframes feiring-rull {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
 }
 
 /* ---------- Skjerm-navngivning (førstegangsoppsett per fysisk skjerm) ---------- */
@@ -1320,10 +1364,11 @@ body {
   .lanes { grid-template-columns: 1fr; }
   .lane { max-height: 60vh; }
   .stats { display: none; }
-  .postit { right: 170px; bottom: 64px; width: 160px; }
-  .busstider { right: 12px; bottom: 232px; width: 150px; }
-  .kundenytt { right: 12px; bottom: 100px; width: 150px; max-height: 120px; }
+  .postit { right: 170px; bottom: 108px; width: 160px; }
+  .busstider { right: 12px; bottom: 276px; width: 150px; }
+  .kundenytt { right: 12px; bottom: 144px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
+  .nyheter-item { font-size: 0.95rem; }
   .gjeste-stat { flex-basis: 45%; }
   .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
   .gjeste-vaer-klokke { position: static; align-items: center; margin-top: 0.6rem; }
