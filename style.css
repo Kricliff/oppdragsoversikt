@@ -376,7 +376,6 @@ body {
   line-height: 1.3;
   margin: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -503,19 +502,42 @@ body {
   z-index: 1;
 }
 
-/* Kundenavn og rolle vises alltid sammen på ÉN linje (kundenavnet uthevet) - de pleide
+/* Rolle og kundenavn vises alltid sammen på ÉN linje (kundenavnet uthevet) - de pleide
    å være to separate linjer, men kunde-linjen ble skjult helt på tettheter 2-4 (se
    card-scale-* under) for å spare høyde, som gjorde at kundenavnet i praksis ikke var
    synlig på de aller fleste kortene. Slått sammen 2026-09-02 slik at kunde alltid vises,
-   uansett hvor tett tavlen er pakket. */
+   uansett hvor tett tavlen er pakket.
+   Får ikke begge deler plass, ruller linjen i stedet for å klippes med "..." - se
+   .tittel-track/.tittel-innhold og oppdaterRullendeTitler() i app.js. */
 .card .tittel {
   font-weight: 500;
   font-size: clamp(0.82rem, 1vw, 0.95rem);
   margin-bottom: 0.55rem;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
+}
+
+.card .tittel-track {
+  display: inline-flex;
+}
+
+.card .tittel.rullende .tittel-track {
+  animation-name: tittel-rull;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.card .tittel-innhold {
+  display: inline-block;
+  padding-right: 3rem;
+  white-space: nowrap;
+}
+
+@keyframes tittel-rull {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 .card .kunde-navn {
