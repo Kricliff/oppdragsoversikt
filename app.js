@@ -1008,8 +1008,7 @@ function byggKort(o) {
   div.className = `card status-${o.status}`;
   div.innerHTML = `
     ${o.erNytt ? '<span class="ny-merke">Ny</span>' : ""}
-    <div class="tittel">${escapeHtml(o.tittel)}</div>
-    <div class="kunde">${escapeHtml(o.kunde)}</div>
+    <div class="tittel"><span class="kunde-navn">${escapeHtml(o.kunde)}</span> · ${escapeHtml(o.tittel)}</div>
     <div class="meta-row">
       <span class="status-pill status-${o.status}">${statusLabel(o.status)}</span>
       <span class="card-right">

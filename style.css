@@ -303,10 +303,6 @@ body {
 
 .lanes.card-scale-1 .card .tittel {
   font-size: 0.78rem;
-}
-
-.lanes.card-scale-1 .card .kunde {
-  font-size: 0.68rem;
   margin-bottom: 0.4rem;
 }
 
@@ -320,12 +316,7 @@ body {
 
 .lanes.card-scale-2 .card .tittel {
   font-size: 0.72rem;
-  margin-bottom: 0.2rem;
-  white-space: normal;
-}
-
-.lanes.card-scale-2 .card .kunde {
-  display: none;
+  margin-bottom: 0.25rem;
 }
 
 .lanes.card-scale-2 .status-pill {
@@ -348,12 +339,7 @@ body {
 .lanes.card-scale-3 .card .tittel {
   font-size: 0.62rem;
   line-height: 1.15;
-  margin-bottom: 0;
-  white-space: nowrap;
-}
-
-.lanes.card-scale-3 .card .kunde {
-  display: none;
+  margin-bottom: 0.12rem;
 }
 
 .lanes.card-scale-3 .status-pill {
@@ -392,10 +378,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.lanes.card-scale-4 .card .kunde {
-  display: none;
 }
 
 .lanes.card-scale-4 .meta-row {
@@ -521,23 +503,23 @@ body {
   z-index: 1;
 }
 
+/* Kundenavn og rolle vises alltid sammen på ÉN linje (kundenavnet uthevet) - de pleide
+   å være to separate linjer, men kunde-linjen ble skjult helt på tettheter 2-4 (se
+   card-scale-* under) for å spare høyde, som gjorde at kundenavnet i praksis ikke var
+   synlig på de aller fleste kortene. Slått sammen 2026-09-02 slik at kunde alltid vises,
+   uansett hvor tett tavlen er pakket. */
 .card .tittel {
-  font-weight: 600;
+  font-weight: 500;
   font-size: clamp(0.82rem, 1vw, 0.95rem);
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.55rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
 }
 
-.card .kunde {
-  font-size: clamp(0.72rem, 0.85vw, 0.82rem);
-  color: var(--text-muted);
-  margin-bottom: 0.55rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.card .kunde-navn {
+  font-weight: 700;
 }
 
 .card .meta-row {
