@@ -969,6 +969,7 @@ function byggKort(o) {
   const div = document.createElement("div");
   div.className = `card status-${o.status}`;
   div.innerHTML = `
+    ${o.erNytt ? '<span class="ny-merke">Ny</span>' : ""}
     <div class="tittel">${escapeHtml(o.tittel)}</div>
     <div class="kunde">${escapeHtml(o.kunde)}</div>
     <div class="meta-row">

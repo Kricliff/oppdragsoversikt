@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 20;
+const CACHE_VERSION = 21;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -59,6 +59,9 @@ export async function onRequestGet(context) {
 
   try {
     const payload = await hentOgNormaliser(context.env.RECMAN_API_KEY);
+    // Må skje FØR responsen bygges (ikke context.waitUntil) - erNytt-flagget skal jo
+    // faktisk være med i det som sendes til klienten.
+    await merkNyeOppdrag(payload.oppdrag, context.env.NOTAT_KV);
     const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",
@@ -121,6 +124,47 @@ async function loggEndringer(oppdrag, kv) {
   } catch (err) {
     console.warn("Fikk ikke skrevet endringslogg til KV:", err);
   }
+}
+
+const NY_MERKE_KV_KEY = "oppdrag-forstesett";
+const NY_MERKE_DAGER = 3; // hvor lenge "Ny"-merket vises på et oppdrag-kort
+
+// Merker hvert oppdrag med erNytt: true i NY_MERKE_DAGER dager etter det FØRST dukket
+// opp på tavlen - lagret varig per oppdrag-id (recman-<projectId>), som aldri endres.
+// Flyttes oppdraget til en annen rådgiver er det fortsatt samme id, så "først sett"-
+// tidspunktet - og dermed selve "Ny"-merket - påvirkes ikke av en omplassering.
+async function merkNyeOppdrag(oppdrag, kv) {
+  if (!kv) return;
+
+  const tilstand = (await kv.get(NY_MERKE_KV_KEY, "json")) ?? {};
+  const erBootstrap = Object.keys(tilstand).length === 0;
+  const naa = Date.now();
+  // Ved aller første kjøring skal ikke hele den eksisterende porteføljen merkes "Ny" -
+  // lagre et tidspunkt godt utenfor NY_MERKE_DAGER-vinduet, som om vi allerede kjente
+  // til dem (samme bootstrap-mønster som loggEndringer/feiring.js).
+  const forstegangsTidspunkt = naa - (NY_MERKE_DAGER + 1) * 24 * 60 * 60 * 1000;
+
+  const aktiveIder = new Set(oppdrag.map((o) => o.id));
+  // Rydd bort oppdrag som ikke lenger er synlige - "først sett" trengs ikke for dem
+  // lenger, og dukker de opp igjen senere regnes de naturlig som nye på nytt da.
+  Object.keys(tilstand).forEach((id) => {
+    if (!aktiveIder.has(id)) delete tilstand[id];
+  });
+
+  oppdrag.forEach((o) => {
+    if (!tilstand[o.id]) tilstand[o.id] = erBootstrap ? forstegangsTidspunkt : naa;
+  });
+
+  try {
+    await kv.put(NY_MERKE_KV_KEY, JSON.stringify(tilstand));
+  } catch (err) {
+    console.warn("Fikk ikke skrevet oppdrag-forstesett til KV:", err);
+  }
+
+  const grense = naa - NY_MERKE_DAGER * 24 * 60 * 60 * 1000;
+  oppdrag.forEach((o) => {
+    o.erNytt = tilstand[o.id] > grense;
+  });
 }
 
 async function hentOgNormaliser(apiKey) {

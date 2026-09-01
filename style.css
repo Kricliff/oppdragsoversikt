@@ -491,6 +491,7 @@ body {
 /* ---------- Cards ---------- */
 
 .card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--neutral);
@@ -501,6 +502,23 @@ body {
 .card.status-aktiv { border-left-color: var(--aktiv); }
 .card.status-utfort { border-left-color: var(--utfort); opacity: 0.85; }
 .card.status-paVent { border-left-color: var(--pa-vent); opacity: 0.85; }
+
+/* Overlegg, ikke en del av flyten - tar aldri plass fra selve kortinnholdet, uansett
+   hvor tett tilpassKortStorrelseTilSkjerm() pakker kortene sammen. */
+.ny-merke {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--aktiv);
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.12rem 0.4rem;
+  line-height: 1.2;
+  z-index: 1;
+}
 
 .card .tittel {
   font-weight: 600;
