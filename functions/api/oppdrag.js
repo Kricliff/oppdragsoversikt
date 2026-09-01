@@ -12,7 +12,7 @@
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 21;
+const CACHE_VERSION = 22;
 
 // EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
 // når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
@@ -50,6 +50,11 @@ const STATUS_MAP = {
   solvedEnded: "utfort",
   request: "paVent"
 };
+
+// Manuelt skjulte prosjekt-ID-er - enkeltoppdrag som skal bort fra tavlen på forespørsel,
+// selv om de fortsatt har en status som normalt vises. 1296846: "Direct Search Recruitment
+// - IT x3" hos Uno-X (Kristian Clifford, "på vent") - be om å fjerne den 2026-09-01.
+const SKJULTE_PROSJEKT_IDER = new Set(["1296846"]);
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -219,6 +224,8 @@ async function hentOgNormaliser(apiKey) {
 
   const oppdrag = Object.values(projectJson.data)
     .map((p) => {
+      if (SKJULTE_PROSJEKT_IDER.has(String(p.projectId))) return null;
+
       let status = STATUS_MAP[p.status];
 
       if (BEHANDLE_100_PROSENT_SOM_UTFORT && KAN_LOFTES_VED_100_PROSENT.has(p.status) && Number(p.completePercent) >= 100) {
