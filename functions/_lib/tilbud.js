@@ -19,7 +19,38 @@
 
 export async function hentSignerteOppdrag(apiKey) {
   const fakturaDatoPrProsjekt = await hentForsteFakturaPrProsjekt(apiKey);
-  return byggOppdragsliste(apiKey, fakturaDatoPrProsjekt);
+  const oppdragsliste = await byggOppdragsliste(apiKey, fakturaDatoPrProsjekt);
+  return slaSammenSammeDagSammeKunde(oppdragsliste);
+}
+
+// Flere rekrutteringer under samme tilbud faktureres ofte som separate oppstartsfakturaer
+// (og dermed separate RecMan-prosjekter) samme dag til samme kunde - det skal likevel
+// telle som ETT signert tilbud, ikke ett per faktura/prosjekt (bekreftet av GreatPeople
+// 2026-09-02). Slår derfor sammen alle prosjekter med samme kunde + samme fakturadato til
+// én rad, med rollene slått sammen. Gjelder KUN signerte tilbud - hvert avsluttet prosjekt
+// (hentAvsluttedeOppdrag) telles fortsatt for seg, siden hver leveranse avsluttes for seg.
+function slaSammenSammeDagSammeKunde(oppdragsliste) {
+  const grupper = new Map();
+  oppdragsliste.forEach((o) => {
+    // Ukjent kunde (kunde === null) grupperes IKKE sammen med andre ukjente - da ville
+    // alle uløselige prosjekter samme dag blitt slått feilaktig sammen til én rad.
+    const nokkel = o.kunde ? `${o.kunde}__${o.dato.slice(0, 10)}` : `id__${o.id}`;
+    const eksisterende = grupper.get(nokkel);
+    if (!eksisterende) {
+      grupper.set(nokkel, { ...o, roller: [o.rolle] });
+    } else {
+      eksisterende.roller.push(o.rolle);
+      if (o.dato < eksisterende.dato) eksisterende.dato = o.dato;
+    }
+  });
+
+  return [...grupper.values()].map((g) => ({
+    id: g.id,
+    rolle: g.roller.join(", "),
+    kunde: g.kunde,
+    ansvarlig: g.ansvarlig,
+    dato: g.dato
+  }));
 }
 
 export async function hentAvsluttedeOppdrag(apiKey) {

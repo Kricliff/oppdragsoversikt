@@ -7,7 +7,7 @@
 import { hentSignerteOppdrag } from "../_lib/tilbud.js";
 
 const CACHE_SECONDS = 20 * 60;
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 const NYLIGE_DAGER = 30; // hvor langt tilbake admin-listen viser
 
 export async function onRequestGet(context) {

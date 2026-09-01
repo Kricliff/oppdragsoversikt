@@ -9,47 +9,17 @@
 // og cacher svaret CACHE_SECONDS på Cloudflares edge, så gjentatte sideinnlastinger fra
 // skjermen ikke bruker opp kvoten.
 
+import { bestemStatus } from "../_lib/oppdragStatus.js";
+
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 22;
+const CACHE_VERSION = 23;
 
-// EKSPERIMENT (2026-08-25): mange rådgivere glemmer å sette prosjektstatus til "Løst"
-// når de er ferdige, men husker som regel å sette fremdrift til 100%. Til det motsatte
-// er bevist, behandler vi 100% fremdrift som utført uansett hva statusfeltet sier -
-// men aldri for cancelled/lost, som er en bevisst avsluttet-uten-suksess-tilstand.
-const BEHANDLE_100_PROSENT_SOM_UTFORT = true;
-
-// Faser som kan LØFTES til "utfort" via 100%-regelen over (i tillegg til solvedEnded,
-// som alltid er utfort uansett prosent).
-const KAN_LOFTES_VED_100_PROSENT = new Set(["notStarted", "active", "urgent", "solvedOngoing"]);
-
-// Recman inneholder mange gamle prosjekter som ble satt til "active"/"urgent" og aldri
-// lukket - reelt sett forlatte, ikke faktisk aktivt arbeid. Et "aktiv"-oppdrag som ikke
-// er rørt i Recman på lenger enn dette regnes ikke som aktivt lenger, og skjules.
-const AKTIV_MAKS_DAGER_UTEN_OPPDATERING = 90;
-
-// Recman sine prosjekt-statuser (se help.recman.io "Projects module") normalisert til
-// det tavlen forstår. "cancelled" og "lost" er bevisst utelatt - de skal ikke vises,
-// og alt som ikke er "aktiv"/"utfort"/"paVent" skjules automatisk av erSynligPaTavle
-// i app.js.
-//
-// "request" (= "På vent" i Recman sitt grensesnitt) vises nå som egen status "paVent"
-// (2026-08-27) - står på tavlen i PA_VENT_SYNLIG_DAGER dager (se app.js) fra sist
-// oppdatert i Recman, samme mønster som "Utført". Settes status bort fra "request"
-// igjen før den fristen, følger oppdraget bare sin nye status som normalt.
-//
-// "solvedOngoing" ("Løst løpende") er bevisst IKKE med her (2026-08-25) - "Utført i år"
-// skal kun telle solvedEnded ("Løst avsluttet") + 100%-regelen under, ikke løpende
-// leveranser. Et solvedOngoing-prosjekt under 100% skjules derfor helt fra tavlen,
-// akkurat som cancelled/lost - det når 100% (og telles) i stedet.
-const STATUS_MAP = {
-  notStarted: "aktiv",
-  active: "aktiv",
-  urgent: "aktiv",
-  solvedEnded: "utfort",
-  request: "paVent"
-};
+// Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
+// inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
+// _lib/oppdragStatus.js - DELT med functions/api/feiring.js, som bruker nøyaktig samme
+// regler til å avgjøre når "Nytt oppdrag" skal feires (se kommentar der).
 
 // Manuelt skjulte prosjekt-ID-er - enkeltoppdrag som skal bort fra tavlen på forespørsel,
 // selv om de fortsatt har en status som normalt vises. 1296846: "Direct Search Recruitment
@@ -226,15 +196,9 @@ async function hentOgNormaliser(apiKey) {
     .map((p) => {
       if (SKJULTE_PROSJEKT_IDER.has(String(p.projectId))) return null;
 
-      let status = STATUS_MAP[p.status];
-
-      if (BEHANDLE_100_PROSENT_SOM_UTFORT && KAN_LOFTES_VED_100_PROSENT.has(p.status) && Number(p.completePercent) >= 100) {
-        status = "utfort";
-      }
-
+      const status = bestemStatus(p);
       if (!status) return null; // cancelled/lost/solvedOngoing under 100% - skjules
 
-      if (status === "aktiv" && erForGammelTilAVaereAktiv(p.updated)) return null;
       // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
       // knyttet til f.eks. et "prospect" er salgsoppfølging, ikke et reelt kundeoppdrag -
       // luk dem bort så tavlen bare viser arbeid for faktiske kunder. Slår aldri filteret på
@@ -264,10 +228,4 @@ async function hentOgNormaliser(apiKey) {
     .filter(Boolean);
 
   return { oppdrag };
-}
-
-function erForGammelTilAVaereAktiv(updated) {
-  if (!updated) return true;
-  const dagerSiden = (Date.now() - new Date(updated.replace(" ", "T") + "Z").getTime()) / 86400000;
-  return dagerSiden > AKTIV_MAKS_DAGER_UTEN_OPPDATERING;
 }

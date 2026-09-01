@@ -10,29 +10,30 @@
 //    (kjent ansvarlig rådgiver). Recman eksponerer ikke selve "Tilbud signert"-øyeblikket
 //    via API i det hele tatt (verken som scope eller felt) - dette er nærmeste tilgjengelige
 //    signal, bekreftet ved testing før utrulling.
-// 3. Nytt oppdrag - prosjektets ALLER FØRSTE faktura noensinne er opprettet (samme
-//    tilnærming som "Signerte tilbud" i functions/api/tilbud.js - RecMan eksponerer ikke
-//    selve "Tilbud signert"-øyeblikket, men fakturering starter aldri før det er signert,
-//    bekreftet av GreatPeople selv). Byttet bort fra "ny annonse (jobPost) opprettet"
-//    2026-09-01, siden en annonse kan legges ut før noe er signert i det hele tatt.
-//    Feires KUN samme dag som fakturaen faktisk er datert (se datofilteret i
-//    hentAktiveFeiringer) - topplinjen i tilbud.js viser fortsatt hele måneden.
+// 3. Nytt oppdrag - prosjektet har fått status "Aktiv" i Recman (samme regler som avgjør
+//    at et kort faktisk vises på tavlen, se _lib/oppdragStatus.js). Byttet bort fra
+//    fakturabasert deteksjon 2026-09-02 - GreatPeople bekreftet at et prosjekt blir
+//    reelt for rådgiverne akkurat når det dukker opp på deres egen oversikt (status
+//    "Aktiv"), ikke når første faktura sendes - det kan skje lenge etter. "Signerte
+//    tilbud denne mnd" (functions/api/tilbud.js) bruker fortsatt fakturadatoen, siden
+//    DEN skal representere når avtalen faktisk ble signert/fakturert, ikke når arbeidet
+//    ble synlig internt.
 //
 // Tilstanden i KV har to deler:
-// - kjenteHired/kjenteKunder/kjenteSignerteOppdrag: ID-er som er sett, for å vite hva som
+// - kjenteHired/kjenteKunder/kjenteAktiveOppdrag: ID-er som er sett, for å vite hva som
 //   er NYTT. Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) -
 //   slik at det å legge til en ny kategori senere ikke utløser feiring for alt som fantes
-//   fra før (derfor et NYTT feltnavn her, ikke gjenbruk av det gamle "kjenteOppdrag" som
-//   sporet jobPost-ID-er - de matcher aldri projectId-ene under, som ville feiret hele
-//   den eksisterende porteføljen på én gang).
+//   fra før (derfor et NYTT feltnavn her hver gang deteksjonsmetoden endres - matcher
+//   ikke ID-ene fra forrige metode, som ville feiret hele den eksisterende porteføljen
+//   på én gang).
 // - aktive: ferdigbygde {tekst, utloper}-poster som fortsatt skal vises, uavhengig av om
 //   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
-import { hentSignerteOppdrag } from "../_lib/tilbud.js";
+import { bestemStatus } from "../_lib/oppdragStatus.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 18;
+const CACHE_VERSION = 19;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 export async function onRequestGet(context) {
@@ -75,12 +76,11 @@ function feiringTekst(h) {
 }
 
 async function hentAktiveFeiringer(apiKey, kv) {
-  const [projectJson, userJson, jobPostJson, hiredJson, nyeOppdrag] = await Promise.all([
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId&page=1`),
+  const [projectJson, userJson, jobPostJson, hiredJson] = await Promise.all([
+    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId,status,completePercent,updated&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=title,projectId`),
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`),
-    hentSignerteOppdrag(apiKey)
+    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`)
   ]);
 
   const navnForUserId = {};
@@ -142,6 +142,21 @@ async function hentAktiveFeiringer(apiKey, kv) {
     .filter(([id, c]) => c.type === "customer" && ansvarligForCompanyId[id] && !inneholderGreatPeople(c.name))
     .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 
+  // --- Nytt oppdrag: status "aktiv" - SAMME kriterier som avgjør at kortet faktisk
+  // vises på tavlen (bestemStatus + kundetype=customer + kjent ansvarlig), slik at
+  // feiringen skjer akkurat når oppdraget dukker opp hos rådgiveren.
+  const aktiveOppdrag = Object.values(projectById)
+    .filter((p) => bestemStatus(p) === "aktiv")
+    .filter((p) => !erInternKunde(p))
+    .filter((p) => companyById[p.companyId]?.type === "customer")
+    .map((p) => ({
+      id: String(p.projectId),
+      rolle: p.name,
+      kunde: companyById[p.companyId]?.name ?? null,
+      ansvarlig: navnForUserId[String(p.responsibleUserId)] ?? null
+    }))
+    .filter((o) => o.ansvarlig); // ukjent rådgiver = ikke synlig på tavlen, skal heller ikke feires
+
   // --- Diff mot lagret tilstand for å finne det som er NYTT ---
   const tilstand = (await kv.get(KV_KEY, "json")) ?? {};
 
@@ -161,16 +176,10 @@ async function hentAktiveFeiringer(apiKey, kv) {
       .forEach((k) => nyeHendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
-  if (tilstand.kjenteSignerteOppdrag) {
-    const idagsDato = new Date().toISOString().slice(0, 10);
-    const kjenteSignerteOppdragSet = new Set(tilstand.kjenteSignerteOppdrag);
-    nyeOppdrag
-      // Banneret skal kun feire samme dag som oppstartsfakturaen faktisk går ut (o.dato) -
-      // ikke bare "nylig oppdaget av oss". Uten dette ekstra datofilteret ville et signert
-      // oppdrag vi (av en eller annen grunn) oppdaget noe forsinket blitt feiret uansett hvor
-      // gammel fakturaen egentlig var, og "denne mnd"-tallet på topplinjen (tilbud.js, som
-      // filtrerer på hele måneden) og banneret ville aldri stemt overens 1:1 på en gitt dag.
-      .filter((o) => !kjenteSignerteOppdragSet.has(o.id) && o.dato.slice(0, 10) === idagsDato)
+  if (tilstand.kjenteAktiveOppdrag) {
+    const kjenteAktiveOppdragSet = new Set(tilstand.kjenteAktiveOppdrag);
+    aktiveOppdrag
+      .filter((o) => !kjenteAktiveOppdragSet.has(o.id))
       .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
@@ -191,7 +200,7 @@ async function hentAktiveFeiringer(apiKey, kv) {
       JSON.stringify({
         kjenteHired: hired.map((h) => h.id),
         kjenteKunder: nyeKunder.map((k) => k.id),
-        kjenteSignerteOppdrag: nyeOppdrag.map((o) => o.id),
+        kjenteAktiveOppdrag: aktiveOppdrag.map((o) => o.id),
         aktive
       })
     );
