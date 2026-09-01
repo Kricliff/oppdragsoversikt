@@ -1174,7 +1174,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 35s linear infinite;
+  animation: feiring-rull 30s linear infinite;
   will-change: transform;
 }
 
@@ -1231,7 +1231,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 25s linear infinite;
+  animation: feiring-rull 28s linear infinite;
   will-change: transform;
 }
 
