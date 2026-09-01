@@ -997,6 +997,10 @@ function grupperPerAnsvarlig(liste) {
 function sorterForVisning(liste) {
   return [...liste].sort((a, b) => {
     if (a.status !== b.status) return STATUS_PRIORITET[a.status] - STATUS_PRIORITET[b.status];
+    // Nye oppdrag (se "Ny"-merket, oppdrag-forstesett i functions/api/oppdrag.js) skal
+    // ligge øverst i hver statusgruppe - i praksis øverst hos rådgiveren, siden "aktiv"
+    // uansett kommer først (se STATUS_PRIORITET).
+    if (a.erNytt !== b.erNytt) return a.erNytt ? -1 : 1;
     if (a.status === "utfort") return new Date(b.utfortDato) - new Date(a.utfortDato);
     if (a.status === "paVent") return new Date(b.paVentDato) - new Date(a.paVentDato);
     return a.tittel.localeCompare(b.tittel, "no");
