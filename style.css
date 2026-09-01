@@ -1174,7 +1174,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 45s linear infinite;
+  animation: feiring-rull 35s linear infinite;
   will-change: transform;
 }
 
@@ -1196,12 +1196,8 @@ body {
 }
 
 @keyframes feiring-rull {
-  /* Kort pause helt i starten (fastlåst ved venstre kant) før den ruller videre - uten
-     denne var teksten praktisk talt ALLTID midt i en rullesyklus når noen faktisk så på
-     skjermen, siden den kun restarter ved innholdsendring og ellers bare løper i ring
-     i opptil 2 timer (se FEIRING_VIS_MS i functions/api/feiring.js). */
-  0%, 15% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 /* ---------- Nyheter (NRK/TV2-overskrifter) - egen linje nederst, under feiringslinjen ---------- */
@@ -1235,7 +1231,7 @@ body {
   display: flex;
   align-items: center;
   white-space: nowrap;
-  animation: feiring-rull 45s linear infinite;
+  animation: feiring-rull 25s linear infinite;
   will-change: transform;
 }
 
