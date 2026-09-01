@@ -14,7 +14,7 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 23;
+const CACHE_VERSION = 24;
 
 // Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
 // inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
@@ -24,7 +24,9 @@ const CACHE_VERSION = 23;
 // Manuelt skjulte prosjekt-ID-er - enkeltoppdrag som skal bort fra tavlen på forespørsel,
 // selv om de fortsatt har en status som normalt vises. 1296846: "Direct Search Recruitment
 // - IT x3" hos Uno-X (Kristian Clifford, "på vent") - be om å fjerne den 2026-09-01.
-const SKJULTE_PROSJEKT_IDER = new Set(["1296846"]);
+// 1297972: "Init4U-DS-Leder Accounting" hos Init4U (Fredrik Aaslestad) - satt til feil
+// fase i RecMan, skal ikke være på tavlen ennå - be om å fjerne den 2026-09-01.
+const SKJULTE_PROSJEKT_IDER = new Set(["1296846", "1297972"]);
 
 export async function onRequestGet(context) {
   const cache = caches.default;
