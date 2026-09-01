@@ -15,6 +15,8 @@
 //    selve "Tilbud signert"-øyeblikket, men fakturering starter aldri før det er signert,
 //    bekreftet av GreatPeople selv). Byttet bort fra "ny annonse (jobPost) opprettet"
 //    2026-09-01, siden en annonse kan legges ut før noe er signert i det hele tatt.
+//    Feires KUN samme dag som fakturaen faktisk er datert (se datofilteret i
+//    hentAktiveFeiringer) - topplinjen i tilbud.js viser fortsatt hele måneden.
 //
 // Tilstanden i KV har to deler:
 // - kjenteHired/kjenteKunder/kjenteSignerteOppdrag: ID-er som er sett, for å vite hva som
@@ -30,7 +32,7 @@ import { hentSignerteOppdrag } from "../_lib/tilbud.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 16;
+const CACHE_VERSION = 17;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 export async function onRequestGet(context) {
@@ -160,9 +162,15 @@ async function hentAktiveFeiringer(apiKey, kv) {
   }
 
   if (tilstand.kjenteSignerteOppdrag) {
+    const idagsDato = new Date().toISOString().slice(0, 10);
     const kjenteSignerteOppdragSet = new Set(tilstand.kjenteSignerteOppdrag);
     nyeOppdrag
-      .filter((o) => !kjenteSignerteOppdragSet.has(o.id))
+      // Banneret skal kun feire samme dag som oppstartsfakturaen faktisk går ut (o.dato) -
+      // ikke bare "nylig oppdaget av oss". Uten dette ekstra datofilteret ville et signert
+      // oppdrag vi (av en eller annen grunn) oppdaget noe forsinket blitt feiret uansett hvor
+      // gammel fakturaen egentlig var, og "denne mnd"-tallet på topplinjen (tilbud.js, som
+      // filtrerer på hele måneden) og banneret ville aldri stemt overens 1:1 på en gitt dag.
+      .filter((o) => !kjenteSignerteOppdragSet.has(o.id) && o.dato.slice(0, 10) === idagsDato)
       .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
