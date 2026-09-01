@@ -2,7 +2,9 @@
 // via API uten Task-tilgang, som vi ikke har. Fakturering starter derimot aldri før et
 // tilbud er signert (bekreftet av GreatPeople selv), så "prosjektets OPPSTART-faktura"
 // (den første av tre faser - oppstart/presentasjon/avslutning) brukes som stedfortreder
-// for selve signeringsøyeblikket.
+// for selve signeringsøyeblikket. Samme resonnement brukes motsatt vei for avslutning:
+// prosjektets SISTE avslutningsfaktura brukes som stedfortreder for at oppdraget er
+// ferdig levert til kunden.
 //
 // Viktig presisering (2026-09-01): den kronologisk FØRSTE fakturaen på et prosjekt er
 // ikke alltid oppstartsfakturaen - annonsekostnader blir ofte fakturert separat, og i
@@ -10,13 +12,23 @@
 // derfor hver faktura ut fra fakturalinjenes beskrivelse, og bruker den tidligste blant
 // dem som faktisk ser ut som en oppstartsfaktura - ikke bare den tidligste totalt.
 //
-// Brukt av både functions/api/tilbud.js (tall til topplinjen + liste til admin) og
+// Brukt av både functions/api/tilbud.js (signerte tilbud - tall til topplinjen + liste
+// til admin), functions/api/avsluttet.js (avsluttede oppdrag - tall til topplinjen) og
 // functions/api/feiring.js (feiringsbanner ved nytt oppdrag) - ligger i _lib (ikke api)
 // slik at den ikke selv blir en rute, kun et delt modul de importerer fra.
 
 export async function hentSignerteOppdrag(apiKey) {
-  const [forsteFakturaPrProsjekt, projectJson, userJson] = await Promise.all([
-    hentForsteFakturaPrProsjekt(apiKey),
+  const fakturaDatoPrProsjekt = await hentForsteFakturaPrProsjekt(apiKey);
+  return byggOppdragsliste(apiKey, fakturaDatoPrProsjekt);
+}
+
+export async function hentAvsluttedeOppdrag(apiKey) {
+  const fakturaDatoPrProsjekt = await hentSisteAvslutningPrProsjekt(apiKey);
+  return byggOppdragsliste(apiKey, fakturaDatoPrProsjekt);
+}
+
+async function byggOppdragsliste(apiKey, fakturaDatoPrProsjekt) {
+  const [projectJson, userJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`)
   ]);
@@ -45,7 +57,7 @@ export async function hentSignerteOppdrag(apiKey) {
 
   // Prosjekt som ikke lar seg slå opp (arkivert/slettet) hoppes over - uten et prosjekt
   // har vi verken kunde, rolle eller ansvarlig å vise uansett.
-  return Object.entries(forsteFakturaPrProsjekt)
+  return Object.entries(fakturaDatoPrProsjekt)
     .map(([projectId, dato]) => ({ projectId, dato, project: projectById[projectId] }))
     .filter(({ project }) => project && !erInternKunde(project) && !inneholderGreatPeople(project.name))
     .map(({ projectId, dato, project }) => ({
@@ -64,10 +76,14 @@ export async function hentSignerteOppdrag(apiKey) {
 // "Del 3..." på samme faktura).
 const OPPSTART_MONSTER = /\boppstart\w*\b|\bdel\s*1\b|\b1\s*(av|of)\s*[23]\b|1\/[23]/i;
 
-// Fanger eksplisitte fase 2/3-markører ("del 2", "del 3", "2 av 3", "presentasjon",
-// "avslutning" osv.) - disse diskvalifiserer en faktura FRA oppstart, MED MINDRE den
-// også har en eksplisitt oppstart-linje (sjekkes over, med høyere prioritet).
-const SENERE_FASE_MONSTER = /\bdel\s*[23]\b|\b[23]\s*(av|of)\s*[23]\b|[23]\/3|\bavslutning\b|\bpresentasjon\b/i;
+// Fase 2-markør ("del 2", "2 av 3", "presentasjon" osv.) - diskvalifiserer en faktura
+// FRA oppstart, med mindre den også har en eksplisitt oppstart-linje (høyere prioritet).
+const PRESENTASJON_MONSTER = /\bdel\s*2\b|\b2\s*(av|of)\s*3\b|2\/3|\bpresentasjon\w*\b/i;
+
+// Fase 3/avslutnings-markør ("del 3", "3 av 3", "avslutning", "sluttfaktura" osv.) -
+// brukt BÅDE til å diskvalifisere en faktura fra oppstart, OG (motsatt fortegn, se
+// erAvslutningFaktura) til å plukke ut selve avslutningsfakturaen.
+const AVSLUTNING_MONSTER = /\bdel\s*3\b|\b3\s*(av|of)\s*3\b|3\/3|\bavslutning\w*\b|\bsluttfaktura\w*\b/i;
 
 // Rene kostnadslinjer (annonsering, administrasjon, reise) - fakturert uavhengig av
 // hvilken fase oppdraget faktisk er i, og skal ikke alene utløse "signert"-status.
@@ -77,12 +93,51 @@ function erOppstartFaktura(rad) {
   const linjer = Object.values(rad.lines ?? {}).map((l) => l.description ?? "");
   if (linjer.length === 0) return false;
   if (linjer.some((b) => OPPSTART_MONSTER.test(b))) return true;
-  if (linjer.some((b) => SENERE_FASE_MONSTER.test(b))) return false;
+  if (linjer.some((b) => PRESENTASJON_MONSTER.test(b) || AVSLUTNING_MONSTER.test(b))) return false;
   if (linjer.every((b) => KUN_KOSTNAD_MONSTER.test(b))) return false;
   return true;
 }
 
+// Strengere enn erOppstartFaktura med hensikt: en faktura uten NOEN fasemarkør defaultes
+// IKKE til å være avslutning (i motsetning til oppstart, som defaultes til true - se
+// begrunnelse i filens toppkommentar). Uten dette ville ethvert prosjekt sin siste
+// registrerte faktura - uansett årsak - blitt tolket som at oppdraget var ferdig levert.
+function erAvslutningFaktura(rad) {
+  const linjer = Object.values(rad.lines ?? {}).map((l) => l.description ?? "");
+  return linjer.some((b) => AVSLUTNING_MONSTER.test(b));
+}
+
 async function hentForsteFakturaPrProsjekt(apiKey) {
+  const alleFakturaer = await hentAlleFakturaer(apiKey);
+
+  const forsteFakturaPrProsjekt = {};
+  alleFakturaer.forEach((r) => {
+    const pid = r.projectId;
+    if (!pid || !r.created || !erOppstartFaktura(r)) return;
+    if (!forsteFakturaPrProsjekt[pid] || r.created < forsteFakturaPrProsjekt[pid]) {
+      forsteFakturaPrProsjekt[pid] = r.created;
+    }
+  });
+
+  return forsteFakturaPrProsjekt;
+}
+
+async function hentSisteAvslutningPrProsjekt(apiKey) {
+  const alleFakturaer = await hentAlleFakturaer(apiKey);
+
+  const sisteAvslutningPrProsjekt = {};
+  alleFakturaer.forEach((r) => {
+    const pid = r.projectId;
+    if (!pid || !r.created || !erAvslutningFaktura(r)) return;
+    if (!sisteAvslutningPrProsjekt[pid] || r.created > sisteAvslutningPrProsjekt[pid]) {
+      sisteAvslutningPrProsjekt[pid] = r.created;
+    }
+  });
+
+  return sisteAvslutningPrProsjekt;
+}
+
+async function hentAlleFakturaer(apiKey) {
   // ~1300 fakturaer totalt i skrivende stund (2 sider) - løkker uansett til en tom side,
   // med god margin (10 sider = 10 000 fakturaer) for videre vekst.
   const alleFakturaer = [];
@@ -95,17 +150,7 @@ async function hentForsteFakturaPrProsjekt(apiKey) {
     alleFakturaer.push(...rader);
     if (rader.length < 1000) break;
   }
-
-  const forsteFakturaPrProsjekt = {};
-  alleFakturaer.forEach((r) => {
-    const pid = r.projectId;
-    if (!pid || !r.created || !erOppstartFaktura(r)) return;
-    if (!forsteFakturaPrProsjekt[pid] || r.created < forsteFakturaPrProsjekt[pid]) {
-      forsteFakturaPrProsjekt[pid] = r.created;
-    }
-  });
-
-  return forsteFakturaPrProsjekt;
+  return alleFakturaer;
 }
 
 async function hentJson(url) {

@@ -23,6 +23,7 @@ const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/
 const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
 const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
 const TILBUD_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/tilbud.js
+const AVSLUTTET_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/avsluttet.js
 const BURSDAG_VIS_MS = 20 * 1000; // hvor lenge feiringen midt på skjermen vises av gangen
 const BURSDAG_SYKLUS_MS = 3 * 60 * 1000; // hvor ofte den dukker opp igjen på selve bursdagen
 const SKJERM_ID_KEY = "skjermId";
@@ -50,6 +51,7 @@ let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, v
 let sisteKundenyttOppdatert = null;
 let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
 let sisteSignerteTilbud = 0; // "Signerte tilbud denne mnd", se lastSignerteTilbud
+let sisteAvsluttet = 0; // "Avsluttet denne mnd", se lastAvsluttet
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
@@ -133,6 +135,8 @@ async function init() {
   }
   lastSignerteTilbud();
   setInterval(lastSignerteTilbud, TILBUD_REFRESH_MS);
+  lastAvsluttet();
+  setInterval(lastAvsluttet, AVSLUTTET_REFRESH_MS);
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   setInterval(sjekkInnstillinger, INNSTILLINGER_SJEKK_MS);
@@ -776,6 +780,7 @@ function renderStats(liste) {
     { label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
     { label: "Utført i år", value: utfortIAr, accent: "utfort" },
     { label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
+    { label: "Avsluttet denne mnd", value: sisteAvsluttet },
     { label: "Salgsmøter", value: sisteTelling.moter }
   ].forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
@@ -804,6 +809,19 @@ async function lastSignerteTilbud() {
     sisteSignerteTilbud = typeof data.signerteTilbud === "number" ? data.signerteTilbud : 0;
   } catch (err) {
     console.warn("Fikk ikke hentet signerte tilbud:", err);
+  }
+  renderStats(alleOppdrag);
+}
+
+// "Avsluttet denne mnd" (functions/api/avsluttet.js) - siste faktura til kunden i
+// tredelingen oppstart/presentasjon/avslutning, se functions/_lib/tilbud.js.
+async function lastAvsluttet() {
+  try {
+    const res = await fetch("/api/avsluttet");
+    const data = await res.json();
+    sisteAvsluttet = typeof data.avsluttetDenneMnd === "number" ? data.avsluttetDenneMnd : 0;
+  } catch (err) {
+    console.warn("Fikk ikke hentet avsluttede oppdrag:", err);
   }
   renderStats(alleOppdrag);
 }
