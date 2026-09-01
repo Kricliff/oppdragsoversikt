@@ -10,19 +10,25 @@
 //    (kjent ansvarlig rådgiver). Recman eksponerer ikke selve "Tilbud signert"-øyeblikket
 //    via API i det hele tatt (verken som scope eller felt) - dette er nærmeste tilgjengelige
 //    signal, bekreftet ved testing før utrulling.
-// 3. Nytt oppdrag - en ny annonse (jobPost) er opprettet i Recman, koblet til kunde +
-//    ansvarlig via samme project-oppslag som over.
+// 3. Nytt oppdrag - prosjektets ALLER FØRSTE faktura noensinne er opprettet (samme
+//    tilnærming som "Signerte tilbud" i functions/api/tilbud.js - RecMan eksponerer ikke
+//    selve "Tilbud signert"-øyeblikket, men fakturering starter aldri før det er signert,
+//    bekreftet av GreatPeople selv). Byttet bort fra "ny annonse (jobPost) opprettet"
+//    2026-09-01, siden en annonse kan legges ut før noe er signert i det hele tatt.
 //
 // Tilstanden i KV har to deler:
-// - kjenteHired/kjenteKunder/kjenteOppdrag: ID-er som er sett, for å vite hva som er NYTT.
-//   Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) - slik at det å
-//   legge til en ny kategori senere ikke utløser feiring for alt som fantes fra før.
+// - kjenteHired/kjenteKunder/kjenteSignerteOppdrag: ID-er som er sett, for å vite hva som
+//   er NYTT. Hver kategori bootstrappes for seg (ikke bare ved aller første kjøring) -
+//   slik at det å legge til en ny kategori senere ikke utløser feiring for alt som fantes
+//   fra før (derfor et NYTT feltnavn her, ikke gjenbruk av det gamle "kjenteOppdrag" som
+//   sporet jobPost-ID-er - de matcher aldri projectId-ene under, som ville feiret hele
+//   den eksisterende porteføljen på én gang).
 // - aktive: ferdigbygde {tekst, utloper}-poster som fortsatt skal vises, uavhengig av om
 //   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 12;
+const CACHE_VERSION = 13;
 const FEIRING_VIS_MS = 4 * 60 * 60 * 1000; // hver hendelse vises i 4 timer før den forsvinner
 
 export async function onRequestGet(context) {
@@ -55,8 +61,8 @@ function feiringTekst(h) {
   }
   if (h.type === "oppdrag") {
     return h.kunde && h.ansvarlig
-      ? `🎉 Ny annonse ute: ${h.tittel} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
-      : `🎉 Ny annonse ute: ${h.tittel}! 🎉`;
+      ? `🎉 Nytt oppdrag: ${h.rolle} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+      : `🎉 Nytt oppdrag: ${h.rolle}! 🎉`;
   }
   // kandidat
   return h.kunde && h.ansvarlig
@@ -65,11 +71,12 @@ function feiringTekst(h) {
 }
 
 async function hentAktiveFeiringer(apiKey, kv) {
-  const [projectJson, userJson, jobPostJson, hiredJson] = await Promise.all([
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=companyId,responsibleUserId&page=1`),
+  const [projectJson, userJson, jobPostJson, hiredJson, forsteFakturaPrProsjekt] = await Promise.all([
+    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=title,projectId`),
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`)
+    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`),
+    hentForsteFakturaPrProsjekt(apiKey)
   ]);
 
   const navnForUserId = {};
@@ -108,15 +115,17 @@ async function hentAktiveFeiringer(apiKey, kv) {
     return companyById[project.companyId]?.type === "ownCompany" || inneholderGreatPeople(kundenavn);
   };
 
-  // --- Nytt oppdrag: annonse (jobPost) -> project -> kunde/ansvarlig ---
-  const nyeOppdrag = jobPostRader
-    .map((jp) => ({ jp, project: jp.projectId ? projectById[jp.projectId] : null }))
-    .filter(({ jp, project }) => !erInternKunde(project) && !inneholderGreatPeople(jp.title))
-    .map(({ jp, project }) => ({
-      id: String(jp.jobPostId),
-      tittel: jp.title,
-      kunde: project ? companyById[project.companyId]?.name : null,
-      ansvarlig: project ? navnForUserId[String(project.responsibleUserId)] : null
+  // --- Nytt oppdrag: prosjektets første faktura -> project -> kunde/rolle/ansvarlig ---
+  // Prosjekt som ikke lar seg slå opp (arkivert/slettet) hoppes rett og slett over her -
+  // uten et prosjekt har vi verken kunde, rolle eller ansvarlig å vise uansett.
+  const nyeOppdrag = Object.entries(forsteFakturaPrProsjekt)
+    .map(([projectId, dato]) => ({ projectId, dato, project: projectById[projectId] }))
+    .filter(({ project }) => project && !erInternKunde(project) && !inneholderGreatPeople(project.name))
+    .map(({ projectId, project }) => ({
+      id: String(projectId),
+      rolle: project.name,
+      kunde: companyById[project.companyId]?.name ?? null,
+      ansvarlig: navnForUserId[String(project.responsibleUserId)] ?? null
     }));
 
   // --- Kandidat landet: jobApplication -> jobPost -> project -> kunde/ansvarlig ---
@@ -161,11 +170,11 @@ async function hentAktiveFeiringer(apiKey, kv) {
       .forEach((k) => nyeHendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
-  if (tilstand.kjenteOppdrag) {
-    const kjenteOppdragSet = new Set(tilstand.kjenteOppdrag);
+  if (tilstand.kjenteSignerteOppdrag) {
+    const kjenteSignerteOppdragSet = new Set(tilstand.kjenteSignerteOppdrag);
     nyeOppdrag
-      .filter((o) => !kjenteOppdragSet.has(o.id))
-      .forEach((o) => nyeHendelser.push({ type: "oppdrag", tittel: o.tittel, kunde: o.kunde, ansvarlig: o.ansvarlig }));
+      .filter((o) => !kjenteSignerteOppdragSet.has(o.id))
+      .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
   // --- Bygg "aktive" - det som fortsatt var aktivt fra før (ikke utløpt) + det nye ---
@@ -185,7 +194,7 @@ async function hentAktiveFeiringer(apiKey, kv) {
       JSON.stringify({
         kjenteHired: hired.map((h) => h.id),
         kjenteKunder: nyeKunder.map((k) => k.id),
-        kjenteOppdrag: nyeOppdrag.map((o) => o.id),
+        kjenteSignerteOppdrag: nyeOppdrag.map((o) => o.id),
         aktive
       })
     );
@@ -194,6 +203,33 @@ async function hentAktiveFeiringer(apiKey, kv) {
   }
 
   return { aktive };
+}
+
+// Samme tilnærming som functions/api/tilbud.js: prosjektets aller første faktura
+// noensinne brukes som stedfortreder for "tilbudet er signert", siden RecMan ikke
+// eksponerer selve tilbudsstatusen via API. Returnerer { projectId: tidligsteDato }.
+async function hentForsteFakturaPrProsjekt(apiKey) {
+  const alleFakturaer = [];
+  for (let side = 1; side <= 10; side++) {
+    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=invoice&page=${side}`;
+    const json = await hentJson(url);
+    if (!json?.success || !json.data) break;
+    const rader = Object.values(json.data);
+    if (rader.length === 0) break;
+    alleFakturaer.push(...rader);
+    if (rader.length < 1000) break;
+  }
+
+  const forsteFakturaPrProsjekt = {};
+  alleFakturaer.forEach((r) => {
+    const pid = r.projectId;
+    if (!pid || !r.created) return;
+    if (!forsteFakturaPrProsjekt[pid] || r.created < forsteFakturaPrProsjekt[pid]) {
+      forsteFakturaPrProsjekt[pid] = r.created;
+    }
+  });
+
+  return forsteFakturaPrProsjekt;
 }
 
 async function hentJson(url) {
