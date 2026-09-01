@@ -4,7 +4,7 @@
 
 async function hentAvganger() {
   try {
-    const res = await fetch("/api/avganger");
+    const res = await fetch("/api/avganger", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
     if (!data || !Array.isArray(data.avganger)) throw new Error("Uventet svarformat fra /api/avganger");

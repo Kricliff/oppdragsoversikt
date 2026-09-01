@@ -43,7 +43,7 @@ function vaerIkonForSymbol(symbolKode) {
 
 async function hentVaer() {
   try {
-    const res = await fetch("/api/vaer");
+    const res = await fetch("/api/vaer", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     return await res.json();
   } catch (err) {

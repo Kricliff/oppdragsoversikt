@@ -14,7 +14,11 @@ function kildeErRecman() {
 
 async function hentOppdrag() {
   try {
-    const res = await fetch("/api/oppdrag");
+    // no-store: uten denne kan nettleseren gjenbruke et gammelt svar fra sitt eget
+    // HTTP-cache i opptil CACHE_SECONDS (functions/api/oppdrag.js) selv om AUTO_REFRESH_MS
+    // trigger et nytt fetch-kall - skjermen står ubetjent i timevis, og skal alltid faktisk
+    // spørre serveren på nytt, ikke stole på nettleserens egen cache-heuristikk.
+    const res = await fetch("/api/oppdrag", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
     if (!data || !Array.isArray(data.oppdrag)) throw new Error("Uventet svarformat fra /api/oppdrag");

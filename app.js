@@ -645,7 +645,7 @@ async function lastOppdrag() {
 // /admin, ikke direkte på tavlen - se readonly-attributtet på selve textarea.
 async function lastNotat() {
   try {
-    const res = await fetch("/api/notat");
+    const res = await fetch("/api/notat", { cache: "no-store" });
     if (!res.ok) return;
     const data = await res.json();
     notatEl.value = data.tekst ?? "";
@@ -804,7 +804,7 @@ async function lastBursdager() {
 // tallet faktisk regnes ut (RecMan eksponerer ikke selve tilbudsstatusen via API).
 async function lastSignerteTilbud() {
   try {
-    const res = await fetch("/api/tilbud");
+    const res = await fetch("/api/tilbud", { cache: "no-store" });
     const data = await res.json();
     sisteSignerteTilbud = typeof data.signerteTilbud === "number" ? data.signerteTilbud : 0;
   } catch (err) {
@@ -817,7 +817,7 @@ async function lastSignerteTilbud() {
 // tredelingen oppstart/presentasjon/avslutning, se functions/_lib/tilbud.js.
 async function lastAvsluttet() {
   try {
-    const res = await fetch("/api/avsluttet");
+    const res = await fetch("/api/avsluttet", { cache: "no-store" });
     const data = await res.json();
     sisteAvsluttet = typeof data.avsluttetDenneMnd === "number" ? data.avsluttetDenneMnd : 0;
   } catch (err) {

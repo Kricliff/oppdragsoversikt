@@ -3,7 +3,7 @@
 
 async function hentKundenytt() {
   try {
-    const res = await fetch("/api/kundenytt");
+    const res = await fetch("/api/kundenytt", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
     return Array.isArray(data.funn) ? data.funn : [];

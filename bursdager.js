@@ -4,7 +4,7 @@
 
 async function hentBursdager() {
   try {
-    const res = await fetch("/api/bursdager");
+    const res = await fetch("/api/bursdager", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
     return Array.isArray(data.bursdager) ? data.bursdager : [];

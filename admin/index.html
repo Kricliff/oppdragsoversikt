@@ -378,7 +378,7 @@
   async function lastNotat() {
     if (document.activeElement === notatEl) return; // ikke overskriv mens noen skriver
     try {
-      const res = await fetch("/api/notat");
+      const res = await fetch("/api/notat", { cache: "no-store" });
       const data = await res.json();
       notatEl.value = data.tekst ?? "";
       sjekkOverflyt();
@@ -497,9 +497,9 @@
   async function lastEndringer() {
     try {
       const [endringerData, tilbudData, avsluttetData] = await Promise.all([
-        fetch("/api/endringslogg").then((r) => r.json()),
-        fetch("/api/tilbud").then((r) => r.json()),
-        fetch("/api/avsluttet").then((r) => r.json())
+        fetch("/api/endringslogg", { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/tilbud", { cache: "no-store" }).then((r) => r.json()),
+        fetch("/api/avsluttet", { cache: "no-store" }).then((r) => r.json())
       ]);
 
       const hendelser = Array.isArray(endringerData.hendelser) ? endringerData.hendelser : [];
@@ -681,7 +681,7 @@
 
   async function lastSkjermer() {
     try {
-      const res = await fetch("/api/skjermer");
+      const res = await fetch("/api/skjermer", { cache: "no-store" });
       const data = await res.json();
       renderSkjermer(Array.isArray(data.skjermer) ? data.skjermer : []);
     } catch (err) {

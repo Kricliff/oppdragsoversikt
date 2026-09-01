@@ -5,7 +5,7 @@
 
 async function hentFeiring() {
   try {
-    const res = await fetch("/api/feiring");
+    const res = await fetch("/api/feiring", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     const data = await res.json();
     return Array.isArray(data.aktive) ? data.aktive : [];

@@ -3,7 +3,7 @@
 
 async function hentTelling() {
   try {
-    const res = await fetch("/api/telling");
+    const res = await fetch("/api/telling", { cache: "no-store" });
     if (!res.ok) throw new Error(`Uventet status ${res.status}`);
     return await res.json();
   } catch (err) {
