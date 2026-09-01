@@ -80,10 +80,14 @@ const OPPSTART_MONSTER = /\boppstart\w*\b|\bdel\s*1\b|\b1\s*(av|of)\s*[23]\b|1\/
 // FRA oppstart, med mindre den også har en eksplisitt oppstart-linje (høyere prioritet).
 const PRESENTASJON_MONSTER = /\bdel\s*2\b|\b2\s*(av|of)\s*3\b|2\/3|\bpresentasjon\w*\b/i;
 
-// Fase 3/avslutnings-markør ("del 3", "3 av 3", "avslutning", "sluttfaktura" osv.) -
-// brukt BÅDE til å diskvalifisere en faktura fra oppstart, OG (motsatt fortegn, se
-// erAvslutningFaktura) til å plukke ut selve avslutningsfakturaen.
-const AVSLUTNING_MONSTER = /\bdel\s*3\b|\b3\s*(av|of)\s*3\b|3\/3|\bavslutning\w*\b|\bsluttfaktura\w*\b/i;
+// Fase 3/avslutnings-markør - brukt BÅDE til å diskvalifisere en faktura fra oppstart, OG
+// (motsatt fortegn, se erAvslutningFaktura) til å plukke ut selve avslutningsfakturaen.
+// Dekker to ulike måter GreatPeople faktisk skriver den siste fasen på (bekreftet av
+// GreatPeople 2026-09-01): eksplisitt fasenummer ("del 3", "3 av 3", "sluttfaktura",
+// "avslutning") OG kandidatspråk ("signert/signering Kandidat", "Landet Kandidat") -
+// de to brukes om hverandre og fanges derfor begge opp, med rom for variasjoner i endelser.
+const AVSLUTNING_MONSTER =
+  /\bdel\s*3\b|\b3\s*(av|of)\s*3\b|3\/3|\bavslutning\w*\b|\bsluttfaktura\w*\b|\bsigner\w*\s+kandidat\w*|\bkandidat\w*\s+signer\w*|\blandet\s+kandidat\w*|\bkandidat\w*\s+landet\w*/i;
 
 // Rene kostnadslinjer (annonsering, administrasjon, reise) - fakturert uavhengig av
 // hvilken fase oppdraget faktisk er i, og skal ikke alene utløse "signert"-status.

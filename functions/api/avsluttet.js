@@ -8,7 +8,7 @@
 import { hentAvsluttedeOppdrag } from "../_lib/tilbud.js";
 
 const CACHE_SECONDS = 20 * 60;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const NYLIGE_DAGER = 30; // hvor langt tilbake admin-listen viser
 
 export async function onRequestGet(context) {
