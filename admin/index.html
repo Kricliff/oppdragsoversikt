@@ -139,6 +139,8 @@
   .endring-merke.borte { background: #c02626; }
   .endring-merke.nytt { background: #1e8a4c; }
   .endring-merke.status { background: var(--aktiv); }
+  .endring-merke.signert { background: #7c5cff; }
+  .endring-merke.avsluttet { background: #1e73be; }
   .endring-innhold { flex: 1 1 auto; min-width: 0; }
   .endring-tittel { font-weight: 600; }
   .endring-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
@@ -310,14 +312,8 @@
 
     <div class="kort">
       <h2>Siste endringer på tavlen</h2>
-      <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet eller byttet status</p>
+      <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet, byttet status, blitt signert eller avsluttet</p>
       <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
-    </div>
-
-    <div class="kort">
-      <h2>Signerte tilbud</h2>
-      <p class="storrelse-hint">Basert på når prosjektet fikk sin første faktura - RecMan eksponerer ikke selve tilbudsstatusen via API (krever Task-tilgang).</p>
-      <div id="tilbudListe"><p class="endring-tom">Laster…</p></div>
     </div>
 
     <div class="kort">
@@ -433,6 +429,8 @@
     if (h.type === "borte") return "forsvant fra tavlen";
     if (h.type === "nytt") return "dukket opp på tavlen";
     if (h.type === "status") return `byttet status: ${STATUS_NAVN[h.statusFor] ?? h.statusFor} → ${STATUS_NAVN[h.status] ?? h.status}`;
+    if (h.type === "signert") return "signerte tilbud";
+    if (h.type === "avsluttet") return "avsluttet (siste faktura)";
     return h.type;
   }
 
@@ -469,7 +467,7 @@
         tittelEl.textContent = h.tittel;
         const metaEl = document.createElement("div");
         metaEl.className = "endring-meta";
-        metaEl.textContent = `${h.kunde} · ${h.ansvarlig} · ${endringTekst(h)}`;
+        metaEl.textContent = [h.kunde, h.ansvarlig, endringTekst(h)].filter(Boolean).join(" · ");
         innhold.append(tittelEl, metaEl);
         rad.appendChild(innhold);
 
@@ -483,71 +481,40 @@
     );
   }
 
+  // Gjør om en {rolle, kunde, ansvarlig, dato}-rad fra tilbud.js/avsluttet.js (se
+  // functions/_lib/tilbud.js) til samme form som endringslogg sine hendelser, slik at
+  // begge kan vises om hverandre i én kronologisk liste.
+  function oppdragTilHendelse(o, type) {
+    return {
+      tittel: o.rolle,
+      kunde: o.kunde,
+      ansvarlig: o.ansvarlig,
+      tidspunkt: new Date(o.dato.replace(" ", "T") + "Z").getTime(),
+      type
+    };
+  }
+
   async function lastEndringer() {
     try {
-      const res = await fetch("/api/endringslogg");
-      const data = await res.json();
-      renderEndringer(Array.isArray(data.hendelser) ? data.hendelser : []);
+      const [endringerData, tilbudData, avsluttetData] = await Promise.all([
+        fetch("/api/endringslogg").then((r) => r.json()),
+        fetch("/api/tilbud").then((r) => r.json()),
+        fetch("/api/avsluttet").then((r) => r.json())
+      ]);
+
+      const hendelser = Array.isArray(endringerData.hendelser) ? endringerData.hendelser : [];
+      const signerte = Array.isArray(tilbudData.nylige) ? tilbudData.nylige.map((t) => oppdragTilHendelse(t, "signert")) : [];
+      const avsluttede = Array.isArray(avsluttetData.nylige) ? avsluttetData.nylige.map((t) => oppdragTilHendelse(t, "avsluttet")) : [];
+
+      renderEndringer([...hendelser, ...signerte, ...avsluttede].sort((a, b) => b.tidspunkt - a.tidspunkt));
     } catch (err) {
-      endringerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet endringsloggen.</p>';
+      endringerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet endringene.</p>';
       console.warn(err);
     }
   }
 
   lastEndringer();
   setInterval(lastEndringer, 5 * 60 * 1000);
-
-  const tilbudListeEl = document.getElementById("tilbudListe");
-
-  function renderTilbud(nylige) {
-    if (nylige.length === 0) {
-      tilbudListeEl.innerHTML = '<p class="endring-tom">Ingen nye signerte tilbud siste 30 dager.</p>';
-      return;
-    }
-
-    tilbudListeEl.replaceChildren(
-      ...nylige.map((t) => {
-        const rad = document.createElement("div");
-        rad.className = "endring-rad";
-
-        const merke = document.createElement("span");
-        merke.className = "endring-merke nytt";
-        rad.appendChild(merke);
-
-        const innhold = document.createElement("div");
-        innhold.className = "endring-innhold";
-        const tittelEl = document.createElement("div");
-        tittelEl.className = "endring-tittel";
-        tittelEl.textContent = t.rolle;
-        const metaEl = document.createElement("div");
-        metaEl.className = "endring-meta";
-        metaEl.textContent = [t.kunde, t.ansvarlig].filter(Boolean).join(" · ");
-        innhold.append(tittelEl, metaEl);
-        rad.appendChild(innhold);
-
-        const tidEl = document.createElement("span");
-        tidEl.className = "endring-tid";
-        tidEl.textContent = new Date(t.dato.replace(" ", "T") + "Z").toLocaleString("no-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        rad.appendChild(tidEl);
-
-        return rad;
-      })
-    );
-  }
-
-  async function lastTilbud() {
-    try {
-      const res = await fetch("/api/tilbud");
-      const data = await res.json();
-      renderTilbud(Array.isArray(data.nylige) ? data.nylige : []);
-    } catch (err) {
-      tilbudListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet signerte tilbud.</p>';
-      console.warn(err);
-    }
-  }
-
-  lastTilbud();
-  setInterval(lastTilbud, 20 * 60 * 1000);
 
   const bursdagerListeEl = document.getElementById("bursdagerListe");
   const bursdagNavnEl = document.getElementById("bursdagNavn");
