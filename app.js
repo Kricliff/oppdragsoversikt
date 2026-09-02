@@ -60,7 +60,7 @@ let sisteAvsluttet = 0; // "Avsluttet denne mnd", se lastAvsluttet
 // eller presse hele tavlen ned til en enda knappere skala for én rådgivers skyld.
 let sisteOppdragPerAnsvarlig = new Map(); // ansvarlig-navn -> sortert oppdragsliste, satt av renderLanes()
 let sideTilstand = new Map(); // ansvarlig-navn -> { kortPerSide, sideIndeks, totalSider }
-const SIDE_BYTT_MS = 18 * 1000;
+const SIDE_BYTT_MS = 10 * 1000;
 
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
