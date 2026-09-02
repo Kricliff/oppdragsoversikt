@@ -6,8 +6,8 @@ const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen 
 // UTFORT_SYNLIG_DAGER-regelen som før.
 const UTFORT_BASISDATO = new Date("2026-08-28T12:30:00Z");
 // Internt navn "paVent" (variabler/CSS-klasser uendret), men vises som "Forespørsel" på
-// tavlen - se statusLabel() og kommentaren over STATUS_MAP i _lib/oppdragStatus.js.
-const PA_VENT_SYNLIG_DAGER = 7; // et "Forespørsel"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
+// tavlen - se statusLabel() og kommentaren over STATUS_MAP i _lib/oppdragStatus.js. Den
+// forsvinner IKKE av seg selv (se erSynligPaTavle) - blir stående til status endres.
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, paVent: 1, utfort: 2 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
@@ -779,7 +779,10 @@ function erSynligPaTavle(o) {
   if (o.status === "utfort") {
     return new Date(o.utfortDato) > UTFORT_BASISDATO && dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
   }
-  if (o.status === "paVent") return dagerSiden(o.paVentDato) <= PA_VENT_SYNLIG_DAGER;
+  // Forespørsel skal IKKE forsvinne av seg selv - den blir stående til status faktisk
+  // endres i Recman (til Aktiv, eller til Avlyst/Mistet - som allerede skjules helt,
+  // se STATUS_MAP i _lib/oppdragStatus.js siden de ikke finnes der i det hele tatt).
+  if (o.status === "paVent") return true;
   return false;
 }
 
@@ -1131,13 +1134,13 @@ function utfortTekst(iso) {
   return `Utført for ${dager} dager siden`;
 }
 
-// Motsatt av utfortTekst - viser nedtelling i stedet for hvor lenge siden, siden det
-// som er relevant her er når oppdraget forsvinner, ikke når det ble satt på vent.
+// Forespørsel forsvinner ikke lenger av seg selv (se erSynligPaTavle), så teksten viser
+// bare hvor lenge den har stått som forespørsel - ikke en nedtelling til den klippes bort.
 function paVentTekst(iso) {
-  const dagerIgjen = PA_VENT_SYNLIG_DAGER - dagerSiden(iso);
-  if (dagerIgjen <= 0) return "Forsvinner snart";
-  if (dagerIgjen === 1) return "Forsvinner om 1 dag";
-  return `Forsvinner om ${dagerIgjen} dager`;
+  const dager = dagerSiden(iso);
+  if (dager <= 0) return "Forespørsel i dag";
+  if (dager === 1) return "Forespørsel siden i går";
+  return `Forespørsel i ${dager} dager`;
 }
 
 function statusLabel(status) {
