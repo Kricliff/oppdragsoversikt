@@ -14,12 +14,27 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 24;
+const CACHE_VERSION = 25;
 
 // Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
 // inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
 // _lib/oppdragStatus.js - DELT med functions/api/feiring.js, som bruker nøyaktig samme
 // regler til å avgjøre når "Nytt oppdrag" skal feires (se kommentar der).
+
+// PILOT (2026-09-02, kun for Fredrik Aaslestad): prosent regnes ut fra hvor langt inn i
+// prosjektets periode (startDate->endDate, "Periode" i Recman) vi er, i stedet for
+// Recman sin egen completePercent - som i praksis sjelden oppdateres manuelt av
+// rådgiverne. Brukes KUN når begge datoene faktisk er satt, ellers vises completePercent
+// som normalt (uendret for alle andre rådgivere).
+const PERIODE_PROSENT_RADGIVERE = new Set(["Fredrik Aaslestad"]);
+
+function beregnPeriodeProsent(startDate, endDate) {
+  const start = new Date(startDate).getTime();
+  const slutt = new Date(endDate).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(slutt) || slutt <= start) return null;
+  const andel = (Date.now() - start) / (slutt - start);
+  return Math.round(Math.max(0, Math.min(100, andel * 100)));
+}
 
 // Manuelt skjulte prosjekt-ID-er - enkeltoppdrag som skal bort fra tavlen på forespørsel,
 // selv om de fortsatt har en status som normalt vises. 1296846: "Direct Search Recruitment
@@ -147,7 +162,7 @@ async function merkNyeOppdrag(oppdrag, kv) {
 async function hentOgNormaliser(apiKey) {
   if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
 
-  const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members";
+  const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members,startDate,endDate";
   const projectUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=1`;
   const userUrl = `https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`;
 
@@ -214,13 +229,19 @@ async function hentOgNormaliser(apiKey) {
       const ansvarlig = radgiverNavn[p.responsibleUserId];
       if (!ansvarlig) return null;
 
+      let fremdriftProsent = p.completePercent != null ? Math.round(Number(p.completePercent)) : null;
+      if (PERIODE_PROSENT_RADGIVERE.has(ansvarlig) && p.startDate && p.endDate) {
+        const periodeProsent = beregnPeriodeProsent(p.startDate, p.endDate);
+        if (periodeProsent !== null) fremdriftProsent = periodeProsent;
+      }
+
       return {
         id: "recman-" + p.projectId,
         tittel: p.name,
         kunde: kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
         ansvarlig,
         status,
-        fremdriftProsent: p.completePercent != null ? Math.round(Number(p.completePercent)) : null,
+        fremdriftProsent,
         // Full presisjon (ikke bare datoen) - trengs for å kunne skille "fullført før
         // eller etter et gitt tidspunkt", se UTFORT_BASISDATO i app.js.
         utfortDato: status === "utfort" && p.updated ? p.updated.replace(" ", "T") + "Z" : undefined,
