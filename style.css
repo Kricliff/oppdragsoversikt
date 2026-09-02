@@ -487,6 +487,16 @@ body {
   flex: 0 0 auto;
 }
 
+/* "1/2" osv. - vises kun når rådgiveren har flere oppdrag enn det får plass til
+   samtidig og kolonnen roterer mellom sider, se initialiserRotasjon()/rullSider()
+   i app.js. Tom span (ingen innhold) resten av tiden, tar ikke plass da. */
+.lane-side {
+  font-size: clamp(0.66rem, 0.82vw, 0.76rem);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
 .lane-body {
   flex: 1 1 auto;
   min-height: 0;

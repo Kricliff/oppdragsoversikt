@@ -53,6 +53,15 @@ let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBu
 let sisteSignerteTilbud = 0; // "Signerte tilbud denne mnd", se lastSignerteTilbud
 let sisteAvsluttet = 0; // "Avsluttet denne mnd", se lastAvsluttet
 
+// Rotasjon for rådgivere med flere oppdrag enn det får plass til samtidig, selv på
+// tetteste kort-skala - se initialiserRotasjon()/rullSider(). Alle rådgivere beholder
+// SAMME kortstørrelse (ingen forskjellsbehandling der), men en overfylt kolonne bytter
+// rolig mellom "sider" av kortene sine i stedet for enten å klippe bort resten usynlig
+// eller presse hele tavlen ned til en enda knappere skala for én rådgivers skyld.
+let sisteOppdragPerAnsvarlig = new Map(); // ansvarlig-navn -> sortert oppdragsliste, satt av renderLanes()
+let sideTilstand = new Map(); // ansvarlig-navn -> { kortPerSide, sideIndeks, totalSider }
+const SIDE_BYTT_MS = 18 * 1000;
+
 const lanesEl = document.getElementById("lanes");
 const statsRow = document.getElementById("statsRow");
 const sourceBadge = document.getElementById("sourceBadge");
@@ -110,6 +119,7 @@ async function init() {
   lastVaer();
   setInterval(tikkKlokke, 1000);
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
+  setInterval(rullSider, SIDE_BYTT_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
   setInterval(lastBusstider, BUSS_REFRESH_MS);
   setInterval(renderTransportPanel, BUSS_TIKK_MS);
@@ -758,6 +768,7 @@ function render() {
   renderStats(alleOppdrag);
   renderLanes(pagaende);
   tilpassKortStorrelseTilSkjerm();
+  initialiserRotasjon();
   emptyState.hidden = pagaende.length > 0;
 }
 
@@ -935,10 +946,12 @@ function renderLanes(liste) {
 
   lanesEl.className = `lanes density-${tetthet}`;
   lanesEl.innerHTML = "";
+  sisteOppdragPerAnsvarlig.clear();
 
   grupper.forEach(([navn, oppdragListe]) => {
     const lane = document.createElement("section");
     lane.className = "lane";
+    lane.dataset.ansvarlig = navn;
 
     const farge = fargeForNavn(navn);
     lane.innerHTML = `
@@ -946,6 +959,7 @@ function renderLanes(liste) {
         <span class="avatar" style="background:${farge}">${initialer(navn)}</span>
         <span class="name">${escapeHtml(navn)}</span>
         <span class="lane-count">${oppdragListe.length}</span>
+        <span class="lane-side"></span>
       </div>
       <div class="lane-body"></div>
     `;
@@ -954,7 +968,9 @@ function renderLanes(liste) {
     if (oppdragListe.length === 0) {
       body.innerHTML = '<div class="lane-empty">Ingen aktive oppdrag</div>';
     } else {
-      sorterForVisning(oppdragListe).forEach((o) => body.appendChild(byggKort(o)));
+      const sortert = sorterForVisning(oppdragListe);
+      sisteOppdragPerAnsvarlig.set(navn, sortert);
+      sortert.forEach((o) => body.appendChild(byggKort(o)));
     }
 
     lanesEl.appendChild(lane);
@@ -977,12 +993,65 @@ function tilpassKortStorrelseTilSkjerm() {
     if (nivå) lanesEl.classList.add(nivå);
     if (!harOverflow()) return;
   }
-  // Selv på tettest nivå er det ikke garantert plass til absolutt alt i ekstreme
-  // tilfeller - da vinner "ingen skrolling" og resten klippes visuelt av overflow:hidden.
+  // Selv på tettest nivå er det ikke garantert plass til absolutt alt oppdrag for én og
+  // samme rådgiver samtidig - de kolonnene som fortsatt flyter over her får i stedet en
+  // rotasjon (se initialiserRotasjon() under), i stedet for at resten klippes bort.
 }
 
 function harOverflow() {
   return [...lanesEl.querySelectorAll(".lane-body")].some((el) => el.scrollHeight > el.clientHeight + 1);
+}
+
+// Rådgivere med flere oppdrag enn det som får plass samtidig (selv på tetteste felles
+// skala) får en "side" av kortene sine av gangen, som byttes ut med jevne mellomrom av
+// rullSider() - i stedet for enten å klippe bort resten usynlig, eller presse HELE
+// tavlen ned til en enda knappere skala bare for én rådgivers skyld (reversert tidligere,
+// se git-historikk - alle skal ha lik kortstørrelse).
+function initialiserRotasjon() {
+  sideTilstand.clear();
+
+  lanesEl.querySelectorAll(".lane").forEach((lane) => {
+    const navn = lane.dataset.ansvarlig;
+    const kropp = lane.querySelector(".lane-body");
+    const kort = [...kropp.querySelectorAll(".card")];
+    if (kort.length === 0 || kropp.scrollHeight <= kropp.clientHeight + 1) return; // alt får plass som normalt
+
+    // Finn hvor mange kort som faktisk får plass ved å skjule ett og ett fra slutten
+    // til resten passer - samme prøve-og-feile-prinsipp som tilpassKortStorrelseTilSkjerm().
+    let kortPerSide = kort.length;
+    while (kortPerSide > 1 && kropp.scrollHeight > kropp.clientHeight + 1) {
+      kortPerSide--;
+      kort[kortPerSide].hidden = true;
+    }
+
+    const alleOppdrag = sisteOppdragPerAnsvarlig.get(navn) ?? [];
+    const totalSider = Math.ceil(alleOppdrag.length / kortPerSide);
+    sideTilstand.set(navn, { kortPerSide, sideIndeks: 0, totalSider });
+    visSide(lane, alleOppdrag, 0, kortPerSide);
+  });
+}
+
+function visSide(lane, alleOppdrag, sideIndeks, kortPerSide) {
+  const kropp = lane.querySelector(".lane-body");
+  const start = sideIndeks * kortPerSide;
+  kropp.innerHTML = "";
+  alleOppdrag.slice(start, start + kortPerSide).forEach((o) => kropp.appendChild(byggKort(o)));
+
+  const totalSider = Math.ceil(alleOppdrag.length / kortPerSide);
+  const sideEl = lane.querySelector(".lane-side");
+  if (sideEl) sideEl.textContent = totalSider > 1 ? `${sideIndeks + 1}/${totalSider}` : "";
+}
+
+// Kjøres på egen, kortere timer (se SIDE_BYTT_MS/init()) - bytter bare INNHOLDET i de
+// aktuelle kolonnene, uten å røre resten av tavlen eller hente noe fra serveren på nytt.
+function rullSider() {
+  sideTilstand.forEach((tilstand, navn) => {
+    if (tilstand.totalSider <= 1) return;
+    tilstand.sideIndeks = (tilstand.sideIndeks + 1) % tilstand.totalSider;
+    const lane = lanesEl.querySelector(`.lane[data-ansvarlig="${CSS.escape(navn)}"]`);
+    if (!lane) return;
+    visSide(lane, sisteOppdragPerAnsvarlig.get(navn) ?? [], tilstand.sideIndeks, tilstand.kortPerSide);
+  });
 }
 
 function grupperPerAnsvarlig(liste) {
