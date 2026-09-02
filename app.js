@@ -1,10 +1,12 @@
 const AUTO_REFRESH_MS = 5 * 60 * 1000; // skjermen skal stå ubetjent, så data friskes opp selv
 const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
-// Rydder engangs-bort hele den daværende "Utført"-bunken på tavlen (28.08.2026) - alt som
-// var fullført FØR dette tidspunktet vises ikke lenger, uansett hvor nytt det er. Kun
+// Rydder engangs-bort hele den daværende "Utført"-bunken på tavlen - alt som var
+// fullført FØR dette tidspunktet vises ikke lenger, uansett hvor nytt det er. Kun
 // oppdrag som blir satt til utført ETTER dette dukker opp, og følger deretter den vanlige
-// UTFORT_SYNLIG_DAGER-regelen som før.
-const UTFORT_BASISDATO = new Date("2026-08-28T12:30:00Z");
+// UTFORT_SYNLIG_DAGER-regelen som før. Flyttet fram 2026-09-02 - mye av bunken som kom
+// da var opprydding i Recman (gamle prosjekter massemarkert utført), ikke reelle nylige
+// leveranser.
+const UTFORT_BASISDATO = new Date("2026-09-02T10:14:17Z");
 // Internt navn "paVent" (variabler/CSS-klasser uendret), men vises som "Forespørsel" på
 // tavlen - se statusLabel() og kommentaren over STATUS_MAP i _lib/oppdragStatus.js. Den
 // forsvinner IKKE av seg selv (se erSynligPaTavle) - blir stående til status endres.
