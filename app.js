@@ -1111,11 +1111,12 @@ function byggKort(o) {
 // "små bokstaver med stor forbokstav" - Recman-titler/kundenavn kommer ofte i store
 // bokstaver eller inkonsekvent skriving, normaliseres til vanlig formatering. Består
 // teksten av flere ord, får hvert av dem stor forbokstav (ikke bare det aller første).
+// Unntak: selskapsformen "AS" skal alltid stå med store bokstaver, ikke "As".
 function storForbokstav(tekst) {
   return tekst
     .toLowerCase()
     .split(" ")
-    .map((ord) => ord.charAt(0).toUpperCase() + ord.slice(1))
+    .map((ord) => (ord === "as" ? "AS" : ord.charAt(0).toUpperCase() + ord.slice(1)))
     .join(" ");
 }
 
