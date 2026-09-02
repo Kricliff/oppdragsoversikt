@@ -849,9 +849,11 @@ async function lastAvsluttet() {
   renderStats(alleOppdrag);
 }
 
+const BURSDAG_STAT_VIS_DAGER_FOR = 7; // "Neste bursdag" skal først dukke opp i statslinjen denne mange dager før
+
 function leggTilBursdagStat() {
   const neste = finnNesteBursdag(bursdager);
-  if (!neste) return;
+  if (!neste || neste.dagerTil > BURSDAG_STAT_VIS_DAGER_FOR) return;
 
   const el = document.createElement("div");
   el.className = "stat-card bursdag";
