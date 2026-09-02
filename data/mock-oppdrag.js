@@ -1,7 +1,8 @@
 // Mock-data i samme form som recman-adapter.js forventer å motta fra Recman API.
 // Byttes ut med et ekte API-kall når Recman-tilgang er på plass (se recman-adapter.js).
-// Kun to statuser i bruk: "aktiv" og "utfort". Recman sin "request"-fase ("På vent")
-// vises bevisst ikke - se STATUS_MAP-kommentaren i functions/api/oppdrag.js.
+// Kun to statuser i bruk: "aktiv" og "utfort". Recman sin "request"-fase (vises som
+// "Forespørsel" på tavlen, internt fortsatt kalt "paVent") er ikke med her - se
+// STATUS_MAP-kommentaren i functions/_lib/oppdragStatus.js.
 //
 // Rådgivernavnene er ekte (hentet fra Recman sitt "user"-scope 2026-08-24) - resten
 // av innholdet (tittel/kunde/antallKandidater/fremdriftProsent) er fortsatt påfunnet,

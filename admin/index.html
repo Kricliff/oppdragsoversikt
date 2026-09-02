@@ -423,7 +423,7 @@
   setInterval(lastNotat, 60 * 1000); // hold i sync om noen andre endrer den samtidig
 
   const endringerListeEl = document.getElementById("endringerListe");
-  const STATUS_NAVN = { aktiv: "Aktiv", utfort: "Utført", paVent: "På vent" };
+  const STATUS_NAVN = { aktiv: "Aktiv", utfort: "Utført", paVent: "Forespørsel" };
 
   function endringTekst(h) {
     if (h.type === "borte") return "forsvant fra tavlen";

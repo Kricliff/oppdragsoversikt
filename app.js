@@ -5,7 +5,9 @@ const UTFORT_SYNLIG_DAGER = 7; // et "Utført"-oppdrag blir stående på tavlen 
 // oppdrag som blir satt til utført ETTER dette dukker opp, og følger deretter den vanlige
 // UTFORT_SYNLIG_DAGER-regelen som før.
 const UTFORT_BASISDATO = new Date("2026-08-28T12:30:00Z");
-const PA_VENT_SYNLIG_DAGER = 7; // et "På vent"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
+// Internt navn "paVent" (variabler/CSS-klasser uendret), men vises som "Forespørsel" på
+// tavlen - se statusLabel() og kommentaren over STATUS_MAP i _lib/oppdragStatus.js.
+const PA_VENT_SYNLIG_DAGER = 7; // et "Forespørsel"-oppdrag blir stående på tavlen i 7 dager før det forsvinner
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, paVent: 1, utfort: 2 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
@@ -1139,7 +1141,7 @@ function paVentTekst(iso) {
 }
 
 function statusLabel(status) {
-  return { aktiv: "Aktiv", utfort: "Utført", paVent: "På vent" }[status] ?? status;
+  return { aktiv: "Aktiv", utfort: "Utført", paVent: "Forespørsel" }[status] ?? status;
 }
 
 function dagerSiden(iso) {

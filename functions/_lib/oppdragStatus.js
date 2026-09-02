@@ -9,6 +9,14 @@ const BEHANDLE_100_PROSENT_SOM_UTFORT = true;
 const KAN_LOFTES_VED_100_PROSENT = new Set(["notStarted", "active", "urgent", "solvedOngoing"]);
 const AKTIV_MAKS_DAGER_UTEN_OPPDATERING = 90;
 
+// "request" er internt kalt "paVent" i denne koden (variabelnavn/CSS-klasser/JSON-felt
+// endres ikke), men Recman sin egen "fase" for denne statusen heter FORESPØRSEL, ikke
+// "På vent" (bekreftet i help.recman.io "Prosjekt modulen" 2026-09-02, etter at Fredrik
+// Aaslestad meldte at hans forespørsel-prosjekter feilaktig viste "På vent" på tavlen).
+// "På vent" er faktisk en helt ANNEN, separat statusverdi i Recman (Ikke satt/I rute/
+// I fare/På vent/Av kurs/Fullført) som vi ikke henter eller bruker noe sted. Selve
+// visningsteksten er derfor rettet til "Forespørsel" (se statusLabel() i app.js og
+// STATUS_NAVN i admin/index.html) - kun label-en var feil, dataene/logikken er riktig.
 const STATUS_MAP = {
   notStarted: "aktiv",
   active: "aktiv",
