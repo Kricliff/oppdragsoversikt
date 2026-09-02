@@ -14,7 +14,7 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 25;
+const CACHE_VERSION = 26;
 
 // Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
 // inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
@@ -155,7 +155,10 @@ async function merkNyeOppdrag(oppdrag, kv) {
 
   const grense = naa - NY_MERKE_DAGER * 24 * 60 * 60 * 1000;
   oppdrag.forEach((o) => {
-    o.erNytt = tilstand[o.id] > grense;
+    // Kun aktive oppdrag skal kunne vise "Ny" - et prosjekt kan gå rett til
+    // Utført/Forespørsel etter å ha vært usynlig (f.eks. for gammelt/inaktivt), og blir
+    // da "først sett" i vår sporing samme dag - men et avsluttet oppdrag er ikke "nytt".
+    o.erNytt = o.status === "aktiv" && tilstand[o.id] > grense;
   });
 }
 
