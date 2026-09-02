@@ -8,6 +8,10 @@ const UTFORT_BASISDATO = new Date("2026-08-28T12:30:00Z");
 // Internt navn "paVent" (variabler/CSS-klasser uendret), men vises som "Forespørsel" på
 // tavlen - se statusLabel() og kommentaren over STATUS_MAP i _lib/oppdragStatus.js. Den
 // forsvinner IKKE av seg selv (se erSynligPaTavle) - blir stående til status endres.
+// Engangsopprydding (02.09.2026, samme mønster som UTFORT_BASISDATO over): alt som
+// allerede var eldre enn 7 dager DA dette ble satt, fjernes for godt - resten blir
+// stående uten utløpsdato fremover.
+const PA_VENT_OPPRYDDING_GRENSE = new Date("2026-08-26T10:07:06Z");
 const PALETTE_SIZE = 8;
 const STATUS_PRIORITET = { aktiv: 0, paVent: 1, utfort: 2 };
 const BUSS_REFRESH_MS = 30 * 1000; // sanntid - friskes opp oftere enn oppdrag
@@ -782,7 +786,8 @@ function erSynligPaTavle(o) {
   // Forespørsel skal IKKE forsvinne av seg selv - den blir stående til status faktisk
   // endres i Recman (til Aktiv, eller til Avlyst/Mistet - som allerede skjules helt,
   // se STATUS_MAP i _lib/oppdragStatus.js siden de ikke finnes der i det hele tatt).
-  if (o.status === "paVent") return true;
+  // PA_VENT_OPPRYDDING_GRENSE rydder kun bort den daværende bunken én gang, se der.
+  if (o.status === "paVent") return new Date(o.paVentDato) >= PA_VENT_OPPRYDDING_GRENSE;
   return false;
 }
 
