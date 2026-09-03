@@ -10,11 +10,11 @@
 // skjermen ikke bruker opp kvoten.
 
 import { bestemStatus } from "../_lib/oppdragStatus.js";
+// Cache-nøkkelen (og versjonen) ligger i _lib fordi skjulte.js må kunne blanke den når
+// skjulelista endres - bump OPPDRAG_CACHE_VERSION der ved endringer i logikken under.
+import { oppdragCacheKey } from "../_lib/oppdragCache.js";
 
 const CACHE_SECONDS = 20 * 60;
-// Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
-// før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 27;
 
 // Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
 // inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
@@ -36,23 +36,37 @@ function beregnPeriodeProsent(startDate, endDate) {
   return Math.round(Math.max(0, Math.min(100, andel * 100)));
 }
 
-// Manuelt skjulte prosjekt-ID-er - enkeltoppdrag som skal bort fra tavlen på forespørsel,
-// selv om de fortsatt har en status som normalt vises. 1296846: "Direct Search Recruitment
-// - IT x3" hos Uno-X (Kristian Clifford, "på vent") - be om å fjerne den 2026-09-01.
-// 1297972: "Init4U-DS-Leder Accounting" hos Init4U (Fredrik Aaslestad) - satt til feil
-// fase i RecMan, skal ikke være på tavlen ennå - be om å fjerne den 2026-09-01.
-// 1237953: "IT Team Lead / Virksomhetsarkitekt" hos Akershus Energi (Kristian Clifford)
-// - satt på vent i RecMan, ba om å fjerne den 2026-09-02.
-const SKJULTE_PROSJEKT_IDER = new Set(["1296846", "1297972", "1237953"]);
+// Manuelt parkerte oppdrag - enkeltoppdrag som skal bort fra tavlen selv om de fortsatt
+// har en status som normalt vises. Typisk fordi de står "På vent" i RecMan sitt
+// sekundære statusfelt, som ikke finnes i API-et i det hele tatt (se functions/api/
+// skjulte.js for hele bakgrunnen). Lista styres fra /admin og ligger i KV, slik at
+// oppdrag kan hentes tilbake uten en kodeendring.
+const SKJULTE_KV_KEY = "skjulte-oppdrag";
+
+async function hentSkjulteIder(kv) {
+  if (!kv) return new Set();
+  try {
+    const liste = (await kv.get(SKJULTE_KV_KEY, "json")) ?? [];
+    if (!Array.isArray(liste)) return new Set();
+    return new Set(liste.map((s) => String(s?.id)));
+  } catch (err) {
+    // Får vi ikke lest lista, viser vi heller for mye enn å skjule feil oppdrag
+    console.warn("Fikk ikke lest skjulte-oppdrag fra KV:", err);
+    return new Set();
+  }
+}
 
 export async function onRequestGet(context) {
   const cache = caches.default;
-  const cacheKey = new Request(`https://oppdragsoversikt-cache.internal/oppdrag?v=${CACHE_VERSION}`);
+  const cacheKey = oppdragCacheKey();
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
   try {
-    const payload = await hentOgNormaliser(context.env.RECMAN_API_KEY);
+    const payload = await hentOgNormaliser(
+      context.env.RECMAN_API_KEY,
+      await hentSkjulteIder(context.env.NOTAT_KV)
+    );
     // Må skje FØR responsen bygges (ikke context.waitUntil) - erNytt-flagget skal jo
     // faktisk være med i det som sendes til klienten.
     await merkNyeOppdrag(payload.oppdrag, context.env.NOTAT_KV);
@@ -164,7 +178,7 @@ async function merkNyeOppdrag(oppdrag, kv) {
   });
 }
 
-async function hentOgNormaliser(apiKey) {
+async function hentOgNormaliser(apiKey, skjulteIder = new Set()) {
   if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
 
   const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members,startDate,endDate";
@@ -216,7 +230,7 @@ async function hentOgNormaliser(apiKey) {
 
   const oppdrag = Object.values(projectJson.data)
     .map((p) => {
-      if (SKJULTE_PROSJEKT_IDER.has(String(p.projectId))) return null;
+      if (skjulteIder.has(String(p.projectId))) return null;
 
       const status = bestemStatus(p);
       if (!status) return null; // cancelled/lost/solvedOngoing under 100% - skjules

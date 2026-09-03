@@ -146,6 +146,47 @@
   .endring-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
   .endring-tid { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; flex: none; }
   .endring-tom { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+  .parkering-tittel {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 1.1rem 0 0.5rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+  }
+  .parker-sok {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    font-family: inherit;
+    font-size: 0.85rem;
+  }
+  .parker-sok:focus { outline: 2px solid var(--aktiv); outline-offset: -1px; }
+  .parker-treff { margin-top: 0.4rem; max-height: 260px; overflow-y: auto; }
+  .parker-rad, .skjult-rad {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .parker-rad:last-child, .skjult-rad:last-child { border-bottom: none; }
+  .parker-innhold { flex: 1 1 auto; min-width: 0; }
+  .parker-rolle { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .parker-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.1rem; }
+  .parker-knapp {
+    flex: none;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.76rem;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+  }
+  .parker-knapp:hover { border-color: var(--aktiv); color: var(--aktiv); }
+  .parker-knapp.hent-tilbake:hover { border-color: #1e8a4c; color: #1e8a4c; }
   .bursdag-rad {
     display: flex;
     align-items: center;
@@ -314,6 +355,15 @@
       <h2>Siste endringer på tavlen</h2>
       <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet, byttet status, blitt signert eller avsluttet</p>
       <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
+      <h2>Parkerte oppdrag</h2>
+      <p class="storrelse-hint">Oppdrag som er tatt bort fra tavlen, f.eks. fordi de står "På vent" i RecMan. RecMan eksponerer ikke det statusfeltet via API, så det styres herfra - og hentes tilbake når oppdraget er i rute igjen.</p>
+      <div id="skjulteListe"><p class="endring-tom">Laster…</p></div>
+      <h3 class="parkering-tittel">Parker et oppdrag</h3>
+      <input type="search" id="parkerSok" class="parker-sok" placeholder="Søk på rolle, kunde eller rådgiver…" autocomplete="off">
+      <div id="parkerTreff" class="parker-treff"></div>
     </div>
 
     <div class="kort">
@@ -515,6 +565,132 @@
 
   lastEndringer();
   setInterval(lastEndringer, 5 * 60 * 1000);
+
+  // --- Parkerte oppdrag ---
+  // RecMan sitt sekundære statusfelt ("På vent"/"I rute") finnes ikke i API-et, så
+  // parkeringen styres herfra. Se functions/api/skjulte.js.
+  const skjulteListeEl = document.getElementById("skjulteListe");
+  const parkerSokEl = document.getElementById("parkerSok");
+  const parkerTreffEl = document.getElementById("parkerTreff");
+  let skjulte = [];
+  let oppdragPaaTavlen = [];
+
+  function radFor(o, knappTekst, knappKlasse, handling) {
+    const rad = document.createElement("div");
+    rad.className = knappKlasse === "hent-tilbake" ? "skjult-rad" : "parker-rad";
+
+    const innhold = document.createElement("div");
+    innhold.className = "parker-innhold";
+    const rolle = document.createElement("div");
+    rolle.className = "parker-rolle";
+    rolle.textContent = o.tittel || `Prosjekt ${o.id}`;
+    const meta = document.createElement("div");
+    meta.className = "parker-meta";
+    meta.textContent = [o.kunde, o.ansvarlig].filter(Boolean).join(" · ");
+    innhold.append(rolle, meta);
+    rad.appendChild(innhold);
+
+    const knapp = document.createElement("button");
+    knapp.type = "button";
+    knapp.className = `parker-knapp ${knappKlasse}`;
+    knapp.textContent = knappTekst;
+    knapp.addEventListener("click", () => handling(knapp));
+    rad.appendChild(knapp);
+
+    return rad;
+  }
+
+  function renderSkjulte() {
+    if (skjulte.length === 0) {
+      skjulteListeEl.innerHTML = '<p class="endring-tom">Ingen oppdrag er parkert.</p>';
+      return;
+    }
+    skjulteListeEl.replaceChildren(
+      ...[...skjulte]
+        .sort((a, b) => (b.skjultTidspunkt ?? 0) - (a.skjultTidspunkt ?? 0))
+        .map((s) => radFor(s, "Hent tilbake", "hent-tilbake", (knapp) => endreSkjult(s, true, knapp)))
+    );
+  }
+
+  function renderTreff() {
+    const sok = parkerSokEl.value.trim().toLowerCase();
+    if (sok.length < 2) {
+      parkerTreffEl.innerHTML = '<p class="endring-tom">Skriv minst to tegn for å søke.</p>';
+      return;
+    }
+    const treff = oppdragPaaTavlen
+      .filter((o) => `${o.tittel} ${o.kunde} ${o.ansvarlig}`.toLowerCase().includes(sok))
+      .slice(0, 12);
+
+    if (treff.length === 0) {
+      parkerTreffEl.innerHTML = '<p class="endring-tom">Ingen treff på tavlen.</p>';
+      return;
+    }
+    parkerTreffEl.replaceChildren(
+      ...treff.map((o) => radFor(o, "Parker", "", (knapp) => endreSkjult(o, false, knapp)))
+    );
+  }
+
+  async function endreSkjult(oppdrag, vis, knapp) {
+    knapp.disabled = true;
+    knapp.textContent = vis ? "Henter…" : "Parkerer…";
+    try {
+      const res = await fetch("/api/skjulte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: String(oppdrag.id).replace("recman-", ""),
+          vis,
+          tittel: oppdrag.tittel,
+          kunde: oppdrag.kunde,
+          ansvarlig: oppdrag.ansvarlig
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Status ${res.status}`);
+      skjulte = Array.isArray(data.skjulte) ? data.skjulte : skjulte;
+      renderSkjulte();
+      await lastOppdragPaaTavlen();
+      renderTreff();
+    } catch (err) {
+      knapp.disabled = false;
+      knapp.textContent = vis ? "Hent tilbake" : "Parker";
+      console.warn(err);
+      alert(`Fikk ikke lagret: ${err.message}`);
+    }
+  }
+
+  async function lastSkjulte() {
+    try {
+      const res = await fetch("/api/skjulte", { cache: "no-store" });
+      const data = await res.json();
+      skjulte = Array.isArray(data.skjulte) ? data.skjulte : [];
+      renderSkjulte();
+    } catch (err) {
+      skjulteListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet parkerte oppdrag.</p>';
+      console.warn(err);
+    }
+  }
+
+  async function lastOppdragPaaTavlen() {
+    try {
+      const res = await fetch("/api/oppdrag", { cache: "no-store" });
+      const data = await res.json();
+      oppdragPaaTavlen = (Array.isArray(data.oppdrag) ? data.oppdrag : []).map((o) => ({
+        id: String(o.id).replace("recman-", ""),
+        tittel: o.tittel,
+        kunde: o.kunde,
+        ansvarlig: o.ansvarlig
+      }));
+    } catch (err) {
+      console.warn("Fikk ikke hentet oppdrag til parkeringssøket:", err);
+    }
+  }
+
+  parkerSokEl.addEventListener("input", renderTreff);
+  renderTreff();
+  lastSkjulte();
+  lastOppdragPaaTavlen();
 
   const bursdagerListeEl = document.getElementById("bursdagerListe");
   const bursdagNavnEl = document.getElementById("bursdagNavn");
