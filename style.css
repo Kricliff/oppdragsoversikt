@@ -244,8 +244,23 @@ body {
 
 /* ---------- Lanes ---------- */
 
+/* Post-it/busstider/kundenytt sto tidligere som løst fastplasserte widgets i nedre
+   høyre hjørne, hver med sin egen hånd-utregnede bottom-verdi. Det ga to problemer:
+   dekket ekte kort når en rådgiver sin kolonne endte opp der (Sara Göthe/Espen
+   Steinsrud), og et forsøk på å reservere plass til dem etterlot mye synlig tomrom
+   over dem siden de selv bare sto nederst. Nå er de en ordentlig stablet spalte
+   (.side-stack) ved siden av .lanes i layouten, se .content-row under - ingen
+   fastposisjonering eller magiske pixel-offsets lenger. */
+.content-row {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: clamp(12px, 1.6vw, 24px);
+}
+
 .lanes {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -256,17 +271,15 @@ body {
      jobber allerede i overkant av det den klarer for å få alt til å vise uten
      skrolling, og mindre tilgjengelig høyde presset kort til å bli usynlig
      klippet av overflow:hidden i stedet for bare dekket av et panel - reelt
-     datatap, verre enn det opprinnelige overlapp-problemet.
+     datatap, verre enn det opprinnelige overlapp-problemet. */
+}
 
-     Bredden (padding-right) er en annen sak: post-it (right:290px, width:220px)
-     og busstider/kundenytt (right:28px, width:250px) står alltid i nedre høyre
-     hjørne og dekket tidligere ekte kort der (f.eks. Sara Göthe/Espen Stensrud)
-     - synlig data, ikke bare tomrom. I motsetning til høyde-forsøket over
-     håndteres mindre bredde trygt: balanserKolonner() regner uansett ut
-     kolonnetall på nytt fra lanesEl.clientWidth, og skala-/rotasjonstrappen
-     tar over om det likevel blir trangt - ingen klipping. 526px dekker
-     post-it sin ytterkant (510px) pluss litt luft for skyggen. */
-  padding-right: calc(526px - clamp(18px, 2.4vw, 40px));
+.side-stack {
+  flex: 0 0 260px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vh, 16px);
 }
 
 /* Tetthet skalerer ned kort/avatar/skrift når det er mange rådgivere,
@@ -730,16 +743,13 @@ body {
 /* ---------- Post-it ---------- */
 
 .postit {
-  position: fixed;
-  right: 290px; /* venstre for busstider/kundenytt-søylen (250px bred + 28px kant + 12px luft) */
-  bottom: 124px; /* 28px opprinnelig marg + 44px feiringsbanner + 44px nyhetsbanner + 8px luft */
-  width: 220px;
+  flex: 0 0 auto;
+  position: relative;
   min-height: 150px;
   background: #fde68a;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.1);
   transform: rotate(-2deg);
   padding: 18px 12px 12px;
-  z-index: 50;
   transition: transform 0.2s ease;
 }
 
@@ -782,14 +792,10 @@ body {
 /* ---------- Busstider ---------- */
 
 .busstider {
-  position: fixed;
-  right: 28px; /* samme høyrekant som kundenytt, stablet rett over den */
-  bottom: 320px; /* kundenytt (~140px høy) + 124px bunnmarg (inkl. begge bannerlinjene) + 56px luft */
-  width: 250px;
+  flex: 0 0 auto;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
-  z-index: 50;
 }
 
 .busstider-header {
@@ -863,15 +869,12 @@ body {
 /* ---------- Kundenytt (omtale av kunder i nyhetene) ---------- */
 
 .kundenytt {
-  position: fixed;
-  right: 28px; /* samme høyrekant som busstider, rett under den */
-  bottom: 164px; /* busstider (bottom 320px) - 140px høyde her - 16px luft mellom dem */
-  width: 250px; /* samme bredde som busstider */
+  flex: 0 0 auto;
+  margin-top: auto; /* skyver kundenytt til bunnen av spalten, uansett hvor høy busstider er */
   max-height: 140px; /* viser kun én sak av gangen (karusell), ikke flere stablet */
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
-  z-index: 50;
   transform: translateX(120%);
   transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

@@ -36,7 +36,26 @@
   </header>
   <div class="brand-bar"></div>
 
-  <main id="lanes" class="lanes"></main>
+  <div class="content-row">
+    <main id="lanes" class="lanes"></main>
+
+    <aside class="side-stack" id="sideStack">
+      <div class="postit">
+        <div class="postit-pin">📌</div>
+        <textarea id="notatTekst" class="postit-text" maxlength="500" placeholder="Ingen beskjed satt" readonly></textarea>
+      </div>
+
+      <div class="busstider">
+        <div class="busstider-header" id="busstiderHeader">🚌 Wessels plass</div>
+        <div class="busstider-liste" id="busstiderListe"></div>
+      </div>
+
+      <div class="kundenytt" id="kundenyttPanel" hidden>
+        <div class="kundenytt-header" id="kundenyttHeader">📣 Kundenytt</div>
+        <div class="kundenytt-liste" id="kundenyttListe"></div>
+      </div>
+    </aside>
+  </div>
 
   <footer class="statusbar">
     <span id="sourceBadge" class="source-badge">Kilde: mock-data</span>
@@ -51,21 +70,6 @@
   <p id="emptyState" class="empty-state" hidden>Ingen aktive oppdrag akkurat nå.</p>
 
   <button id="gjesteKnapp" class="gjeste-knapp" type="button" title="Gjestevisning (Ctrl+Shift+G)" aria-label="Vis gjestevisning">🙈</button>
-
-  <div class="postit">
-    <div class="postit-pin">📌</div>
-    <textarea id="notatTekst" class="postit-text" maxlength="500" placeholder="Ingen beskjed satt" readonly></textarea>
-  </div>
-
-  <div class="busstider">
-    <div class="busstider-header" id="busstiderHeader">🚌 Wessels plass</div>
-    <div class="busstider-liste" id="busstiderListe"></div>
-  </div>
-
-  <div class="kundenytt" id="kundenyttPanel" hidden>
-    <div class="kundenytt-header" id="kundenyttHeader">📣 Kundenytt</div>
-    <div class="kundenytt-liste" id="kundenyttListe"></div>
-  </div>
 
   <div class="feiring" id="feiringBanner" hidden>
     <div class="feiring-track" id="feiringTrack">
