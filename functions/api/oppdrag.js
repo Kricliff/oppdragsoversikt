@@ -14,7 +14,7 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 const CACHE_SECONDS = 20 * 60;
 // Bump denne når normaliseringslogikken under endres, slik at gamle cachede svar fra
 // før endringen ikke fortsetter å bli servert i opptil CACHE_SECONDS etter en deploy.
-const CACHE_VERSION = 26;
+const CACHE_VERSION = 27;
 
 // Selve status-normaliseringen (Recman sine rå statuser -> aktiv/utfort/paVent/skjult,
 // inkludert 100%-regelen og "for gammel til å være aktiv"-filteret) ligger i
@@ -41,7 +41,9 @@ function beregnPeriodeProsent(startDate, endDate) {
 // - IT x3" hos Uno-X (Kristian Clifford, "på vent") - be om å fjerne den 2026-09-01.
 // 1297972: "Init4U-DS-Leder Accounting" hos Init4U (Fredrik Aaslestad) - satt til feil
 // fase i RecMan, skal ikke være på tavlen ennå - be om å fjerne den 2026-09-01.
-const SKJULTE_PROSJEKT_IDER = new Set(["1296846", "1297972"]);
+// 1237953: "IT Team Lead / Virksomhetsarkitekt" hos Akershus Energi (Kristian Clifford)
+// - satt på vent i RecMan, ba om å fjerne den 2026-09-02.
+const SKJULTE_PROSJEKT_IDER = new Set(["1296846", "1297972", "1237953"]);
 
 export async function onRequestGet(context) {
   const cache = caches.default;
