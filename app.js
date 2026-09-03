@@ -126,6 +126,7 @@ async function init() {
   lastBusstider();
   lastVaer();
   setInterval(tikkKlokke, 1000);
+  setInterval(sjekkTema, TEMA_SJEKK_MS); // slår nattmodus av/på når klokka passerer grensene
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
   setInterval(rullSider, SIDE_BYTT_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
@@ -568,25 +569,61 @@ async function lastTelling() {
   renderStats(alleOppdrag);
 }
 
-// Manuell nattmodus - husker valget i localStorage slik at det består til neste
-// gang noen laster tavlen (f.eks. etter en auto-reload fra sjekkNyVersjon).
+// Nattmodus slår seg på av seg selv etter kontortid (16:30) og av igjen om morgenen
+// (06:00) - skjermen står ubetjent, så den skal ikke stå i dagmodus og lyse opp et tomt
+// kontor hele natten. Bryteren i footeren overstyrer fortsatt manuelt, men bare fram til
+// neste automatiske skifte: da nullstilles overstyringen, slik at en glemt manuell
+// endring ikke låser skjermen i feil modus i dagevis.
+const NATTMODUS_FRA_TIME = 16.5; // 16:30
+const NATTMODUS_TIL_TIME = 6; // 06:00
 const TEMA_LAGRET_NOKKEL = "oppdragsoversikt-tema";
+const TEMA_SJEKK_MS = 60 * 1000;
+
+function automatiskTema(naa = new Date()) {
+  const time = naa.getHours() + naa.getMinutes() / 60;
+  return time >= NATTMODUS_FRA_TIME || time < NATTMODUS_TIL_TIME ? "dark" : "light";
+}
+
+// Overstyringen lagres sammen med hva automatikken sa da den ble satt. Så snart
+// automatikken sier noe annet enn den gjorde da (altså at vi har passert 16:30 eller
+// 06:00), er overstyringen utdatert og forkastes.
+function lesOverstyring() {
+  try {
+    const lagret = JSON.parse(localStorage.getItem(TEMA_LAGRET_NOKKEL) ?? "null");
+    if (!lagret?.manuelt) return null;
+    return lagret.autoDaSatt === automatiskTema() ? lagret.manuelt : null;
+  } catch {
+    return null; // gammelt format ("dark"/"light" som ren streng) - ignoreres
+  }
+}
 
 function initTema() {
-  const lagret = localStorage.getItem(TEMA_LAGRET_NOKKEL);
-  settTema(lagret === "dark" ? "dark" : "light");
+  settTema(lesOverstyring() ?? automatiskTema());
+}
+
+function sjekkTema() {
+  settTema(lesOverstyring() ?? automatiskTema());
 }
 
 function byttTema() {
   const naavaerende = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-  settTema(naavaerende === "dark" ? "light" : "dark");
+  const nytt = naavaerende === "dark" ? "light" : "dark";
+  try {
+    localStorage.setItem(
+      TEMA_LAGRET_NOKKEL,
+      JSON.stringify({ manuelt: nytt, autoDaSatt: automatiskTema() })
+    );
+  } catch (err) {
+    console.warn("Fikk ikke lagret temavalg:", err);
+  }
+  settTema(nytt);
 }
 
 function settTema(tema) {
+  if (document.documentElement.dataset.theme === tema) return;
   document.documentElement.dataset.theme = tema;
   temaBtn.textContent = tema === "dark" ? "☀️" : "🌙";
   brandLogoEl.src = tema === "dark" ? "assets/great-people-white-logo.png" : "assets/great-people-black-logo.png";
-  localStorage.setItem(TEMA_LAGRET_NOKKEL, tema);
 }
 
 // Skjermen står ubetjent og laster aldri siden på nytt av seg selv - uten dette ville
@@ -989,6 +1026,8 @@ function renderLanes(liste) {
 
     lanesEl.appendChild(lane);
   });
+
+  lanesEl.style.gridTemplateColumns = `repeat(${balanserKolonner(grupper.length, tetthet)}, 1fr)`;
 }
 
 function tetthetForAntall(antallRadgivere) {
@@ -997,9 +1036,34 @@ function tetthetForAntall(antallRadgivere) {
   return "dense";
 }
 
+// Må matche minmax()-verdiene for .lanes.density-* i style.css
+const MIN_LANE_BREDDE = { cozy: 220, compact: 190, dense: 160 };
+
+// CSS-en sin auto-fit fyller hver rad helt før den starter en ny, som gir skjeve rader
+// (11 rådgivere ble 8 + 3, med fem tomme celler ved siden av den siste raden). Her
+// regner vi i stedet ut hvor mange rader som TRENGS, og deler rådgiverne jevnt utover
+// dem - 11 blir da 6 + 5. Kolonnene blir samtidig bredere, som gir mindre avkorting
+// av rolle-/kundenavn.
+function balanserKolonner(antallLaner, tetthet) {
+  if (antallLaner === 0) return 1;
+
+  const stil = getComputedStyle(lanesEl);
+  const gap = parseFloat(stil.columnGap) || 0;
+  const minBredde = MIN_LANE_BREDDE[tetthet] ?? MIN_LANE_BREDDE.compact;
+  const maksKolonner = Math.max(1, Math.floor((lanesEl.clientWidth + gap) / (minBredde + gap)));
+
+  if (antallLaner <= maksKolonner) return antallLaner;
+  const rader = Math.ceil(antallLaner / maksKolonner);
+  return Math.ceil(antallLaner / rader);
+}
+
 // Alle oppdrag skal vises uten skrolling. Etter at tavlen er tegnet, prøver vi
 // stadig mer kompakte kort-skalaer til ingen rådgiver-kolonne flyter over.
-const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2", "card-scale-3", "card-scale-4"];
+// Stigen stopper bevisst på card-scale-2 (2026-09-02): tidligere gikk den til nivå 4,
+// som presset teksten ned til ~9-10px - uleselig på en vegghengt skjerm, og i praksis
+// alltid i bruk. Nå er lesbarhet gulvet, og rotasjonen (initialiserRotasjon) tar over
+// for det som ikke får plass.
+const KORT_SKALA_NIVAER = ["", "card-scale-1", "card-scale-2"];
 
 function tilpassKortStorrelseTilSkjerm() {
   for (const nivå of KORT_SKALA_NIVAER) {
@@ -1040,31 +1104,65 @@ function initialiserRotasjon() {
 
     const alleOppdrag = sisteOppdragPerAnsvarlig.get(navn) ?? [];
     const totalSider = Math.ceil(alleOppdrag.length / kortPerSide);
-    sideTilstand.set(navn, { kortPerSide, sideIndeks: 0, totalSider });
-    visSide(lane, alleOppdrag, 0, kortPerSide);
+    // Forskyvningen sprer sidebyttene utover i tid, slik at ikke alle kolonner blar om
+    // i samme øyeblikk (det ga ett stort "blink" over hele tavlen hvert 10. sekund).
+    sideTilstand.set(navn, { kortPerSide, sideIndeks: 0, totalSider, forskyvning: sideTilstand.size });
+    visSide(lane, alleOppdrag, 0, kortPerSide, false);
   });
 }
 
-function visSide(lane, alleOppdrag, sideIndeks, kortPerSide) {
+function visSide(lane, alleOppdrag, sideIndeks, kortPerSide, medInnblending = true) {
   const kropp = lane.querySelector(".lane-body");
-  const start = sideIndeks * kortPerSide;
-  kropp.innerHTML = "";
-  alleOppdrag.slice(start, start + kortPerSide).forEach((o) => kropp.appendChild(byggKort(o)));
 
-  const totalSider = Math.ceil(alleOppdrag.length / kortPerSide);
-  const sideEl = lane.querySelector(".lane-side");
-  if (sideEl) sideEl.textContent = totalSider > 1 ? `${sideIndeks + 1}/${totalSider}` : "";
+  const tegn = () => {
+    const start = sideIndeks * kortPerSide;
+    kropp.innerHTML = "";
+    alleOppdrag.slice(start, start + kortPerSide).forEach((o) => kropp.appendChild(byggKort(o)));
+
+    const totalSider = Math.ceil(alleOppdrag.length / kortPerSide);
+    const sideEl = lane.querySelector(".lane-side");
+    if (sideEl) sideEl.textContent = totalSider > 1 ? `${sideIndeks + 1}/${totalSider}` : "";
+  };
+
+  if (!medInnblending) {
+    tegn();
+    return;
+  }
+
+  // Kort ut/inn-blending (se .lane-body.bytter-side i style.css) i stedet for et brått
+  // bytte - roligere å se på når kolonnen blar om av seg selv.
+  kropp.classList.add("bytter-side");
+  setTimeout(() => {
+    tegn();
+    kropp.classList.remove("bytter-side");
+  }, 180);
 }
 
 // Kjøres på egen, kortere timer (se SIDE_BYTT_MS/init()) - bytter bare INNHOLDET i de
 // aktuelle kolonnene, uten å røre resten av tavlen eller hente noe fra serveren på nytt.
+// Hver kolonne har sin egen forskyvning (se initialiserRotasjon), så de blar om etter
+// hverandre i stedet for alle på én gang. Hele forskyvnings-vinduet holdes innenfor en
+// begrenset del av intervallet, slik at det aldri renner over i neste runde uansett hvor
+// mange kolonner som roterer samtidig.
+const SIDE_FORSKYVNING_MAKS_MS = 900;
+const SIDE_FORSKYVNING_ANDEL = 0.4;
+
 function rullSider() {
+  const antallRoterende = [...sideTilstand.values()].filter((t) => t.totalSider > 1).length;
+  const trinn = Math.min(
+    SIDE_FORSKYVNING_MAKS_MS,
+    (SIDE_BYTT_MS * SIDE_FORSKYVNING_ANDEL) / Math.max(1, antallRoterende)
+  );
+
   sideTilstand.forEach((tilstand, navn) => {
     if (tilstand.totalSider <= 1) return;
     tilstand.sideIndeks = (tilstand.sideIndeks + 1) % tilstand.totalSider;
     const lane = lanesEl.querySelector(`.lane[data-ansvarlig="${CSS.escape(navn)}"]`);
     if (!lane) return;
-    visSide(lane, sisteOppdragPerAnsvarlig.get(navn) ?? [], tilstand.sideIndeks, tilstand.kortPerSide);
+    setTimeout(
+      () => visSide(lane, sisteOppdragPerAnsvarlig.get(navn) ?? [], tilstand.sideIndeks, tilstand.kortPerSide),
+      (tilstand.forskyvning ?? 0) * trinn
+    );
   });
 }
 
