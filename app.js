@@ -109,6 +109,8 @@ const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
 const gjesteTrenderListeEl = document.getElementById("gjesteTrenderListe");
+const gjesteAvgangerEl = document.getElementById("gjesteAvganger");
+const gjesteNyheterEl = document.getElementById("gjesteNyheter");
 const gjesteVaerIkonEl = document.getElementById("gjesteVaerIkon");
 const gjesteVaerTempEl = document.getElementById("gjesteVaerTemp");
 const gjesteVaerVarselEl = document.getElementById("gjesteVaerVarsel");
@@ -312,6 +314,67 @@ function renderGjestevisning() {
 
   tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
   renderGjesteTrender();
+  renderGjesteAvganger();
+  renderGjesteNyheter();
+}
+
+// Rutetabell for besøkende - samme sisteAvganger som brukes internt (se lastBusstider),
+// bare med "Wessels plass" fast valgt i stedet for å rotere gjennom alle linjene.
+// Holdes fersk gjennom hele gjestevinduet av renderTransportPanel() under, som allerede
+// kjører på et tikk-intervall for den interne rutetabellen.
+function renderGjesteAvganger() {
+  if (!gjestevisningEl.classList.contains("vis")) return;
+
+  if (sisteAvganger.length === 0) {
+    gjesteAvgangerEl.innerHTML = '<div class="buss-tom">Ingen avganger akkurat nå</div>';
+    return;
+  }
+
+  gjesteAvgangerEl.replaceChildren(
+    ...sisteAvganger.slice(0, 5).map((a) => {
+      const rad = document.createElement("div");
+      rad.className = "gjeste-avgang";
+      rad.innerHTML = `
+        <span class="gjeste-avgang-linje">${escapeHtml(a.linje)}</span>
+        <span class="gjeste-avgang-destinasjon">${escapeHtml(a.destinasjon)}</span>
+        <span class="gjeste-avgang-tid">${busstidTekst(a.avgangstid)}</span>
+      `;
+      return rad;
+    })
+  );
+}
+
+// Siste nytt for besøkende - samme nrkOverskrifter som fyller bunnbanneret internt
+// (se lastNrk), bare vist som en stille liste i stedet for et rullende banner.
+function renderGjesteNyheter() {
+  if (!gjestevisningEl.classList.contains("vis")) return;
+
+  if (nrkOverskrifter.length === 0) {
+    gjesteNyheterEl.innerHTML = '<p class="endring-tom">Ingen saker akkurat nå</p>';
+    return;
+  }
+
+  gjesteNyheterEl.replaceChildren(
+    ...nrkOverskrifter.slice(0, 4).map((s) => {
+      const rad = document.createElement("div");
+      rad.className = "gjeste-nyhet";
+
+      if (s.logo) {
+        const logo = document.createElement("img");
+        logo.className = "gjeste-nyhet-logo";
+        logo.src = s.logo;
+        logo.alt = "";
+        rad.appendChild(logo);
+      }
+
+      const tittel = document.createElement("span");
+      tittel.className = "gjeste-nyhet-tittel";
+      tittel.textContent = s.tittel;
+      rad.appendChild(tittel);
+
+      return rad;
+    })
+  );
 }
 
 function lagGjesteStat(verdi, etikett) {
@@ -497,6 +560,7 @@ function oppdaterFeiringVisning() {
 async function lastNrk() {
   nrkOverskrifter = await hentNrkNyheter();
   oppdaterNyheterVisning();
+  renderGjesteNyheter();
 }
 
 function oppdaterNyheterVisning() {
@@ -865,6 +929,7 @@ function renderTransportPanel() {
     renderAvgangsliste(sisteTbane.ostover);
   }
   settPanelHeader(busstiderHeaderEl, tittel, sisteBusstiderOppdatert);
+  renderGjesteAvganger();
 }
 
 // Viser når dataene i et panel sist faktisk ble hentet på nytt (ikke bare
