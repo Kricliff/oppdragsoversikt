@@ -105,39 +105,65 @@
 <!-- Gjestevisning - full-skjerm erstatning som skjuler kandidat-/kundenavn når det
      kommer besøk. Aktiveres med Ctrl+Shift+G, se veksleGjestevisning i app.js. -->
 <div class="gjestevisning" id="gjestevisning" hidden>
-  <img class="gjeste-logo" src="assets/great-people-black-logo.png" alt="GreatPeople">
-  <p class="gjeste-tittel">Slik går det med oss</p>
+  <header class="gjeste-topp">
+    <img class="gjeste-logo" id="gjesteLogo" src="assets/great-people-black-logo.png" alt="GreatPeople">
+    <div class="gjeste-vaer-klokke">
+      <div class="gjeste-vaer-rad">
+        <div class="vaer">
+          <div class="vaer-rad">
+            <span class="vaer-ikon" id="gjesteVaerIkon">⛅</span>
+            <span class="vaer-temp" id="gjesteVaerTemp">--°</span>
+          </div>
+          <span class="vaer-varsel" id="gjesteVaerVarsel" hidden>☂️ Ta med paraply</span>
+        </div>
+        <div class="clock-tid">
+          <div class="clock" id="gjesteKlokke">--:--</div>
+          <div class="date" id="gjesteDato">-</div>
+        </div>
+      </div>
+      <div class="gjeste-varsel-liste" id="gjesteVarselListe"></div>
+    </div>
+  </header>
+
+  <section class="gjeste-hero">
+    <h1>Vi gjør rekruttering enklere.</h1>
+    <p class="gjeste-ingress">Flere og bedre kandidater raskere.</p>
+  </section>
 
   <div class="gjeste-stats" id="gjesteStats"></div>
 
-  <div class="gjeste-grafer">
-    <div class="gjeste-graf-kort">
-      <h3>Oppdrag fullført per måned</h3>
+  <div class="gjeste-midt">
+    <section class="gjeste-panel gjeste-tjenester">
+      <h2>Våre tjenester</h2>
+      <ul>
+        <li>
+          <span class="gjeste-tjeneste-navn">Rekruttere én</span>
+          <span class="gjeste-tjeneste-tekst">Vi finner og kvalifiserer kandidaten til den faste stillingen</span>
+        </li>
+        <li>
+          <span class="gjeste-tjeneste-navn">Rekruttere flere</span>
+          <span class="gjeste-tjeneste-tekst">Flere roller i samme prosess, med felles fremdrift</span>
+        </li>
+        <li>
+          <span class="gjeste-tjeneste-navn">Leie én eller flere</span>
+          <span class="gjeste-tjeneste-tekst">Innleie og interim når behovet er midlertidig</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="gjeste-panel gjeste-graf-kort">
+      <h2>Oppdrag fullført per måned</h2>
       <div class="gjeste-graf" id="gjesteGrafOppdrag"></div>
-    </div>
+    </section>
   </div>
 
-  <div class="gjeste-trender-kort">
-    <h3>Rekrutteringstrender</h3>
-    <div class="gjeste-trender-liste" id="gjesteTrenderListe"></div>
-  </div>
-
-  <div class="gjeste-vaer-klokke">
-    <div class="gjeste-vaer-rad">
-      <div class="vaer">
-        <div class="vaer-rad">
-          <span class="vaer-ikon" id="gjesteVaerIkon">⛅</span>
-          <span class="vaer-temp" id="gjesteVaerTemp">--°</span>
-        </div>
-        <span class="vaer-varsel" id="gjesteVaerVarsel" hidden>☂️ Ta med paraply</span>
-      </div>
-      <div class="clock-tid">
-        <div class="clock" id="gjesteKlokke">--:--</div>
-        <div class="date" id="gjesteDato">-</div>
-      </div>
+  <footer class="gjeste-bunn">
+    <div class="gjeste-trender-kort">
+      <h2>Vi er eksperter som rekrutterer eksperter</h2>
+      <div class="gjeste-trender-liste" id="gjesteTrenderListe"></div>
     </div>
-    <div class="gjeste-varsel-liste" id="gjesteVarselListe"></div>
-  </div>
+    <span class="gjeste-nettside">greatpeople.no</span>
+  </footer>
 </div>
 
 <script src="data/mock-oppdrag.js"></script>

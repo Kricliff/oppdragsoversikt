@@ -930,20 +930,24 @@ body {
 
 /* ---------- Gjestevisning (Ctrl+Shift+G) ---------- */
 
+/* Gjestesiden er det besøkende og kunder ser (aktiveres automatisk 11:00-11:30, se
+   sjekkGjestevindu i app.js). Formspråket er hentet fra greatpeople.no: Poppins i vekt
+   500 på store overskrifter, skarpe kanter, hvit flate med sort tekst og oransje aksent,
+   og et venstrestilt hero-utsagn i stedet for en midtstilt tallvegg. Ingen kandidat-
+   eller kundenavn skal forekomme her - kun aggregerte tall. */
 .gjestevisning {
   position: fixed;
   inset: 0;
   z-index: 1000;
   background: var(--bg-0);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(20px, 3.5vh, 40px);
-  padding: clamp(24px, 4vh, 60px);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: clamp(14px, 2.4vh, 34px);
+  padding: clamp(22px, 3.4vh, 52px) clamp(26px, 4vw, 76px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.4s ease;
+  overflow: hidden;
 }
 
 .gjestevisning.vis {
@@ -951,74 +955,127 @@ body {
   pointer-events: auto;
 }
 
-.gjeste-logo {
-  height: clamp(32px, 5vh, 52px);
+.gjeste-topp {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
-.gjeste-tittel {
+.gjeste-logo {
+  height: clamp(30px, 3.4vh, 46px);
+}
+
+/* Selve utsagnet - samme setning og vekt som hero-en på greatpeople.no */
+.gjeste-hero h1 {
   margin: 0;
-  font-size: clamp(1rem, 2vh, 1.3rem);
-  color: var(--text-muted);
+  font-size: clamp(2.4rem, 5vw, 5rem);
   font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.gjeste-ingress {
+  margin: clamp(0.5rem, 1.2vh, 1rem) 0 0;
+  font-size: clamp(1.1rem, 1.9vw, 2rem);
+  font-weight: 500;
+  color: var(--aktiv);
 }
 
 .gjeste-stats {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: clamp(14px, 2vw, 32px);
-  width: min(1100px, 92vw);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(14px, 2vw, 34px);
 }
 
+/* Aksentstrek på toppen i stedet for en hel ramme - roligere, og de store tallene får
+   stå for seg selv slik de gjør på nettsiden. */
 .gjeste-stat {
-  flex: 0 1 260px;
-  text-align: center;
-  padding: clamp(16px, 2vh, 26px) clamp(8px, 1vw, 14px);
+  padding: clamp(12px, 1.8vh, 22px) clamp(14px, 1.4vw, 22px);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-top: 3px solid var(--aktiv);
+  border-bottom: 1px solid var(--border);
 }
 
 .gjeste-stat .verdi {
-  font-size: clamp(1.8rem, 4.5vw, 3.2rem);
-  font-weight: 700;
-  color: var(--aktiv);
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
+  font-weight: 500;
+  color: var(--text);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .gjeste-stat .etikett {
-  margin-top: 0.5rem;
-  font-size: clamp(0.7rem, 0.9vw, 0.85rem);
+  margin-top: 0.45rem;
+  font-size: clamp(0.78rem, 1vw, 1rem);
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.gjeste-grafer {
+.gjeste-midt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: clamp(14px, 2vw, 34px);
+  min-height: 0;
+}
+
+.gjeste-panel {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(14px, 2vh, 26px) clamp(16px, 1.8vw, 28px);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
-.gjeste-graf-kort {
-  width: min(520px, 92vw);
+.gjeste-panel h2 {
+  margin: 0 0 clamp(0.7rem, 1.6vh, 1.3rem);
+  font-size: clamp(0.95rem, 1.2vw, 1.25rem);
+  font-weight: 500;
+  color: var(--text);
 }
 
-.gjeste-graf-kort h3 {
-  margin: 0 0 1rem;
-  font-size: 0.82rem;
-  font-weight: 600;
+.gjeste-tjenester ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.gjeste-tjenester li {
+  padding: clamp(0.5rem, 1.1vh, 0.9rem) 0 clamp(0.5rem, 1.1vh, 0.9rem) clamp(0.7rem, 1vw, 1.1rem);
+  border-left: 3px solid var(--aktiv);
+  margin-bottom: clamp(0.4rem, 0.9vh, 0.8rem);
+}
+
+.gjeste-tjenester li:last-child { margin-bottom: 0; }
+
+.gjeste-tjeneste-navn {
+  display: block;
+  font-size: clamp(1rem, 1.35vw, 1.4rem);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.gjeste-tjeneste-tekst {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: clamp(0.78rem, 0.95vw, 0.98rem);
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  text-align: center;
+  line-height: 1.4;
 }
 
 .gjeste-graf {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 6px;
-  height: clamp(130px, 17vh, 200px);
+  gap: clamp(4px, 0.6vw, 10px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .gjeste-graf-soyle {
@@ -1045,8 +1102,8 @@ body {
 }
 
 .gjeste-graf-tall {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: clamp(0.68rem, 0.85vw, 0.9rem);
+  font-weight: 500;
   color: var(--text);
   margin-bottom: 0.3rem;
   font-variant-numeric: tabular-nums;
@@ -1054,61 +1111,73 @@ body {
 
 .gjeste-graf-etikett {
   margin-top: 0.4rem;
-  font-size: 0.64rem;
-  color: var(--text-faint);
+  font-size: clamp(0.62rem, 0.78vw, 0.82rem);
+  color: var(--text-muted);
   text-transform: uppercase;
+}
+
+.gjeste-bunn {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(14px, 2vw, 34px);
+  padding-top: clamp(10px, 1.6vh, 20px);
+  border-top: 1px solid var(--border);
 }
 
 .gjeste-trender-kort {
-  width: min(1100px, 92vw);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.gjeste-trender-kort h3 {
-  margin: 0 0 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  text-align: center;
+.gjeste-trender-kort h2 {
+  margin: 0 0 clamp(0.5rem, 1.1vh, 0.9rem);
+  font-size: clamp(0.95rem, 1.2vw, 1.25rem);
+  font-weight: 500;
+  color: var(--text);
 }
 
 .gjeste-trender-liste {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: clamp(12px, 1.6vw, 24px);
+  gap: clamp(12px, 1.6vw, 30px);
 }
 
 .gjeste-trend {
-  text-align: center;
-  padding: clamp(8px, 1.2vh, 14px) clamp(6px, 0.8vw, 10px);
+  padding-right: clamp(6px, 0.8vw, 12px);
 }
 
 /* Nøytral farge (ikke oransje) - dette er bransjefakta, ikke våre egne tall, og skal
    lese seg tydelig annerledes enn gjeste-stat sine egne prestasjonstall. */
 .gjeste-trend .tall {
-  font-size: clamp(1.3rem, 2.6vw, 1.9rem);
-  font-weight: 700;
+  font-size: clamp(1.2rem, 1.8vw, 1.8rem);
+  font-weight: 500;
   color: var(--text);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .gjeste-trend .tekst {
-  margin-top: 0.4rem;
-  font-size: 0.72rem;
+  margin-top: 0.3rem;
+  font-size: clamp(0.7rem, 0.85vw, 0.88rem);
   color: var(--text-muted);
   line-height: 1.35;
 }
 
+.gjeste-nettside {
+  flex: 0 0 auto;
+  font-size: clamp(0.85rem, 1.1vw, 1.15rem);
+  font-weight: 500;
+  color: var(--aktiv);
+  white-space: nowrap;
+}
+
 .gjeste-vaer-klokke {
-  position: absolute;
-  top: clamp(20px, 3.5vh, 40px);
-  right: clamp(24px, 4vw, 60px);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 0.5rem;
+  flex: 0 0 auto;
 }
 
 .gjeste-vaer-rad {
