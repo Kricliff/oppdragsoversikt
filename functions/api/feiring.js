@@ -33,8 +33,25 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 21;
+const CACHE_VERSION = 22;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
+
+// En opprydding i Recman 2026-09-02 (gamle prosjekter og kunder massebehandlet) traff
+// diffene under som om alt hadde skjedd akkurat da: banneret endte med 535 samtidige
+// feiringer - 309 "er ny kunde" (praktisk talt hele kundebasen) og 226 "kandidat landet".
+// To sperrer mot at det gjentar seg:
+// - MAKS_NYE_PER_RUNDE: får én runde plutselig flere nye enn dette i en kategori, er det
+//   en masseendring og ikke reelle hendelser. De registreres som kjente (så de ikke dukker
+//   opp igjen senere), men feires ikke.
+// - MAKS_AKTIVE: uansett årsak skal aldri mer enn dette ligge i banneret samtidig.
+const MAKS_NYE_PER_RUNDE = 5;
+const MAKS_AKTIVE = 12;
+
+function massendringsvakt(nye, hva) {
+  if (nye.length <= MAKS_NYE_PER_RUNDE) return nye;
+  console.warn(`Hopper over feiring av ${nye.length} ${hva} pa en gang - ser ut som en masseendring i Recman, ikke reelle hendelser.`);
+  return [];
+}
 
 export async function onRequestGet(context) {
   const cache = caches.default;
@@ -155,7 +172,7 @@ async function hentAktiveFeiringer(apiKey, kv) {
 
   if (tilstand.kjenteHired) {
     const kjenteHiredSet = new Set(tilstand.kjenteHired);
-    const nyeAnsettelser = hired.filter((h) => !kjenteHiredSet.has(h.id));
+    const nyeAnsettelser = massendringsvakt(hired.filter((h) => !kjenteHiredSet.has(h.id)), "ansettelser");
     const detaljer = await Promise.all(
       nyeAnsettelser.map((h) => hentKandidatDetaljer(apiKey, h, projectById, companyById, navnForUserId))
     );
@@ -166,15 +183,13 @@ async function hentAktiveFeiringer(apiKey, kv) {
 
   if (tilstand.kjenteKunder) {
     const kjenteKunderSet = new Set(tilstand.kjenteKunder);
-    nyeKunder
-      .filter((k) => !kjenteKunderSet.has(k.id))
+    massendringsvakt(nyeKunder.filter((k) => !kjenteKunderSet.has(k.id)), "nye kunder")
       .forEach((k) => nyeHendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
   if (tilstand.kjenteAktiveOppdrag) {
     const kjenteAktiveOppdragSet = new Set(tilstand.kjenteAktiveOppdrag);
-    aktiveOppdrag
-      .filter((o) => !kjenteAktiveOppdragSet.has(o.id))
+    massendringsvakt(aktiveOppdrag.filter((o) => !kjenteAktiveOppdragSet.has(o.id)), "nye oppdrag")
       .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
@@ -182,7 +197,9 @@ async function hentAktiveFeiringer(apiKey, kv) {
   const naa = Date.now();
   const fortsattAktive = (tilstand.aktive ?? []).filter((a) => a.utloper > naa);
   const nyAktive = nyeHendelser.map((h) => ({ tekst: feiringTekst(h), utloper: naa + FEIRING_VIS_MS }));
-  const aktive = [...fortsattAktive, ...nyAktive];
+  // Siste skanse: banneret skal aldri kunne vokse seg til hundrevis av poster uansett -
+  // beholder de nyeste (se MAKS_AKTIVE).
+  const aktive = [...fortsattAktive, ...nyAktive].slice(-MAKS_AKTIVE);
 
   // Skriv-feil (f.eks. KV sin daglige gratiskvote brukt opp) skal ikke hindre selve
   // svaret - klienten poller denne siden hvert minutt, og uten dette ville en feilet
