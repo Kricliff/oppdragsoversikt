@@ -1014,15 +1014,13 @@ body {
   z-index: 1000;
   background: var(--bg-0);
   display: grid;
-  /* Radene er bevisst "auto", ikke "1fr" på den midtre - en skjerm som er høyere enn
-     designet trenger (målt opp mot både 21:9- og 4K-lignende oppløsninger) presset
-     tidligere .gjeste-midt til å strekke seg til hele den ekstra høyden, mens
-     innholdet i den (tekst/graf-skala er bredde-, ikke høydedrevet) ikke vokste med -
-     synlig tomrom nederst i hvert panel. align-content: center fordeler i stedet
-     overskytende høyde jevnt over/under HELE oppsettet, uansett skjermens
-     høyde-bredde-forhold. */
-  grid-template-rows: repeat(5, auto);
-  align-content: center;
+  /* "auto"-rader + align-content:center ble forsøkt her for å fordele overskytende
+     høyde jevnt i stedet for å presse alt inn i midt-raden - reversert (03.09.2026):
+     ga tekst som overlappet på ekte skjerm, siden .gjeste-tjenester sin
+     justify-content:space-evenly (flex:1 1 auto uten en fast foreldre-høyde å vokse
+     inn i) regnet ut en annen - for lav - høyde enn det som faktisk ble rendret.
+     1fr gir midt-raden en eksplisitt høyde å style etter, som er langt mer robust. */
+  grid-template-rows: auto auto auto 1fr auto;
   gap: clamp(14px, 2.4vh, 34px);
   padding: clamp(22px, 3.4vh, 52px) clamp(26px, 4vw, 76px);
   opacity: 0;
