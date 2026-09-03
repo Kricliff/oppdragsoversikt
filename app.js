@@ -109,8 +109,8 @@ const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
 const gjesteGrafOppdragEl = document.getElementById("gjesteGrafOppdrag");
 const gjesteTrenderListeEl = document.getElementById("gjesteTrenderListe");
+const gjesteAvgangerTittelEl = document.getElementById("gjesteAvgangerTittel");
 const gjesteAvgangerEl = document.getElementById("gjesteAvganger");
-const gjesteNyheterEl = document.getElementById("gjesteNyheter");
 const gjesteVaerIkonEl = document.getElementById("gjesteVaerIkon");
 const gjesteVaerTempEl = document.getElementById("gjesteVaerTemp");
 const gjesteVaerVarselEl = document.getElementById("gjesteVaerVarsel");
@@ -315,23 +315,26 @@ function renderGjestevisning() {
   tegnGjesteGraf(gjesteGrafOppdragEl, fullforteOppdragPerManed(fullforteIAr));
   renderGjesteTrender();
   renderGjesteAvganger();
-  renderGjesteNyheter();
 }
 
-// Rutetabell for besøkende - samme sisteAvganger som brukes internt (se lastBusstider),
-// bare med "Wessels plass" fast valgt i stedet for å rotere gjennom alle linjene.
-// Holdes fersk gjennom hele gjestevinduet av renderTransportPanel() under, som allerede
-// kjører på et tikk-intervall for den interne rutetabellen.
+// Rutetabell for besøkende - viser nøyaktig samme holdeplass/linje som det interne
+// panelet akkurat nå (se hentTransportPanelData), og roterer i takt med det via
+// samme visPanel-tilstand og PANEL_BYTT_MS-intervall - ikke bare bussen lenger.
+// Nyheter vises IKKE her lenger (for trangt til å lese godt) - de kommer i stedet i
+// det samme rullende bunnbanneret som brukes internt, se oppdaterNyheterVisning().
 function renderGjesteAvganger() {
   if (!gjestevisningEl.classList.contains("vis")) return;
 
-  if (sisteAvganger.length === 0) {
+  const { tittel, liste } = hentTransportPanelData();
+  gjesteAvgangerTittelEl.textContent = tittel;
+
+  if (liste.length === 0) {
     gjesteAvgangerEl.innerHTML = '<div class="buss-tom">Ingen avganger akkurat nå</div>';
     return;
   }
 
   gjesteAvgangerEl.replaceChildren(
-    ...sisteAvganger.slice(0, 5).map((a) => {
+    ...liste.slice(0, 6).map((a) => {
       const rad = document.createElement("div");
       rad.className = "gjeste-avgang";
       rad.innerHTML = `
@@ -339,39 +342,6 @@ function renderGjesteAvganger() {
         <span class="gjeste-avgang-destinasjon">${escapeHtml(a.destinasjon)}</span>
         <span class="gjeste-avgang-tid">${busstidTekst(a.avgangstid)}</span>
       `;
-      return rad;
-    })
-  );
-}
-
-// Siste nytt for besøkende - samme nrkOverskrifter som fyller bunnbanneret internt
-// (se lastNrk), bare vist som en stille liste i stedet for et rullende banner.
-function renderGjesteNyheter() {
-  if (!gjestevisningEl.classList.contains("vis")) return;
-
-  if (nrkOverskrifter.length === 0) {
-    gjesteNyheterEl.innerHTML = '<p class="endring-tom">Ingen saker akkurat nå</p>';
-    return;
-  }
-
-  gjesteNyheterEl.replaceChildren(
-    ...nrkOverskrifter.slice(0, 4).map((s) => {
-      const rad = document.createElement("div");
-      rad.className = "gjeste-nyhet";
-
-      if (s.logo) {
-        const logo = document.createElement("img");
-        logo.className = "gjeste-nyhet-logo";
-        logo.src = s.logo;
-        logo.alt = "";
-        rad.appendChild(logo);
-      }
-
-      const tittel = document.createElement("span");
-      tittel.className = "gjeste-nyhet-tittel";
-      tittel.textContent = s.tittel;
-      rad.appendChild(tittel);
-
       return rad;
     })
   );
@@ -560,7 +530,6 @@ function oppdaterFeiringVisning() {
 async function lastNrk() {
   nrkOverskrifter = await hentNrkNyheter();
   oppdaterNyheterVisning();
-  renderGjesteNyheter();
 }
 
 function oppdaterNyheterVisning() {
@@ -907,27 +876,21 @@ function byttTransportPanel() {
   renderTransportPanel();
 }
 
+// Delt av det interne rutetabell-panelet og gjestesidens rutetabell - begge roterer
+// gjennom akkurat de samme holdeplassene/linjene i takt (samme visPanel), i stedet for
+// at gjestesiden bare noensinne viste bussen mens den interne tavlen viste alt.
+function hentTransportPanelData() {
+  if (visPanel === "buss") return { tittel: "🚌 Wessels plass", liste: sisteAvganger };
+  if (visPanel === "togOslo") return { tittel: "🚆 Nasjonalth. - mot Oslo", liste: sisteTog.motOslo };
+  if (visPanel === "togDrammen") return { tittel: "🚆 Nasjonalth. - mot Drammen", liste: sisteTog.motDrammen };
+  if (visPanel === "trikk") return { tittel: "🚊 Øvre Slottsgate", liste: sisteTrikk };
+  if (visPanel === "tbaneVest") return { tittel: "🚇 Stortinget - vestover", liste: sisteTbane.vestover };
+  return { tittel: "🚇 Stortinget - østover", liste: sisteTbane.ostover };
+}
+
 function renderTransportPanel() {
-  let tittel;
-  if (visPanel === "buss") {
-    tittel = "🚌 Wessels plass";
-    renderAvgangsliste(sisteAvganger);
-  } else if (visPanel === "togOslo") {
-    tittel = "🚆 Nasjonalth. - mot Oslo";
-    renderAvgangsliste(sisteTog.motOslo);
-  } else if (visPanel === "togDrammen") {
-    tittel = "🚆 Nasjonalth. - mot Drammen";
-    renderAvgangsliste(sisteTog.motDrammen);
-  } else if (visPanel === "trikk") {
-    tittel = "🚊 Øvre Slottsgate";
-    renderAvgangsliste(sisteTrikk);
-  } else if (visPanel === "tbaneVest") {
-    tittel = "🚇 Stortinget - vestover";
-    renderAvgangsliste(sisteTbane.vestover);
-  } else {
-    tittel = "🚇 Stortinget - østover";
-    renderAvgangsliste(sisteTbane.ostover);
-  }
+  const { tittel, liste } = hentTransportPanelData();
+  renderAvgangsliste(liste);
   settPanelHeader(busstiderHeaderEl, tittel, sisteBusstiderOppdatert);
   renderGjesteAvganger();
 }

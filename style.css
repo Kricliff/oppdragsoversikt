@@ -1023,6 +1023,9 @@ body {
   grid-template-rows: auto auto auto 1fr auto;
   gap: clamp(14px, 2.4vh, 34px);
   padding: clamp(22px, 3.4vh, 52px) clamp(26px, 4vw, 76px);
+  /* Reservert plass til nyhetsbanneret (44px + litt luft) nederst, slik at
+     .gjeste-bunn aldri havner under det rullende banneret - se .nyheter-banner. */
+  padding-bottom: calc(clamp(22px, 3.4vh, 52px) + 56px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.4s ease;
@@ -1209,32 +1212,17 @@ body {
   text-transform: uppercase;
 }
 
-/* Praktisk info for besøkende - rutetabell og siste nytt, delt i to i samme kort
-   siden begge er korte lister. Bruker samme tall/data som resten av tavlen
-   (sisteAvganger/nrkOverskrifter), bare tegnet med gjestesidens eget formspråk. */
-.gjeste-praktisk {
-  gap: clamp(14px, 2vh, 24px);
-}
-
-.gjeste-praktisk-del {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.gjeste-praktisk-del:first-child {
-  flex: 0 0 auto;
-}
-
-.gjeste-praktisk-del:last-child {
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
+/* Praktisk info for besøkende - rutetabellen, roterer gjennom akkurat de samme
+   holdeplassene/linjene som det interne panelet (se hentTransportPanelData i app.js).
+   Siste nytt flyttet ut herfra til det rullende bunnbanneret (for trangt til å leses
+   godt i en liste ved siden av alt annet) - se .nyheter-banner. */
 .gjeste-avganger {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.35rem, 0.9vh, 0.6rem);
+  justify-content: space-evenly;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: clamp(0.4rem, 1vh, 0.7rem);
 }
 
 .gjeste-avgang {
@@ -1268,41 +1256,6 @@ body {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
-}
-
-.gjeste-nyheter {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: clamp(0.5rem, 1.1vh, 0.9rem);
-  overflow: hidden; /* sikkerhetsnett - se kommentaren over .gjeste-tjenester li */
-}
-
-.gjeste-nyhet {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-}
-
-.gjeste-nyhet-logo {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  margin-top: 0.15rem;
-}
-
-.gjeste-nyhet-tittel {
-  font-size: clamp(0.76rem, 0.92vw, 0.92rem);
-  color: var(--text);
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .gjeste-bunn {
@@ -1498,7 +1451,10 @@ body {
   right: 0;
   bottom: 0;
   height: 44px;
-  z-index: 100;
+  /* Høyere enn .gjestevisning (z-index:1000) med vilje - nyhetsbanneret skal vises for
+     besøkende også, i motsetning til feiring/bursdag-banneret som kan nevne
+     kandidat-/kundenavn og derfor MÅ holde seg bak gjestesiden. */
+  z-index: 1001;
   overflow: hidden;
   background: none;
   pointer-events: none;
