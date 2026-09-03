@@ -638,8 +638,11 @@ function renderTeamskanal() {
   teamskanalPanelEl.hidden = false;
   settPanelHeader(teamskanalHeaderEl, "💬 Teamskanal", sisteTeamskanalOppdatert);
 
+  // teamskanal er sortert nyest-først (se teamskanal.js) - snur rekkefølgen på de
+  // 3 siste før visning, slik at det leses som en vanlig meldingstråd med den
+  // ferskeste meldingen nederst.
   teamskanalListeEl.replaceChildren(
-    ...teamskanal.slice(0, 3).map((m) => {
+    ...teamskanal.slice(0, 3).reverse().map((m) => {
       const rad = document.createElement("div");
       rad.className = "teamskanal-rad";
 
