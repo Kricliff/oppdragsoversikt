@@ -4,8 +4,8 @@
 // utrulling) - klienten trenger ikke huske noe selv, den speiler bare det serveren sier.
 //
 // 1. Kandidat landet - jobApplication satt til "Hired" (samme kilde som "Kandidater
-//    Landet"-tallet), koblet til kunde + ansvarlig via jobPostId -> jobPost.projectId ->
-//    project.companyId/responsibleUserId ("Job post"-tilgang åpnet 2026-08-26).
+//    Landet"-tallet). Navn, kunde og ansvarlig hentes via kandidatens egen pipeline,
+//    se hentKandidatDetaljer() nederst for hvorfor veien om jobPost ikke fungerer.
 // 2. Ny kunde - et firma har byttet til type "Customer" OG har minst ett reelt prosjekt
 //    (kjent ansvarlig rådgiver). Recman eksponerer ikke selve "Tilbud signert"-øyeblikket
 //    via API i det hele tatt (verken som scope eller felt) - dette er nærmeste tilgjengelige
@@ -33,7 +33,7 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 20;
+const CACHE_VERSION = 21;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 export async function onRequestGet(context) {
@@ -70,16 +70,16 @@ function feiringTekst(h) {
       : `🎉 Nytt oppdrag: ${h.rolle}! 🎉`;
   }
   // kandidat
-  return h.kunde && h.ansvarlig
-    ? `🎉 Ny kandidat landet hos ${h.kunde}! (${h.ansvarlig}) 🎉`
-    : "🎉 Ny kandidat landet! 🎉"; // mangler kunde/ansvarlig for enkelte eldre/eksterne søknader
+  const hvem = h.navn ? `Ny kandidat landet: ${h.navn}` : "Ny kandidat landet";
+  if (h.kunde && h.ansvarlig) return `🎉 ${hvem} hos ${h.kunde}! (${h.ansvarlig}) 🎉`;
+  if (h.kunde) return `🎉 ${hvem} hos ${h.kunde}! 🎉`;
+  return `🎉 ${hvem}! 🎉`;
 }
 
 async function hentAktiveFeiringer(apiKey, kv) {
-  const [projectJson, userJson, jobPostJson, hiredJson] = await Promise.all([
+  const [projectJson, userJson, hiredJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId,status,completePercent,updated&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
-    hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobPost&fields=title,projectId`),
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=jobApplication&page=1&status=hired`)
   ]);
 
@@ -99,18 +99,10 @@ async function hentAktiveFeiringer(apiKey, kv) {
     : null;
   const companyById = companyJson?.success ? companyJson.data : {};
 
-  const projectIdForJobPostId = {};
-  const jobPostRader = jobPostJson?.success ? Object.values(jobPostJson.data) : [];
-  jobPostRader.forEach((jp) => {
-    projectIdForJobPostId[jp.jobPostId] = jp.projectId;
-  });
-
   // Interne nyheter skal aldri feires. To uavhengige sjekker: kundens type er
   // "ownCompany" (GreatPeople sitt eget selskap i Recman), OG - som ekstra sikkerhetsnett -
-  // om ordet "GreatPeople" dukker opp i kundenavn eller annonsetittel i det hele tatt.
-  // Prosjekt som ikke lar seg slå opp (f.eks. en lukket annonse) er IKKE det samme som
-  // internt - de beholdes med kunde/ansvarlig = null, og faller tilbake til generisk
-  // tekst hos klienten som før.
+  // om ordet "GreatPeople" dukker opp i kundenavnet i det hele tatt. Prosjekt som ikke
+  // lar seg slå opp er IKKE det samme som internt - de beholdes, men med det vi vet.
   const inneholderGreatPeople = (...tekster) =>
     tekster.some((t) => typeof t === "string" && t.toLowerCase().includes("greatpeople"));
   const erInternKunde = (project) => {
@@ -119,16 +111,15 @@ async function hentAktiveFeiringer(apiKey, kv) {
     return companyById[project.companyId]?.type === "ownCompany" || inneholderGreatPeople(kundenavn);
   };
 
-  // --- Kandidat landet: jobApplication -> jobPost -> project -> kunde/ansvarlig ---
+  // --- Kandidat landet ---
+  // Bare ID-ene her, så diffen mot KV er billig. Selve oppslaget av navn/kunde/ansvarlig
+  // skjer først for de ansettelsene som faktisk er NYE (se under) - typisk 0-3 av gangen.
   const hiredRader = hiredJson?.success ? hiredJson.data : [];
-  const hired = hiredRader
-    .map((a) => ({ a, project: projectIdForJobPostId[a.jobPostId] ? projectById[projectIdForJobPostId[a.jobPostId]] : null }))
-    .filter(({ project }) => !erInternKunde(project))
-    .map(({ a, project }) => ({
-      id: String(a.jobApplicationId),
-      kunde: project ? companyById[project.companyId]?.name : null,
-      ansvarlig: project ? navnForUserId[String(project.responsibleUserId)] : null
-    }));
+  const hired = hiredRader.map((a) => ({
+    id: String(a.jobApplicationId),
+    candidateId: a.candidateId,
+    jobPostId: a.jobPostId
+  }));
 
   // --- Ny kunde: type=customer OG minst ett reelt prosjekt (kjent ansvarlig) ---
   const ansvarligForCompanyId = {};
@@ -164,9 +155,13 @@ async function hentAktiveFeiringer(apiKey, kv) {
 
   if (tilstand.kjenteHired) {
     const kjenteHiredSet = new Set(tilstand.kjenteHired);
-    hired
-      .filter((h) => !kjenteHiredSet.has(h.id))
-      .forEach((h) => nyeHendelser.push({ type: "kandidat", kunde: h.kunde, ansvarlig: h.ansvarlig }));
+    const nyeAnsettelser = hired.filter((h) => !kjenteHiredSet.has(h.id));
+    const detaljer = await Promise.all(
+      nyeAnsettelser.map((h) => hentKandidatDetaljer(apiKey, h, projectById, companyById, navnForUserId))
+    );
+    detaljer
+      .filter((d) => !erInternKunde(d.project))
+      .forEach((d) => nyeHendelser.push({ type: "kandidat", navn: d.navn, kunde: d.kunde, ansvarlig: d.ansvarlig }));
   }
 
   if (tilstand.kjenteKunder) {
@@ -209,6 +204,46 @@ async function hentAktiveFeiringer(apiKey, kv) {
   }
 
   return { aktive };
+}
+
+// Finner navn, kunde og ansvarlig for EN ny ansettelse.
+//
+// Den opprinnelige veien var jobApplication -> jobPost -> project, men scope=jobPost
+// returnerer KUN aktive annonser ("Retrieve a list of all active job posts" i RecMan-
+// dokumentasjonen), og en ansettelse skjer typisk etter at annonsen er tatt ned. Målt
+// mot ekte data løste 0 av 113 ansettelser seg opp - inkludert den nyeste - så banneret
+// endte ALLTID på den generiske teksten uten navn, kunde og rådgiver (2026-09-02).
+//
+// Veien går nå via kandidatens egen pipeline i candidate-scopet, som har både projectId,
+// jobPostId og userId - og navnet ligger i samme oppslag.
+async function hentKandidatDetaljer(apiKey, ansettelse, projectById, companyById, navnForUserId) {
+  const tomt = { navn: null, kunde: null, ansvarlig: null, project: null };
+  if (!ansettelse.candidateId) return tomt;
+
+  const json = await hentJson(
+    `https://api.recman.io/v2/get/?key=${apiKey}&scope=candidate&candidateId=${ansettelse.candidateId}&fields=firstName,lastName,pipeline`
+  );
+  const rad = json?.success ? Object.values(json.data ?? {})[0] : null;
+  if (!rad) return tomt;
+
+  // En kandidat kan ligge i flere prosjekt-pipelines - velg den som hører til annonsen
+  // det ble ansatt på, ellers den sist oppdaterte som har et prosjekt på seg.
+  const pipeline = Array.isArray(rad.pipeline) ? rad.pipeline.filter((p) => p.projectId) : [];
+  const treff =
+    pipeline.find((p) => String(p.jobPostId) === String(ansettelse.jobPostId)) ??
+    [...pipeline].sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0];
+
+  const project = treff ? projectById[treff.projectId] : null;
+  return {
+    navn: `${rad.firstName ?? ""} ${rad.lastName ?? ""}`.trim() || null,
+    kunde: project ? companyById[project.companyId]?.name ?? null : null,
+    // Faller tilbake til den som eier pipeline-oppføringen hvis prosjektet ikke lar seg slå opp
+    ansvarlig:
+      (project ? navnForUserId[String(project.responsibleUserId)] : null) ??
+      (treff ? navnForUserId[String(treff.userId)] : null) ??
+      null,
+    project
+  };
 }
 
 async function hentJson(url) {
