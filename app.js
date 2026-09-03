@@ -444,7 +444,7 @@ function oppdaterFeiringVisning() {
   if (signatur !== sisteBannerTekst) {
     settRullebannerInnhold(feiringTekst1El, feiringAktive.map((h) => h.tekst), "feiring-item");
     settRullebannerInnhold(feiringTekst2El, feiringAktive.map((h) => h.tekst), "feiring-item");
-    restartRullebannerAnimasjon(feiringTrackEl);
+    restartRullebannerAnimasjon(feiringTrackEl, RULL_FART_FEIRING);
     sisteBannerTekst = signatur;
   }
 }
@@ -474,7 +474,7 @@ function oppdaterNyheterVisning() {
   if (signatur !== sisteNyheterTekst) {
     settRullebannerInnhold(nyheterTekst1El, nrkOverskrifter, "nyheter-item", "nyheter-kilde-logo");
     settRullebannerInnhold(nyheterTekst2El, nrkOverskrifter, "nyheter-item", "nyheter-kilde-logo");
-    restartRullebannerAnimasjon(nyheterTrackEl);
+    restartRullebannerAnimasjon(nyheterTrackEl, RULL_FART_NYHETER);
     sisteNyheterTekst = signatur;
   }
 }
@@ -499,10 +499,26 @@ function settRullebannerInnhold(containerEl, elementer, itemClass, logoClass) {
   );
 }
 
-function restartRullebannerAnimasjon(trackEl) {
+// CSS-en har en FAST varighet per banner, men rullelengden avhenger av hvor mye tekst
+// som ligger der - så farten ble helt avhengig av antall hendelser: med én feiring
+// krøp banneret (28 px/s), med ti fløy det (282 px/s). Varigheten regnes derfor ut fra
+// faktisk bredde her, slik at farten er den samme uansett hvor mange feiringer eller
+// nyheter som vises. Feiring holdes litt roligere enn nyhetene.
+const RULL_FART_FEIRING = 80; // piksler per sekund
+const RULL_FART_NYHETER = 95;
+
+function restartRullebannerAnimasjon(trackEl, pikslerPerSekund) {
   trackEl.style.animation = "none";
   void trackEl.offsetWidth; // tving reflow slik at "none" faktisk får effekt
   trackEl.style.animation = "";
+
+  // MÅ settes etter nullstillingen over: style.animation = "" fjerner samtidig en
+  // inline animationDuration, så rekkefølgen her er ikke valgfri.
+  // Sporet inneholder to identiske kopier, og animasjonen flytter det -50% (én kopi).
+  const enKopiBredde = trackEl.scrollWidth / 2;
+  if (enKopiBredde) {
+    trackEl.style.animationDuration = `${(enKopiBredde / pikslerPerSekund).toFixed(1)}s`;
+  }
 }
 
 // Omtale av kunder i nyhetene (functions/api/kundenytt.js) - eget panel ved siden av
@@ -983,9 +999,9 @@ function sjekkBursdagBanner() {
   bursdagBannerTekst2El.textContent = samlet;
 
   bursdagBannerEl.hidden = false;
-  bursdagBannerTrackEl.style.animation = "none";
-  void bursdagBannerTrackEl.offsetWidth; // tving reflow - start rullingen fra venstre kant hver gang
-  bursdagBannerTrackEl.style.animation = "";
+  // Samme fart-per-piksel-håndtering som de to andre bannerlinjene, slik at farten
+  // ikke avhenger av hvor mange som har bursdag samme dag.
+  restartRullebannerAnimasjon(bursdagBannerTrackEl, RULL_FART_FEIRING);
   requestAnimationFrame(() => bursdagBannerEl.classList.add("vis"));
 
   setTimeout(() => bursdagBannerEl.classList.remove("vis"), BURSDAG_VIS_MS);
