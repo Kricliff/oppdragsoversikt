@@ -1105,6 +1105,11 @@ body {
   padding: clamp(14px, 2vh, 26px) clamp(16px, 1.8vw, 28px);
   background: var(--surface);
   border: 1px solid var(--border);
+  /* Ytterste sikkerhetsnett - uansett hva som en dag overraskende blir for høyt inni et
+     panel, skal det ALDRI kunne renne ut og overlappe raden under (se 03.09.2026-feilen
+     i .gjeste-tjenester li). Klipt innhold i en boks er en langt mindre synlig feil enn
+     tekst som legger seg oppå neste seksjon. */
+  overflow: hidden;
 }
 
 .gjeste-panel h2 {
@@ -1120,18 +1125,27 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
+  gap: clamp(0.3rem, 0.9vh, 0.8rem);
   flex: 1 1 auto;
   min-height: 0;
 }
 
+/* justify-content:space-evenly (tidligere) fordeler bare LUFTEN mellom elementene -
+   den krymper aldri selve elementene når det er for lite plass, så teksten rant rett
+   forbi boksens kant og oppå "Vi er eksperter..."-raden under på en trangere skjerm
+   enn det som ble testet her (03.09.2026). flex:1 1 0 + min-height:0 gjør at de tre
+   punktene faktisk deler OG krymper likt innenfor boksens høyde, med overflow:hidden
+   som siste sikkerhetsnett - klipping er en langt mindre synlig feil enn overlapp. */
 .gjeste-tjenester li {
-  padding: clamp(0.5rem, 1.1vh, 0.9rem) 0 clamp(0.5rem, 1.1vh, 0.9rem) clamp(0.7rem, 1vw, 1.1rem);
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 0 0 clamp(0.7rem, 1vw, 1.1rem);
   border-left: 3px solid var(--aktiv);
-  margin-bottom: clamp(0.4rem, 0.9vh, 0.8rem);
+  overflow: hidden;
 }
-
-.gjeste-tjenester li:last-child { margin-bottom: 0; }
 
 .gjeste-tjeneste-navn {
   display: block;
@@ -1263,6 +1277,7 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   gap: clamp(0.5rem, 1.1vh, 0.9rem);
+  overflow: hidden; /* sikkerhetsnett - se kommentaren over .gjeste-tjenester li */
 }
 
 .gjeste-nyhet {
