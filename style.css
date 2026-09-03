@@ -870,7 +870,6 @@ body {
 
 .kundenytt {
   flex: 0 0 auto;
-  margin-top: auto; /* skyver kundenytt til bunnen av spalten, uansett hvor høy busstider er */
   max-height: 140px; /* viser kun én sak av gangen (karusell), ikke flere stablet */
   background: var(--surface);
   border: 1px solid var(--border);
