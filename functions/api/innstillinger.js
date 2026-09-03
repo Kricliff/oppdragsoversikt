@@ -4,7 +4,7 @@
 // (se sjekkInnstillinger i app.js), samme mønster som den selvfornyende deploy-sjekken.
 
 const KV_KEY = "innstillinger";
-const STANDARD = { kundenytt: true, feiring: true, bursdager: true };
+const STANDARD = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
 
 export async function onRequestGet(context) {
   const lagret = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
@@ -23,7 +23,8 @@ export async function onRequestPost(context) {
   const nye = {
     kundenytt: typeof body?.kundenytt === "boolean" ? body.kundenytt : forrige.kundenytt,
     feiring: typeof body?.feiring === "boolean" ? body.feiring : forrige.feiring,
-    bursdager: typeof body?.bursdager === "boolean" ? body.bursdager : forrige.bursdager
+    bursdager: typeof body?.bursdager === "boolean" ? body.bursdager : forrige.bursdager,
+    teamskanal: typeof body?.teamskanal === "boolean" ? body.teamskanal : forrige.teamskanal
   };
 
   try {

@@ -21,7 +21,7 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js", "/bursdager.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js", "/bursdager.js", "/teamskanal.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
@@ -29,6 +29,7 @@ const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henti
 const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
 const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
 const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
+const TEAMSKANAL_REFRESH_MS = 2 * 60 * 1000; // billig KV-lesing - kan friskes opp ofte
 const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
 const TILBUD_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/tilbud.js
 const AVSLUTTET_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/avsluttet.js
@@ -40,7 +41,7 @@ const SKJERM_HEARTBEAT_MS = 15 * 1000; // hvor ofte skjermen melder seg inn og s
 const INNSTILLINGER_SJEKK_MS = 5 * 60 * 1000; // hvor ofte skjermen sjekker om en av/på-bryter i admin har endret seg
 
 let alleOppdrag = [];
-let innstillinger = { kundenytt: true, feiring: true, bursdager: true };
+let innstillinger = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
 let sisteInnstillingerInnhold = null; // for å vite når en bryter faktisk har endret seg, se sjekkInnstillinger
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
@@ -57,6 +58,8 @@ let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
 let sisteKundenyttOppdatert = null;
+let teamskanal = []; // siste meldinger fra Teams-gruppechatten, se lastTeamskanal
+let sisteTeamskanalOppdatert = null;
 let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
 let sisteSignerteTilbud = 0; // "Signerte tilbud denne mnd", se lastSignerteTilbud
 let sisteAvsluttet = 0; // "Avsluttet denne mnd", se lastAvsluttet
@@ -98,6 +101,9 @@ const nyheterTekst2El = document.getElementById("nyheterTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
+const teamskanalPanelEl = document.getElementById("teamskanalPanel");
+const teamskanalHeaderEl = document.getElementById("teamskanalHeader");
+const teamskanalListeEl = document.getElementById("teamskanalListe");
 const gjestevisningEl = document.getElementById("gjestevisning");
 const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
@@ -148,6 +154,10 @@ async function init() {
     lastKundenytt();
     setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
     setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
+  }
+  if (innstillinger.teamskanal) {
+    lastTeamskanal();
+    setInterval(lastTeamskanal, TEAMSKANAL_REFRESH_MS);
   }
   setInterval(oppdaterFeiringVisning, FEIRING_TIKK_MS);
   if (innstillinger.bursdager) {
@@ -609,6 +619,53 @@ function renderKundenytt() {
   }
 
   kundenyttListeEl.replaceChildren(rad);
+}
+
+// Siste meldinger fra Teams-gruppechatten "GreatPeople på kontoret"
+// (functions/api/teamskanal.js) - se skrivenotatet der for hvordan panelet fylles opp.
+async function lastTeamskanal() {
+  teamskanal = await hentTeamskanal();
+  sisteTeamskanalOppdatert = Date.now();
+  renderTeamskanal();
+}
+
+function renderTeamskanal() {
+  if (teamskanal.length === 0) {
+    teamskanalPanelEl.hidden = true;
+    return;
+  }
+
+  teamskanalPanelEl.hidden = false;
+  settPanelHeader(teamskanalHeaderEl, "💬 Teamskanal", sisteTeamskanalOppdatert);
+
+  teamskanalListeEl.replaceChildren(
+    ...teamskanal.slice(0, 3).map((m) => {
+      const rad = document.createElement("div");
+      rad.className = "teamskanal-rad";
+
+      const topp = document.createElement("div");
+      topp.className = "teamskanal-topp";
+
+      const fra = document.createElement("span");
+      fra.className = "teamskanal-fra";
+      fra.textContent = m.fra;
+      topp.appendChild(fra);
+
+      const tid = document.createElement("span");
+      tid.className = "teamskanal-tid";
+      tid.textContent = new Date(m.tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+      topp.appendChild(tid);
+
+      rad.appendChild(topp);
+
+      const tekst = document.createElement("div");
+      tekst.className = "teamskanal-tekst";
+      tekst.textContent = m.tekst;
+      rad.appendChild(tekst);
+
+      return rad;
+    })
+  );
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -

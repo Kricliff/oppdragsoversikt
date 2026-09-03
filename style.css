@@ -940,6 +940,67 @@ body {
   color: var(--text-muted);
 }
 
+/* ---------- Teamskanal (siste meldinger fra Teams-gruppechatten) ---------- */
+
+.teamskanal {
+  flex: 0 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.teamskanal-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 0.76rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
+.teamskanal-liste {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.teamskanal-rad { display: flex; flex-direction: column; gap: 0.1rem; }
+
+.teamskanal-topp {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.teamskanal-fra {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamskanal-tid {
+  font-size: 0.66rem;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.teamskanal-tekst {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+  white-space: pre-wrap; /* hele meldingen skal med, ikke bare de første linjene */
+  overflow-wrap: break-word;
+}
+
 /* ---------- Gjestevisning (Ctrl+Shift+G) ---------- */
 
 /* Gjestesiden er det besøkende og kunder ser (aktiveres automatisk 11:00-11:30, se
