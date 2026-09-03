@@ -256,7 +256,17 @@ body {
      jobber allerede i overkant av det den klarer for å få alt til å vise uten
      skrolling, og mindre tilgjengelig høyde presset kort til å bli usynlig
      klippet av overflow:hidden i stedet for bare dekket av et panel - reelt
-     datatap, verre enn det opprinnelige overlapp-problemet. */
+     datatap, verre enn det opprinnelige overlapp-problemet.
+
+     Bredden (padding-right) er en annen sak: post-it (right:290px, width:220px)
+     og busstider/kundenytt (right:28px, width:250px) står alltid i nedre høyre
+     hjørne og dekket tidligere ekte kort der (f.eks. Sara Göthe/Espen Stensrud)
+     - synlig data, ikke bare tomrom. I motsetning til høyde-forsøket over
+     håndteres mindre bredde trygt: balanserKolonner() regner uansett ut
+     kolonnetall på nytt fra lanesEl.clientWidth, og skala-/rotasjonstrappen
+     tar over om det likevel blir trangt - ingen klipping. 526px dekker
+     post-it sin ytterkant (510px) pluss litt luft for skyggen. */
+  padding-right: calc(526px - clamp(18px, 2.4vw, 40px));
 }
 
 /* Tetthet skalerer ned kort/avatar/skrift når det er mange rådgivere,
