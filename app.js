@@ -80,7 +80,6 @@ const updatedLabel = document.getElementById("updatedLabel");
 const emptyState = document.getElementById("emptyState");
 const clockEl = document.getElementById("clock");
 const dateLabelEl = document.getElementById("dateLabel");
-const refreshBtn = document.getElementById("refreshBtn");
 const temaBtn = document.getElementById("temaBtn");
 const brandLogoEl = document.getElementById("brandLogo");
 const gjesteLogoEl = document.getElementById("gjesteLogo");
@@ -174,7 +173,6 @@ async function init() {
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   setInterval(sjekkInnstillinger, INNSTILLINGER_SJEKK_MS);
-  refreshBtn.addEventListener("click", () => lastOppdrag());
   temaBtn.addEventListener("click", byttTema);
   document.addEventListener("keydown", handterGjesteHotkey);
   gjesteKnappEl.addEventListener("click", veksleGjestevisning);
@@ -837,7 +835,6 @@ async function sjekkInnstillinger() {
 }
 
 async function lastOppdrag() {
-  refreshBtn.classList.add("spinning");
   try {
     alleOppdrag = await hentOppdrag();
     sourceBadge.textContent = kildeErRecman() ? "Kilde: Recman" : "Kilde: mock-data";
@@ -846,8 +843,6 @@ async function lastOppdrag() {
   } catch (err) {
     sourceBadge.textContent = "Feil ved lasting";
     console.error(err);
-  } finally {
-    setTimeout(() => refreshBtn.classList.remove("spinning"), 400);
   }
 }
 

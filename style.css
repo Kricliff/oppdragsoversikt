@@ -670,34 +670,6 @@ body {
 
 .statusbar .dot { opacity: 0.5; }
 
-.statusbar-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.statusbar button {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.85rem;
-  line-height: 1;
-  transition: transform 0.4s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.statusbar button:hover {
-  color: var(--text);
-  border-color: var(--aktiv);
-}
-
-.statusbar button.spinning {
-  transform: rotate(360deg);
-}
-
 .empty-state {
   position: absolute;
   inset: 0;
@@ -738,6 +710,12 @@ body {
 .gjeste-knapp:hover {
   border-color: var(--aktiv);
   transform: translateY(-1px);
+}
+
+/* Tema-knappen (mørk/lys) flyttet hit fra statusbar-bunnlinjen - deler .gjeste-knapp
+   sin runde stil, plassert rett ved siden av. */
+.tema-knapp {
+  left: 76px;
 }
 
 /* ---------- Post-it ---------- */
@@ -1629,6 +1607,7 @@ body {
   .gjeste-trender-liste { grid-template-columns: repeat(2, 1fr); }
   .gjeste-vaer-klokke { position: static; align-items: center; margin-top: 0.6rem; }
   .gjeste-knapp { left: 12px; bottom: 12px; width: 34px; height: 34px; }
+  .tema-knapp { left: 54px; }
   .bursdag-banner { height: 56px; }
   .bursdag-banner-tekst { font-size: 1.1rem; }
 }
