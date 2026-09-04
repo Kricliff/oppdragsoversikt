@@ -654,6 +654,15 @@ function renderKundenytt() {
   kundenyttListeEl.replaceChildren(rad);
 }
 
+// Dato foran klokkeslett - meldingene kan være flere dager gamle (feires ikke
+// nødvendigvis samme dag som de skjedde), så bare klokkeslettet alene var misvisende.
+function teamskanalTidspunktTekst(iso) {
+  const dato = new Date(iso);
+  const datoTekst = dato.toLocaleDateString("no-NO", { day: "numeric", month: "short" });
+  const klokkeTekst = dato.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+  return `${datoTekst} ${klokkeTekst}`;
+}
+
 // Siste meldinger fra Teams-gruppechatten "GreatPeople på kontoret"
 // (functions/api/teamskanal.js) - se skrivenotatet der for hvordan panelet fylles opp.
 async function lastTeamskanal() {
@@ -689,7 +698,7 @@ function renderTeamskanal() {
 
       const tid = document.createElement("span");
       tid.className = "teamskanal-tid";
-      tid.textContent = new Date(m.tidspunkt).toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+      tid.textContent = teamskanalTidspunktTekst(m.tidspunkt);
       topp.appendChild(tid);
 
       rad.appendChild(topp);
