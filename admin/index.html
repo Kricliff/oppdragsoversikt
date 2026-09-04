@@ -344,6 +344,17 @@
       <div id="innstillingerListe"><p class="endring-tom">Laster…</p></div>
     </div>
 
+    <div class="kort" style="grid-column: 2;">
+      <h2>Bilde-oppslag</h2>
+      <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 1 time hvis du ikke fjerner det selv under.</p>
+      <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
+      <input type="file" id="bildeInput" accept="image/*">
+      <div class="statusrad">
+        <span id="bildeLastOppStatus"></span>
+        <button id="bildeFjernKnapp" class="lagreknapp" hidden>Fjern bilde</button>
+      </div>
+    </div>
+
   </div>
 
   <div class="kort-grid">
@@ -384,17 +395,6 @@
         <input type="text" id="bursdagNavn" placeholder="Navn" maxlength="60">
         <input type="date" id="bursdagDato">
         <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
-      </div>
-    </div>
-
-    <div class="kort">
-      <h2>Bilde-oppslag</h2>
-      <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 1 time hvis du ikke fjerner det selv under.</p>
-      <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
-      <input type="file" id="bildeInput" accept="image/*">
-      <div class="statusrad">
-        <span id="bildeLastOppStatus"></span>
-        <button id="bildeFjernKnapp" class="lagreknapp" hidden>Fjern bilde</button>
       </div>
     </div>
 
