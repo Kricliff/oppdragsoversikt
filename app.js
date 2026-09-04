@@ -840,7 +840,7 @@ async function sjekkInnstillinger() {
 }
 
 // Bilde-oppslag lagt ut fra admin (functions/api/bilde.js) - fjernes enten manuelt fra
-// admin, eller av seg selv etter 1 time (KV-en sin egen expirationTtl, ikke noe skjermen
+// admin, eller av seg selv etter 2 timer (KV-en sin egen expirationTtl, ikke noe skjermen
 // regner ut selv). Denne sjekker bare om det finnes et bilde akkurat nå.
 async function sjekkBildeOppslag() {
   try {

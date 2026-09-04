@@ -340,7 +340,7 @@
 
     <div class="kort">
       <h2>Bilde-oppslag</h2>
-      <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 1 time hvis du ikke fjerner det selv under.</p>
+      <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 2 timer hvis du ikke fjerner det selv under.</p>
       <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
       <input type="file" id="bildeInput" accept="image/*">
       <div class="statusrad">
@@ -983,7 +983,7 @@
       return;
     }
     const lagtUt = new Date(data.lagtUt);
-    const fjernesAutomatisk = new Date(data.lagtUt + 60 * 60 * 1000);
+    const fjernesAutomatisk = new Date(data.lagtUt + 2 * 60 * 60 * 1000);
     bildeStatusEl.innerHTML = `
       <img src="${data.bilde}" class="bilde-forhandsvisning" alt="Gjeldende oppslag">
       <p class="storrelse-hint">Lagt ut kl. ${bildeTidFormat(lagtUt)} - fjernes automatisk kl. ${bildeTidFormat(fjernesAutomatisk)} hvis du ikke fjerner det selv.</p>

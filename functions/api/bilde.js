@@ -1,11 +1,11 @@
 // Bilde-oppslag - admin kan laste opp ett bilde som vises stort på selve tavlen (se
 // .bilde-oppslag i style.css/app.js), f.eks. en plakat eller et resultat å feire.
 // Lagres som data-URL i samme KV som resten av tavlen sine delte data. expirationTtl
-// gjør at KV selv fjerner oppslaget etter 1 time hvis ingen fjerner det manuelt fra
+// gjør at KV selv fjerner oppslaget etter 2 timer hvis ingen fjerner det manuelt fra
 // admin først - ingen egen opprydningsjobb nødvendig.
 
 const KV_KEY = "tavle-bilde";
-const VARIGHET_SEKUNDER = 60 * 60; // 1 time
+const VARIGHET_SEKUNDER = 2 * 60 * 60; // 2 timer
 const MAKS_BYTES = 6_000_000; // grovt vern - KV tåler mye mer, men en veggskjerm trenger aldri et større bilde enn dette
 
 export async function onRequestGet(context) {
