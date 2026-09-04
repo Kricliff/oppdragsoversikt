@@ -40,11 +40,6 @@
     column-count: 2;
     column-gap: 1.2rem;
   }
-  .kort-par {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.2rem;
-  }
   .kort {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -315,7 +310,6 @@
   .tilbake:hover { color: var(--text); }
   @media (max-width: 720px) {
     .kort-grid { column-count: 1; }
-    .kort-par { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -330,7 +324,7 @@
   <h1>Admin - Oppdragsoversikt</h1>
   <p class="ingress">Denne siden er kun tilgjengelig for de som er lagt til i egen tilgangspolicy - ikke alle som ser tavlen.</p>
 
-  <div class="kort-par">
+  <div class="kort-grid">
 
     <div class="kort">
       <h2>Fjernstyring</h2>
@@ -344,7 +338,7 @@
       <div id="innstillingerListe"><p class="endring-tom">Laster…</p></div>
     </div>
 
-    <div class="kort" style="grid-column: 2;">
+    <div class="kort">
       <h2>Bilde-oppslag</h2>
       <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 1 time hvis du ikke fjerner det selv under.</p>
       <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
@@ -354,10 +348,6 @@
         <button id="bildeFjernKnapp" class="lagreknapp" hidden>Fjern bilde</button>
       </div>
     </div>
-
-  </div>
-
-  <div class="kort-grid">
 
     <div class="kort">
       <h2>Post-it-lapp</h2>
