@@ -73,6 +73,12 @@
   <button id="gjesteKnapp" class="gjeste-knapp" type="button" title="Gjestevisning (Ctrl+Shift+G)" aria-label="Vis gjestevisning">🙈</button>
   <button id="temaBtn" class="gjeste-knapp tema-knapp" type="button" title="Bytt tema" aria-label="Bytt mørkt/lyst tema">🌙</button>
 
+  <!-- Bilde-oppslag fra admin (functions/api/bilde.js) - stort bilde over store deler av
+       skjermen, fjernes manuelt fra admin eller automatisk etter 1 time (KV-TTL). -->
+  <div class="bilde-oppslag" id="bildeOppslag" hidden>
+    <img id="bildeOppslagBilde" alt="Oppslag">
+  </div>
+
   <div class="feiring" id="feiringBanner" hidden>
     <div class="feiring-track" id="feiringTrack">
       <span class="feiring-tekst" id="feiringTekst1"></span>

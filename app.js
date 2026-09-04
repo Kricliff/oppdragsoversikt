@@ -39,6 +39,7 @@ const SKJERM_ID_KEY = "skjermId";
 const SKJERM_NAVN_KEY = "skjermNavn";
 const SKJERM_HEARTBEAT_MS = 15 * 1000; // hvor ofte skjermen melder seg inn og sjekker for fjernstyring
 const INNSTILLINGER_SJEKK_MS = 5 * 60 * 1000; // hvor ofte skjermen sjekker om en av/på-bryter i admin har endret seg
+const BILDE_SJEKK_MS = 20 * 1000; // hvor ofte skjermen sjekker om admin har lagt ut/fjernet et bilde-oppslag
 
 let alleOppdrag = [];
 let innstillinger = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
@@ -89,6 +90,8 @@ const busstiderListeEl = document.getElementById("busstiderListe");
 const vaerIkonEl = document.getElementById("vaerIkon");
 const vaerTempEl = document.getElementById("vaerTemp");
 const vaerVarselEl = document.getElementById("vaerVarsel");
+const bildeOppslagEl = document.getElementById("bildeOppslag");
+const bildeOppslagBildeEl = document.getElementById("bildeOppslagBilde");
 const feiringBannerEl = document.getElementById("feiringBanner");
 const feiringTrackEl = document.getElementById("feiringTrack");
 const feiringTekst1El = document.getElementById("feiringTekst1");
@@ -173,6 +176,8 @@ async function init() {
   sjekkNyVersjon();
   setInterval(sjekkNyVersjon, DEPLOY_SJEKK_MS);
   setInterval(sjekkInnstillinger, INNSTILLINGER_SJEKK_MS);
+  sjekkBildeOppslag();
+  setInterval(sjekkBildeOppslag, BILDE_SJEKK_MS);
   temaBtn.addEventListener("click", byttTema);
   document.addEventListener("keydown", handterGjesteHotkey);
   gjesteKnappEl.addEventListener("click", veksleGjestevisning);
@@ -831,6 +836,28 @@ async function sjekkInnstillinger() {
     }
   } catch (err) {
     console.warn("Fikk ikke sjekket innstillinger:", err);
+  }
+}
+
+// Bilde-oppslag lagt ut fra admin (functions/api/bilde.js) - fjernes enten manuelt fra
+// admin, eller av seg selv etter 1 time (KV-en sin egen expirationTtl, ikke noe skjermen
+// regner ut selv). Denne sjekker bare om det finnes et bilde akkurat nå.
+async function sjekkBildeOppslag() {
+  try {
+    const res = await fetch("/api/bilde", { cache: "no-store" });
+    const data = await res.json();
+    if (data.bilde && bildeOppslagBildeEl.src !== data.bilde) {
+      bildeOppslagBildeEl.src = data.bilde;
+    }
+    bildeOppslagEl.hidden = false;
+    requestAnimationFrame(() => bildeOppslagEl.classList.toggle("vis", !!data.bilde));
+    if (!data.bilde) {
+      setTimeout(() => {
+        if (!bildeOppslagEl.classList.contains("vis")) bildeOppslagEl.hidden = true;
+      }, 500);
+    }
+  } catch (err) {
+    console.warn("Fikk ikke sjekket bilde-oppslag:", err);
   }
 }
 

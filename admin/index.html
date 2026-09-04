@@ -101,6 +101,16 @@
     cursor: pointer;
   }
   .lagreknapp:disabled { opacity: 0.5; cursor: default; }
+  .bilde-forhandsvisning {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    background: #111;
+    border: 1px solid var(--border);
+    margin-bottom: 0.7rem;
+  }
+  input[type="file"] { font-size: 0.82rem; }
   .emoji-rad {
     display: flex;
     flex-wrap: wrap;
@@ -374,6 +384,17 @@
         <input type="text" id="bursdagNavn" placeholder="Navn" maxlength="60">
         <input type="date" id="bursdagDato">
         <button id="bursdagLeggTilKnapp" class="lagreknapp">Legg til</button>
+      </div>
+    </div>
+
+    <div class="kort">
+      <h2>Bilde-oppslag</h2>
+      <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 1 time hvis du ikke fjerner det selv under.</p>
+      <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
+      <input type="file" id="bildeInput" accept="image/*">
+      <div class="statusrad">
+        <span id="bildeLastOppStatus"></span>
+        <button id="bildeFjernKnapp" class="lagreknapp" hidden>Fjern bilde</button>
       </div>
     </div>
 
@@ -950,6 +971,101 @@
   }
 
   lastInnstillinger();
+
+  // ---------- Bilde-oppslag ----------
+  const bildeStatusEl = document.getElementById("bildeStatus");
+  const bildeInputEl = document.getElementById("bildeInput");
+  const bildeFjernKnapp = document.getElementById("bildeFjernKnapp");
+  const bildeLastOppStatusEl = document.getElementById("bildeLastOppStatus");
+
+  // Nok oppløsning for en veggskjerm sett på avstand, og holder base64-strengen som
+  // sendes til KV rimelig liten (rå kamerabilder kan fort bli 5-10x større enn dette).
+  const BILDE_MAKS_PIKSLER = 1600;
+
+  function bildeTidFormat(d) {
+    return d.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderBildeStatus(data) {
+    if (!data?.bilde) {
+      bildeStatusEl.innerHTML = '<p class="endring-tom">Ingen bilde er lagt ut nå.</p>';
+      bildeFjernKnapp.hidden = true;
+      return;
+    }
+    const lagtUt = new Date(data.lagtUt);
+    const fjernesAutomatisk = new Date(data.lagtUt + 60 * 60 * 1000);
+    bildeStatusEl.innerHTML = `
+      <img src="${data.bilde}" class="bilde-forhandsvisning" alt="Gjeldende oppslag">
+      <p class="storrelse-hint">Lagt ut kl. ${bildeTidFormat(lagtUt)} - fjernes automatisk kl. ${bildeTidFormat(fjernesAutomatisk)} hvis du ikke fjerner det selv.</p>
+    `;
+    bildeFjernKnapp.hidden = false;
+  }
+
+  async function lastBildeStatus() {
+    try {
+      const res = await fetch("/api/bilde", { cache: "no-store" });
+      renderBildeStatus(await res.json());
+    } catch (err) {
+      bildeStatusEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet status.</p>';
+      console.warn(err);
+    }
+  }
+
+  // Skalerer ned og komprimerer bildet i nettleseren før opplasting - se
+  // BILDE_MAKS_PIKSLER over.
+  function skalerBilde(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const skala = Math.min(1, BILDE_MAKS_PIKSLER / Math.max(img.width, img.height));
+        const bredde = Math.round(img.width * skala);
+        const hoyde = Math.round(img.height * skala);
+        const canvas = document.createElement("canvas");
+        canvas.width = bredde;
+        canvas.height = hoyde;
+        canvas.getContext("2d").drawImage(img, 0, 0, bredde, hoyde);
+        URL.revokeObjectURL(img.src);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => reject(new Error("Kunne ikke lese bildet"));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  bildeInputEl.addEventListener("change", async () => {
+    const file = bildeInputEl.files[0];
+    if (!file) return;
+    bildeLastOppStatusEl.textContent = "Laster opp…";
+    try {
+      const dataUrl = await skalerBilde(file);
+      const res = await fetch("/api/bilde", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bilde: dataUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Ukjent feil");
+      renderBildeStatus(data);
+      bildeLastOppStatusEl.textContent = "Lagt ut!";
+      setTimeout(() => (bildeLastOppStatusEl.textContent = ""), 2500);
+    } catch (err) {
+      bildeLastOppStatusEl.textContent = "Fikk ikke lastet opp bildet.";
+      console.warn(err);
+    } finally {
+      bildeInputEl.value = "";
+    }
+  });
+
+  bildeFjernKnapp.addEventListener("click", async () => {
+    try {
+      await fetch("/api/bilde", { method: "DELETE" });
+      renderBildeStatus(null);
+    } catch (err) {
+      console.warn("Fikk ikke fjernet bildet:", err);
+    }
+  });
+
+  lastBildeStatus();
 </script>
 </body>
 </html>

@@ -718,6 +718,42 @@ body {
   left: 76px;
 }
 
+/* ---------- Bilde-oppslag (admin) ---------- */
+
+/* Under gjestevisning (1000) med vilje - et internt oppslag skal ikke vises til
+   besøkende i gjestevinduet 11:00-11:30. Over nyhetsbanneret (1001) er uviktig her,
+   siden bakgrunnen uansett dekker hele skjermen. */
+.bilde-oppslag {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(10, 10, 10, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 5vw;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.bilde-oppslag.vis {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bilde-oppslag[hidden] {
+  display: none;
+}
+
+.bilde-oppslag img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
 /* ---------- Post-it ---------- */
 
 .postit {
