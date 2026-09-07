@@ -106,6 +106,7 @@ const kundenyttListeEl = document.getElementById("kundenyttListe");
 const teamskanalPanelEl = document.getElementById("teamskanalPanel");
 const teamskanalHeaderEl = document.getElementById("teamskanalHeader");
 const teamskanalListeEl = document.getElementById("teamskanalListe");
+const sideStackEl = document.getElementById("sideStack");
 const gjestevisningEl = document.getElementById("gjestevisning");
 const gjesteKnappEl = document.getElementById("gjesteKnapp");
 const gjesteStatsEl = document.getElementById("gjesteStats");
@@ -683,11 +684,23 @@ function renderTeamskanal() {
   teamskanalPanelEl.hidden = false;
   settPanelHeader(teamskanalHeaderEl, "💬 Teamskanal", sisteTeamskanalOppdatert);
 
-  // teamskanal er sortert nyest-først (se teamskanal.js) - snur rekkefølgen på de
-  // 3 siste før visning, slik at det leses som en vanlig meldingstråd med den
-  // ferskeste meldingen nederst.
+  // Hele meldingsteksten skal med (ikke avkortes) - så i stedet prøver vi færre og
+  // færre meldinger til resten av spalten (post-it/busstider/kundenytt) faktisk får
+  // plass, i stedet for at teamskanal presser resten forbi kanten og oppå
+  // nyhets-/feiringsbanneret nederst på skjermen. Samme "prøv, mål, krymp"-prinsipp
+  // som tilpassKortStorrelseTilSkjerm() bruker for selve oppdrags-kortene.
+  for (let antall = Math.min(3, teamskanal.length); antall >= 1; antall--) {
+    tegnTeamskanalMeldinger(antall);
+    if (antall === 1 || !sideStackOverflow()) break;
+  }
+}
+
+// teamskanal er sortert nyest-først (se teamskanal.js) - snur rekkefølgen på
+// utvalget før visning, slik at det leses som en vanlig meldingstråd med den
+// ferskeste meldingen nederst.
+function tegnTeamskanalMeldinger(antall) {
   teamskanalListeEl.replaceChildren(
-    ...teamskanal.slice(0, 3).reverse().map((m) => {
+    ...teamskanal.slice(0, antall).reverse().map((m) => {
       const rad = document.createElement("div");
       rad.className = "teamskanal-rad";
 
@@ -714,6 +727,10 @@ function renderTeamskanal() {
       return rad;
     })
   );
+}
+
+function sideStackOverflow() {
+  return sideStackEl.scrollHeight > sideStackEl.clientHeight + 1;
 }
 
 // Ekte telefon-/salgsmøte-telling fra Recman sin logg (functions/api/telling.js) -
