@@ -17,8 +17,13 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+  // Feiler LUKKET (2026-09-08) - "if (nokkel && ...)" tillot tidligere skriving helt
+  // uten nøkkel når TEAMSKANAL_SKRIVENOKKEL ikke var satt for miljøet requesten traff
+  // (bekreftet: wrangler sin CLI setter kun "production"-hemmeligheter, aldri "preview" -
+  // enhver forhåndsvisnings-/grendeploy hadde derfor null reell beskyttelse her, selv
+  // om koden så ut til å sjekke en nøkkel). Se _middleware.js for det andre laget.
   const nokkel = context.env.TEAMSKANAL_SKRIVENOKKEL;
-  if (nokkel && context.request.headers.get("x-skrivenokkel") !== nokkel) {
+  if (!nokkel || context.request.headers.get("x-skrivenokkel") !== nokkel) {
     return json({ error: "Mangler eller feil nøkkel" }, 401);
   }
 

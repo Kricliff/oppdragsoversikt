@@ -2,6 +2,8 @@
 // ansatte (bekreftet ved testing mot både v1- og v2-APIet). Samme mønster som notat.js:
 // én delt liste alle med admin-tilgang kan redigere.
 
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
+
 const BURSDAGER_KEY = "bursdager";
 const MAKS_ANTALL = 100;
 
@@ -11,6 +13,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+
   let body;
   try {
     body = await context.request.json();

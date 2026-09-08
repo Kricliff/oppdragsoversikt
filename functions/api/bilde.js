@@ -4,6 +4,8 @@
 // gjør at KV selv fjerner oppslaget etter 2 timer hvis ingen fjerner det manuelt fra
 // admin først - ingen egen opprydningsjobb nødvendig.
 
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
+
 const KV_KEY = "tavle-bilde";
 const VARIGHET_SEKUNDER = 2 * 60 * 60; // 2 timer
 const MAKS_BYTES = 6_000_000; // grovt vern - KV tåler mye mer, men en veggskjerm trenger aldri et større bilde enn dette
@@ -14,6 +16,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+
   let body;
   try {
     body = await context.request.json();
@@ -34,6 +38,8 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestDelete(context) {
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+
   await context.env.NOTAT_KV.delete(KV_KEY);
   return json({ bilde: null, lagtUt: null });
 }

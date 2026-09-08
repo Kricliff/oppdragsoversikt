@@ -3,6 +3,8 @@
 // Skjermen sjekker denne med jevne mellomrom og laster seg selv på nytt ved endring
 // (se sjekkInnstillinger i app.js), samme mønster som den selvfornyende deploy-sjekken.
 
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
+
 const KV_KEY = "innstillinger";
 const STANDARD = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
 
@@ -12,6 +14,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+
   let body;
   try {
     body = await context.request.json();

@@ -11,6 +11,7 @@
 // notat.js/bursdager.js - én delt liste alle med admin-tilgang kan redigere.
 
 import { oppdragCacheKey } from "../_lib/oppdragCache.js";
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
 
 const SKJULTE_KEY = "skjulte-oppdrag";
 const MAKS_ANTALL = 200;
@@ -20,6 +21,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+
   let body;
   try {
     body = await context.request.json();

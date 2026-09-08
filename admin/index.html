@@ -395,6 +395,17 @@
 </div>
 
 <script>
+  // Sikkerhetstiltak 2026-09-08: sendes med på ethvert skrivekall (POST/DELETE), slik at
+  // en eventuell forhåndsvisnings-/grendeploy uten Cloudflare Access ikke lenger godtar
+  // skriving fra hvem som helst - se functions/_lib/skrivevern.js for selve sjekken.
+  // Kun meningsfull beskyttelse fordi denne siden i seg selv ligger bak Access på
+  // produksjon; på en åpen forhåndsvisning er nøkkelen synlig for den som ser kildekoden,
+  // men det er likevel langt bedre enn ingen sperre i det hele tatt.
+  const ADMIN_NOKKEL = "540800eb81a913a6bd0e295e863a054480885d34c393218b";
+  function adminHeaders(ekstra) {
+    return { "x-adminnokkel": ADMIN_NOKKEL, ...ekstra };
+  }
+
   const notatEl = document.getElementById("notatTekst");
   const statusEl = document.getElementById("statusTekst");
   const lagreKnapp = document.getElementById("lagreKnapp");
@@ -456,7 +467,7 @@
     try {
       await fetch("/api/notat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ tekst: notatEl.value })
       });
       statusEl.textContent = `Lagret ${new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })}`;
@@ -648,7 +659,7 @@
     try {
       const res = await fetch("/api/skjulte", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           id: String(oppdrag.id).replace("recman-", ""),
           vis,
@@ -770,7 +781,7 @@
     try {
       await fetch("/api/bursdager", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ bursdager })
       });
     } catch (err) {
@@ -950,7 +961,7 @@
     try {
       const res = await fetch("/api/innstillinger", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ [felt]: verdi })
       });
       const data = await res.json();
@@ -1030,7 +1041,7 @@
       const dataUrl = await skalerBilde(file);
       const res = await fetch("/api/bilde", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: adminHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ bilde: dataUrl })
       });
       const data = await res.json();
@@ -1048,7 +1059,7 @@
 
   bildeFjernKnapp.addEventListener("click", async () => {
     try {
-      await fetch("/api/bilde", { method: "DELETE" });
+      await fetch("/api/bilde", { method: "DELETE", headers: adminHeaders() });
       renderBildeStatus(null);
     } catch (err) {
       console.warn("Fikk ikke fjernet bildet:", err);
