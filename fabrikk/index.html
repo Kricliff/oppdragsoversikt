@@ -43,6 +43,8 @@
     --eksterne-myk: #241a38;
     --teamskanal: #e0699f;
     --teamskanal-myk: #351a29;
+    --obsidian: #6c5fd8;
+    --obsidian-myk: #201c3a;
 
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
@@ -344,13 +346,13 @@
   </div>
 
   <div class="scene">
-    <svg viewBox="0 0 1200 660" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fabrikkgulvet sett ovenfra">
+    <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fabrikkgulvet sett ovenfra">
       <defs>
         <pattern id="fliser" width="40" height="40" patternUnits="userSpaceOnUse">
           <rect width="40" height="40" fill="var(--gulv)"/>
           <path d="M40,0 V40 M0,40 H40" stroke="var(--gulv-rute)" stroke-width="1"/>
         </pattern>
-        <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="660"/></clipPath>
+        <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
         <g id="robot">
           <ellipse cx="1" cy="3" rx="12" ry="11" fill="rgba(23,23,23,.14)"/>
           <circle cx="0" cy="0" r="11" fill="currentColor"/>
@@ -362,7 +364,7 @@
       </defs>
 
       <g clip-path="url(#gulvClip)">
-        <rect x="0" y="0" width="1200" height="660" fill="url(#fliser)"/>
+        <rect x="0" y="0" width="1200" height="760" fill="url(#fliser)"/>
 
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="10" stroke-linejoin="round"/>
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="2" stroke-dasharray="8 10" stroke-linejoin="round" class="vei-stripe"/>
@@ -592,6 +594,36 @@
           <g class="alarmpil"><circle cx="664" cy="444" r="6" fill="#fff"/><circle cx="664" cy="444" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
+        <!-- ============ OBSIDIAN-HVELVET ============ -->
+        <!-- Egen stasjon for den planlagte jobben obsidian-fabrikk-logg (hver kveld kl.
+             23:55) - den skriver dagens hendelser til Kristians lokale Obsidian-hvelv.
+             Ingen levende forbindelse hit heller (samme grunn som Claudes kontrollrom):
+             stasjonen viser derfor kun det jobben SELV har rapportert til /api/agentstatus
+             etter siste kjøring, ikke en sanntidsstatus for selve hvelvet. -->
+        <g class="sone" id="sone-obsidian">
+          <rect class="glo" x="566" y="588" width="122" height="112" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="574" y="596" width="106" height="96" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="574" y="596" width="106" height="22" fill="var(--obsidian)"/>
+          <text x="627" y="611" text-anchor="middle" font-weight="600" font-size="10" fill="#fff">OBSIDIAN</text>
+
+          <!-- den fasetterte "edelstenen" - Obsidian sitt eget formspråk - pluss agenten -->
+          <path d="M 610 630 L 618 622 L 626 630 L 618 640 Z" fill="var(--obsidian-myk)" stroke="var(--obsidian)" stroke-width="1.5"/>
+
+          <g class="robot" id="arkivarAgent" style="color: var(--obsidian)" transform="translate(650 632) scale(0.82)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+            <circle class="nr-bg" cx="0" cy="-20" r="8"/>
+            <text class="nr" x="0" y="-17" text-anchor="middle" font-size="9" font-weight="700">13</text>
+          </g>
+
+          <text x="627" y="661" text-anchor="middle" font-size="9" fill="var(--text-muted)">Sist logg skrevet</text>
+          <text x="627" y="678" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)" id="obsidianSistLogg">–</text>
+          <text x="627" y="690" text-anchor="middle" font-size="8" fill="var(--text-muted)">kl. 23:55 hver kveld</text>
+
+          <circle class="statusdot" cx="590" cy="607" r="5"/>
+          <g class="alarmpil"><circle cx="664" cy="607" r="6" fill="#fff"/><circle cx="664" cy="607" r="3.2" fill="var(--hendelse)"/></g>
+        </g>
+
         <!-- Banene robotene og lastene går på. Usynlige - de finnes kun for at koden
              skal kunne spørre om posisjon og retning underveis (getPointAtLength). -->
         <g id="baner" fill="none" stroke="none"></g>
@@ -638,7 +670,7 @@
   <div class="to-kolonner">
     <div class="kort">
       <h2>🕹️ Agentroster</h2>
-      <p class="hint">12 agenter. Grønn puls = jobber akkurat nå. XP-baren fylles av faktiske hendelser i dag i denne nettleseren, og nullstilles ved midnatt - ikke pynt.</p>
+      <p class="hint">13 agenter. Grønn puls = jobber akkurat nå. XP-baren fylles av faktiske hendelser i dag i denne nettleseren, og nullstilles ved midnatt - ikke pynt.</p>
       <div class="roster" id="agentRoster"></div>
 
       <div class="badgerad" id="badgeRad"></div>
@@ -711,7 +743,8 @@
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de avdelingene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk. Claudes egne planlagte jobber (i dag: Teamskanal-oppdateringen) melder også fra hit etter hver kjøring - feiler en, får boksen en rød ramme til det er kvittert ut, selv om avdelingen jobben skriver til fortsatt svarer helt fint.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de avdelingene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
+        <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
@@ -762,6 +795,7 @@
   // varsling enn et gult felt som ulver hver gang en jobb er litt forsinket.
   const RECMAN_STILLE_MS = 45 * 60 * 1000;   // cachen er 20 min, så 45 betyr låst
   const TEAMS_STILLE_MS = 45 * 60 * 1000;    // jobben kjører hvert 15. min = 3 tapte kjøringer
+  const OBSIDIAN_STILLE_MS = 26 * 60 * 60 * 1000; // jobben kjører én gang i døgnet kl. 23:55
 
   // ---------- hendelseskilder (GET) ----------
   const KILDER = [
@@ -984,9 +1018,12 @@
       jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." },
     // Sitter i ro ved maskinen og har derfor ingen rute å gå. Tegnet direkte i kartet,
     // men står med i listen som de andre - den gjør en like reell jobb.
-    { nr: 12, navn: "Claude", sone: "Kontrollrommet", farge: "var(--staal-mork)", stasjonaer: true,
+    { nr: 12, navn: "Claude", sone: "Kontrollrommet", farge: "var(--staal-mork)", stasjonaer: true, domId: "claudeAgent",
       utloser: ["sone-claude"],
-      jobb: "Meg. Sitter midt på gulvet og ruller ut ny kode på det Kristian ber om. Banene ut til avdelingene ligger der hele tiden, svakt tegnet - de lyser grønt og får en puls når ny kode faktisk gjelder for den avdelingen. Endringer Kristian selv gjør i /admin lyser der, ikke her: de to ser helt like ut utenfra, så de kan ikke tilskrives noen." }
+      jobb: "Meg. Sitter midt på gulvet og ruller ut ny kode på det Kristian ber om. Banene ut til avdelingene ligger der hele tiden, svakt tegnet - de lyser grønt og får en puls når ny kode faktisk gjelder for den avdelingen. Endringer Kristian selv gjør i /admin lyser der, ikke her: de to ser helt like ut utenfra, så de kan ikke tilskrives noen." },
+    { nr: 13, navn: "Arkivaren", sone: "Obsidian-hvelvet", farge: "var(--obsidian)", stasjonaer: true, domId: "arkivarAgent",
+      utloser: ["sone-obsidian"],
+      jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." }
   ];
 
   // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
@@ -1097,6 +1134,10 @@
     // Agent 12 sitter i ro ved maskinen, så den har ingen bane - men skal fortsatt vise
     // at den jobber mens minst én kommando faktisk strømmer ut.
     document.getElementById("claudeAgent").classList.toggle("jobber", stromElementer.size > 0);
+    // Agent 13 (Arkivaren) er også stasjonær - den følger i stedet den grønne pulsen på
+    // sin egen stasjon, som kun tennes når obsidian-fabrikk-logg faktisk har rapportert
+    // en fersk kjøring (se sjekkAgentStatus).
+    document.getElementById("arkivarAgent").classList.toggle("jobber", document.getElementById("sone-obsidian").classList.contains("alarm"));
     requestAnimationFrame(steg);
   }
 
@@ -1113,6 +1154,17 @@
   // Siste svar fra /api/agentstatus - hva Claudes egne planlagte jobber selv har
   // rapportert om sin siste kjøring, se sjekkAgentStatus.
   let sisteAgentStatus = { oppgaver: {} };
+  // "sist"-tidspunktet forrige runde så for hver oppgave - brukes til å oppdage at en
+  // FERSK rapport faktisk kom inn (ikke bare at endepunktet ble spurt igjen), slik at
+  // stasjonen kan gi en ekte grønn puls akkurat når jobben rapporterer, ikke bare når
+  // den går fra frisk til feilet eller omvendt.
+  const sisteAgentTidspunkt = new Map();
+  // Hvilken avdeling en gitt planlagt jobb sin feilrapport skal tegnes på. Ukjente
+  // oppgaver havner på Claude som standard - det er tross alt Claude som kjører dem.
+  const OPPGAVE_SONE = {
+    "teamskanal-oppdatering": ["claude"],
+    "obsidian-fabrikk-logg": ["obsidian"]
+  };
   let bootstrap = true;
 
   const el = (id) => document.getElementById(id);
@@ -1390,7 +1442,7 @@
       const niva = 1 + Math.floor(xp / XP_PER_NIVA);
       const prosent = Math.round(((xp % XP_PER_NIVA) / XP_PER_NIVA) * 100);
 
-      const domRobot = document.getElementById(r.stasjonaer ? "claudeAgent" : "robot-" + r.nr);
+      const domRobot = document.getElementById(r.stasjonaer ? r.domId : "robot-" + r.nr);
       const jobber = domRobot?.classList.contains("jobber") ?? false;
       const nede = (r.utloser ?? []).some((id) => document.getElementById(id)?.classList.contains("feil"));
 
@@ -1681,6 +1733,11 @@
       if (!s.aktiv) stille.set("skjerm-" + s.id, { navn: "Skjerm: " + s.navn, soner: ["tavle"], grunn: "sist sett " + siden(s.sistSett) });
     }
 
+    const obsidian = sisteAgentStatus.oppgaver?.["obsidian-fabrikk-logg"];
+    if (obsidian?.sist && Date.now() - obsidian.sist > OBSIDIAN_STILLE_MS) {
+      stille.set("obsidian-stille", { navn: "Obsidian-loggen", soner: ["obsidian"], grunn: "ingen kjøring på " + siden(obsidian.sist) });
+    }
+
     if (bootstrap) return;
     for (const [id, v] of stille) {
       if (!forrige.has(id)) leggILogg("Blitt stille: " + v.navn + " (" + v.grunn + ")", "var(--advarsel)", treffIder(v.soner, v.benker));
@@ -1718,11 +1775,11 @@
     await sjekkDeploy();
   }
 
-  // Claudes egne planlagte jobber (i dag: teamskanal-oppdatering) kjører som fristilte
-  // økter uten noen levende forbindelse til denne siden - de kan derfor bare fortelle om
-  // sin egen status i etterkant, via /api/agentstatus. En feilet kjøring tegner en rød
-  // ramme rundt selve CLAUDE-boksen, siden det er Claudes eget arbeid som feilet - ikke
-  // avdelingen jobben skriver til (som fortsatt kan være helt frisk).
+  // Claudes egne planlagte jobber (teamskanal-oppdatering, obsidian-fabrikk-logg) kjører
+  // som fristilte økter uten noen levende forbindelse til denne siden - de kan derfor bare
+  // fortelle om sin egen status i etterkant, via /api/agentstatus. En feilet kjøring tegner
+  // en rød ramme rundt jobbens EGEN stasjon (se OPPGAVE_SONE) - ikke nødvendigvis
+  // avdelingen jobben skriver til, som fortsatt kan være helt frisk.
   async function sjekkAgentStatus() {
     try {
       const r = await fetch("/api/agentstatus", { cache: "no-store" });
@@ -1730,22 +1787,39 @@
       const data = await r.json();
       sisteAgentStatus = data;
       pulsHenting("claude");
+      pulsHenting("obsidian");
 
       for (const [oppgave, info] of Object.entries(data.oppgaver ?? {})) {
         const id = "agent-" + oppgave;
+        const soner = OPPGAVE_SONE[oppgave] ?? ["claude"];
         const varNede = feilende.has(id);
+
+        // Fersk rapport = "sist" er endret siden forrige runde. Skiller "jobben kjørte
+        // akkurat nå" fra "vi spurte endepunktet på nytt og fikk samme svar" - uten dette
+        // ville stasjonen aldri gitt en synlig, grønn bekreftelse på en vanlig, vellykket
+        // kjøring, kun blaffet stille hvert minutt uansett.
+        const forrigeSist = sisteAgentTidspunkt.get(oppgave);
+        const erFersk = forrigeSist !== undefined && info.sist !== forrigeSist;
+        sisteAgentTidspunkt.set(oppgave, info.sist);
+
         if (info.ok) {
           if (varNede) {
             feilende.delete(id);
-            leggILogg("Friskmeldt: " + oppgave + " kjørte igjen", "var(--ok)", ["sone-claude"]);
+            leggILogg("Friskmeldt: " + oppgave + " kjørte igjen", "var(--ok)", soner.map((s) => "sone-" + s));
+          } else if (erFersk) {
+            slaAlarm("sone-" + soner[0]);
+            leggILogg(oppgave + " kjørte (OK)", "var(--hendelse)", soner.map((s) => "sone-" + s));
           }
         } else {
           const grunn = info.grunn || "ukjent feil";
-          feilende.set(id, { navn: oppgave, soner: ["claude"], grunn });
-          varslet.set(id, { navn: oppgave, soner: ["claude"], grunn });
-          if (!varNede) leggILogg("FEIL: planlagt jobb " + oppgave + " feilet (" + grunn + ")", "var(--feil)", ["sone-claude"]);
+          feilende.set(id, { navn: oppgave, soner, grunn });
+          varslet.set(id, { navn: oppgave, soner, grunn });
+          if (!varNede) leggILogg("FEIL: planlagt jobb " + oppgave + " feilet (" + grunn + ")", "var(--feil)", soner.map((s) => "sone-" + s));
         }
       }
+
+      const obsidian = data.oppgaver?.["obsidian-fabrikk-logg"];
+      el("obsidianSistLogg").textContent = obsidian ? (obsidian.ok ? siden(obsidian.sist) : "Feilet " + siden(obsidian.sist)) : "Venter på første kjøring";
     } catch {
       // Endepunktet er nytt og valgfritt for jobber å bruke - ingen jobber har rapportert
       // ennå er en helt normal tilstand, ikke en feil å varsle om.
