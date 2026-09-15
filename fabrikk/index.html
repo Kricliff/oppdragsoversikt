@@ -3,81 +3,104 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fabrikken - Oppdragsoversikt</title>
+<title>AI Ops Kommandosenter - Oppdragsoversikt</title>
 <link rel="icon" href="../assets/gp-favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg-0: #ffffff;
-    --surface: #fafafa;
-    --border: #e3e3e3;
-    --text: #171717;
-    --text-muted: #6b6b6b;
-    --aktiv: #ec9b00;
+    /* Mørkt, futuristisk kommandosenter i stedet for den flate admin-hvite paletten -
+       samme tokens brukes både av sidens egen CSS og inni SVG-en (fill="var(--x)"), så
+       hele fabrikkgulvet re-tegnes automatisk uten at et eneste koordinat er rørt. */
+    --bg-0: #070a10;
+    --surface: #0e131c;
+    --border: #212c3a;
+    --text: #e7edf6;
+    --text-muted: #7c8aa0;
+    --aktiv: #f0b429;
 
-    --gulv: #f4f2ee;
-    --gulv-rute: #e8e4dc;
-    --sone: #ffffff;
-    --sone-kant: #e0ddd6;
-    --vei: #34302a;
-    --vei-stripe: #cfc8ba;
-    --teal: #0f766e;
-    --teal-myk: #e0f0ee;
-    --staal: #8a8378;
-    --staal-mork: #4a453e;
-    --staal-myk: #eceae6;
-    --aktiv-myk: #fdf0d6;
+    --gulv: #0b0f16;
+    --gulv-rute: #161d29;
+    --sone: #10161f;
+    --sone-kant: #26334480;
+    --vei: #060809;
+    --vei-stripe: #2a3444;
+    --teal: #2fd4c4;
+    --teal-myk: #0f2e2c;
+    --staal: #647186;
+    --staal-mork: #2a323f;
+    --staal-myk: #1a2230;
+    --aktiv-myk: #2e2410;
 
     /* Egne farger for Recman, Eksterne kilder og Teamskanal - de delte grå (--staal) som
        hele fabrikken tidligere brukte for dem så "avslått" ut ved siden av de fargerike
        avdelingene (teal/oransje/sort). Selve utstyret inni boksene (siloer, postkasser)
        beholder grått med vilje - det er tenkt som nøytralt maskinvare, ikke et signal. */
-    --recman: #2f5fa8;
-    --recman-myk: #dde8f7;
-    --eksterne: #7a4fb0;
-    --eksterne-myk: #ece1f7;
-    --teamskanal: #b23a72;
-    --teamskanal-myk: #f6dfeb;
+    --recman: #4f86d8;
+    --recman-myk: #16233a;
+    --eksterne: #a06fe0;
+    --eksterne-myk: #241a38;
+    --teamskanal: #e0699f;
+    --teamskanal-myk: #351a29;
 
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
        gulvet alltid betyr "her må noen gjøre noe". */
-    --hendelse: #16a34a;   /* trafikk - noe skjedde nå, kortvarig */
-    --feil: #b42318;       /* noe er ødelagt - står til det er fikset */
-    --advarsel: #d98100;   /* noe har blitt stille - står til det er ferskt igjen */
-    --ok: #16a34a;
+    --hendelse: #39e07a;   /* trafikk - noe skjedde nå, kortvarig */
+    --feil: #ff5c5c;       /* noe er ødelagt - står til det er fikset */
+    --advarsel: #f0b429;   /* noe har blitt stille - står til det er ferskt igjen */
+    --ok: #39e07a;
+    --gull: #f0b429;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg-0); color: var(--text); font-family: "Poppins", -apple-system, "Segoe UI", sans-serif; }
+  h1, h2, h3, .tal, .merke, .klokke, button.pille { font-family: "Chakra Petch", sans-serif; }
+  html, body {
+    margin: 0; color: var(--text); font-family: "Inter", -apple-system, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(1100px 560px at 12% -8%, #101c30 0%, transparent 60%),
+      radial-gradient(900px 520px at 108% 8%, #1c1236 0%, transparent 55%),
+      var(--bg-0);
+  }
   .side { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 6vh, 64px) clamp(16px, 4vw, 28px) 80px; }
 
   .topplinje { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
   .topplinje img { height: 24px; }
   .divider { width: 1px; height: 20px; background: var(--border); }
-  .merkelapp { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--aktiv); }
+  .merkelapp { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gull); }
   .tilbake { margin-left: auto; font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
   .tilbake:hover { color: var(--text); }
 
-  h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: -0.01em; }
-  .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.4rem; max-width: 64ch; }
+  h1 { font-size: 1.7rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: 0.01em; }
+  .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.4rem; max-width: 64ch; font-family: "Inter", sans-serif; }
+
+  /* Tynn varselbanner helt øverst - vises kun når det faktisk finnes en aktiv, rød alarm,
+     slik at fraværet av den i seg selv er beroligende informasjon. */
+  .varselbanner {
+    display: none; align-items: center; gap: 10px;
+    background: linear-gradient(90deg, #3a1418, transparent);
+    border: 1px solid #4a1f24; border-left: 3px solid var(--feil);
+    border-radius: 8px; padding: 10px 16px; margin-bottom: 14px;
+    font-size: 0.82rem; color: #ffb3b3;
+  }
+  .varselbanner.vis { display: flex; }
+  .varselbanner b { color: #fff; }
+  .varselbanner .prikk { width: 8px; height: 8px; border-radius: 50%; background: var(--feil); animation: pulse 1.2s ease-in-out infinite; flex: none; }
 
   .statuslinje { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
   .pille {
     display: inline-flex; align-items: center; gap: 0.5rem;
     border: 1px solid var(--border); background: var(--surface);
-    padding: 0.45rem 0.85rem; font-size: 0.78rem; font-weight: 500;
+    border-radius: 999px; padding: 0.45rem 0.85rem; font-size: 0.78rem; font-weight: 500;
   }
   .pille .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: pulse 1.8s ease-in-out infinite; }
   .pille.frakoblet { border-color: var(--feil); color: var(--feil); }
   .pille.frakoblet .pip { background: var(--feil); }
   .pille.varsel { border-color: var(--advarsel); color: var(--advarsel); }
-  .pille .klokke { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .pille .klokke { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--hendelse); }
   .pille.ny-versjon { border-color: var(--hendelse); color: var(--hendelse); font-weight: 600; }
 
   button.pille {
-    font-family: "Poppins", sans-serif;
     color: var(--text-muted);
     cursor: pointer;
   }
@@ -85,30 +108,37 @@
   button.pille.har-alarm {
     background: var(--feil);
     border-color: var(--feil);
-    color: #fff;
-    font-weight: 600;
+    color: #1a0505;
+    font-weight: 700;
     opacity: 1;
   }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
 
-  .scene { border: 1px solid var(--border); background: var(--surface); padding: 8px; overflow: hidden; }
+  .scene { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 8px; overflow: hidden; box-shadow: 0 0 0 1px #000 inset, 0 30px 60px -30px rgba(57, 224, 122, 0.12); }
   svg { display: block; width: 100%; height: auto; }
 
   .under { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.2rem; margin-top: 1.2rem; align-items: start; }
-  .kort { background: var(--surface); border: 1px solid var(--border); padding: 1.4rem; }
+  .kort {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.4rem;
+    position: relative; overflow: hidden;
+  }
+  .kort::before {
+    content: ""; position: absolute; inset: 0; opacity: 0.05; pointer-events: none;
+    background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px);
+  }
   .kort.bred { grid-column: 1 / -1; }
-  .kort h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.4rem; }
-  .kort h3 { font-size: 0.82rem; font-weight: 600; margin: 1.2rem 0 0.5rem; }
+  .kort h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+  .kort h3 { font-size: 0.82rem; font-weight: 600; margin: 1.2rem 0 0.5rem; font-family: "Chakra Petch", sans-serif; color: var(--gull); text-transform: uppercase; letter-spacing: 0.04em; }
   .kort h3:first-of-type { margin-top: 0.4rem; }
   .kort .hint { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 1rem; line-height: 1.45; }
 
-  .logg { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+  .logg { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; position: relative; }
   .logg li { display: grid; grid-template-columns: auto 1fr; gap: 0.65rem; padding: 0.6rem 0; border-top: 1px solid var(--border); align-items: start; }
   .logg li:first-child { border-top: none; }
-  .logg .prikk { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.42rem; flex: none; }
+  .logg .prikk { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.42rem; flex: none; box-shadow: 0 0 6px currentColor; }
   .logg .tid { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
   .logg .tekst { font-size: 0.84rem; line-height: 1.4; }
-  .logg li.fersk .tekst { font-weight: 600; }
+  .logg li.fersk .tekst { font-weight: 600; color: var(--hendelse); }
   .logg .tom { color: var(--text-muted); font-size: 0.84rem; padding: 0.4rem 0; display: block; }
 
   .helse { list-style: none; margin: 0; padding: 0; }
@@ -122,12 +152,12 @@
   .helse li.nede .verdi { color: var(--feil); font-weight: 600; }
   .helse li.treg .verdi { color: var(--advarsel); font-weight: 600; }
 
-  .maaler { height: 12px; background: var(--border); overflow: hidden; margin: 0.3rem 0 0.6rem; }
-  .maaler span { display: block; height: 100%; background: var(--ok); width: 0; transition: width 0.4s ease; }
+  .maaler { height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; margin: 0.3rem 0 0.6rem; }
+  .maaler span { display: block; height: 100%; background: var(--ok); width: 0; transition: width 0.4s ease; box-shadow: 0 0 8px currentColor; }
   .maaler.nesten span { background: var(--advarsel); }
   .maaler.full span { background: var(--feil); }
-  .kvote-sum { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .kvote-sum small { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
+  .kvote-sum { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; font-family: "Chakra Petch", sans-serif; }
+  .kvote-sum small { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); font-family: "Inter", sans-serif; }
   .kvote-rad { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.78rem; padding: 0.32rem 0; border-top: 1px solid var(--border); }
   .kvote-rad span:last-child { font-variant-numeric: tabular-nums; color: var(--text-muted); }
 
@@ -141,6 +171,67 @@
   .to-spalter { columns: 2; column-gap: 1.6rem; }
   @media (max-width: 720px) { .to-spalter { columns: 1; } }
   .to-spalter li { break-inside: avoid; }
+
+  /* ---------- kommandosenteret (HUD-målere, agentroster, trusselpanel, badges) ---------- */
+  .seksjonstittel { display: flex; align-items: baseline; gap: 0.6rem; margin: 2.2rem 0 0.9rem; }
+  .seksjonstittel h2 { font-size: 1.15rem; margin: 0; }
+  .seksjonstittel .hint { margin: 0; }
+
+  .maalere { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }
+  @media (max-width: 860px) { .maalere { grid-template-columns: repeat(2, 1fr); } }
+  .maaler-kort .lab { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  .maaler-kort .tal { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+  .maaler-kort .tal small { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; margin-left: 0.2rem; }
+
+  .to-kolonner { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.2rem; align-items: start; margin-top: 1.2rem; }
+  @media (max-width: 980px) { .to-kolonner { grid-template-columns: 1fr; } }
+
+  .roster { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  @media (max-width: 640px) { .roster { grid-template-columns: 1fr; } }
+  .agent {
+    background: var(--staal-myk); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.65rem 0.7rem; display: flex; gap: 0.6rem; align-items: flex-start; position: relative;
+  }
+  .agent .avatar {
+    width: 32px; height: 32px; border-radius: 8px; flex: none; display: grid; place-items: center;
+    font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 0.76rem; color: #070a10;
+  }
+  .agent .info { min-width: 0; flex: 1; }
+  .agent .navnrad { display: flex; align-items: center; gap: 0.4rem; }
+  .agent .navn { font-size: 0.8rem; font-weight: 600; }
+  .agent .rolle { font-size: 0.68rem; color: var(--text-muted); }
+  .agent .puls { width: 6px; height: 6px; border-radius: 50%; background: var(--staal); flex: none; }
+  .agent.jobber .puls { background: var(--hendelse); box-shadow: 0 0 6px var(--hendelse); }
+  .agent .xpbar { height: 4px; border-radius: 999px; background: #0009; margin-top: 0.4rem; overflow: hidden; }
+  .agent .xpbar span { display: block; height: 100%; background: var(--hendelse); border-radius: 999px; }
+  .agent .sist { font-size: 0.66rem; color: var(--text-muted); margin-top: 0.3rem; }
+  .agent.jobber { border-color: var(--hendelse); box-shadow: 0 0 0 1px rgba(57, 224, 122, 0.18), 0 0 14px -4px rgba(57, 224, 122, 0.5); }
+  .agent.nede { border-color: var(--feil); }
+  .agent.nede .sist { color: #ff9b9b; }
+  .agent .lvl {
+    position: absolute; top: -6px; right: -6px; background: var(--bg-0); border: 1px solid var(--border);
+    border-radius: 999px; font-family: "Chakra Petch", sans-serif; font-size: 0.6rem; font-weight: 700;
+    padding: 1px 6px; color: var(--gull);
+  }
+
+  .badgerad { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem; }
+  .badge {
+    display: flex; align-items: center; gap: 0.4rem; background: var(--staal-myk); border: 1px solid var(--border);
+    border-radius: 999px; padding: 0.35rem 0.75rem; font-size: 0.7rem; color: var(--text-muted);
+  }
+  .badge b { color: var(--text); font-family: "Chakra Petch", sans-serif; }
+
+  .trussel {
+    background: linear-gradient(180deg, #3a1418, transparent 65%); border: 1px solid #4a1f24; border-radius: 10px;
+    padding: 0.7rem 0.8rem; margin-bottom: 0.6rem;
+  }
+  .trussel .rad { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+  .trussel .navn { font-weight: 600; font-size: 0.84rem; color: #ffd7d7; }
+  .trussel .grunn { font-size: 0.72rem; color: #e0a5a5; margin-top: 0.2rem; }
+  .rolig {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 0.9rem;
+    background: var(--teal-myk); border: 1px solid #1f4a30; border-radius: 10px; font-size: 0.8rem; color: #a9f0c4;
+  }
 
   /* ---------- tilstander på gulvet ---------- */
   .glo { opacity: 0; }
@@ -231,13 +322,18 @@
 <div class="side">
 
   <div class="topplinje">
-    <img src="../assets/great-people-black-logo.png" alt="GreatPeople">
+    <img src="../assets/great-people-white-logo.png" alt="GreatPeople">
     <span class="divider"></span>
-    <span class="merkelapp">Fabrikk</span>
+    <span class="merkelapp">AI Ops · Kommandosenter</span>
     <a class="tilbake" href="../admin/">&larr; Tilbake til admin</a>
   </div>
-  <h1>Fabrikken</h1>
-  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv. Skjer det noe, blinker avdelingen grønt - det er normal trafikk. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Forklaringen på alt sammen står nederst.</p>
+  <h1>Kommandosenteret</h1>
+  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv, og agentene som faktisk driver den. Skjer det noe, blinker avdelingen grønt - det er normal trafikk. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Alt under gulvet - agentroster, alarmer, målere - er sanntidstall fra de samme kildene, ikke pynt. Forklaringen på hele kartet står nederst.</p>
+
+  <div class="varselbanner" id="varselBanner">
+    <span class="prikk"></span>
+    <div id="varselBannerTekst"></div>
+  </div>
 
   <div class="statuslinje">
     <span class="pille" id="tilkoblingPille"><span class="pip"></span><span id="tilkoblingTekst">Overvåker</span></span>
@@ -514,22 +610,65 @@
     </svg>
   </div>
 
-  <div class="under">
+  <div class="seksjonstittel">
+    <h2>🎮 AI Ops Kommandosenter</h2>
+    <p class="hint">Samme sanntidsdata som gulvet over - bare som agenter, XP og alarmer i stedet for bokser.</p>
+  </div>
 
+  <div class="maalere">
+    <div class="kort maaler-kort">
+      <div class="lab">Systemhelse</div>
+      <div class="tal" id="hudHelse" style="color: var(--ok)">100<small>/100</small></div>
+      <div class="maaler" id="hudHelseMaaler"><span style="width:100%"></span></div>
+    </div>
+    <div class="kort maaler-kort">
+      <div class="lab">Oppdrag på tavlen</div>
+      <div class="tal" id="hudOppdrag">–</div>
+    </div>
+    <div class="kort maaler-kort">
+      <div class="lab">Skrivekvote i dag</div>
+      <div class="tal" id="hudKvote" style="color: var(--teal)">–</div>
+    </div>
+    <div class="kort maaler-kort">
+      <div class="lab">Kilder friske</div>
+      <div class="tal" id="hudKilder">–</div>
+    </div>
+  </div>
+
+  <div class="to-kolonner">
     <div class="kort">
-      <h2>Hendelser</h2>
-      <p class="hint">Alt som har skjedd, nyeste først. Loggen overlever at du laster siden på nytt, og lagres kun i denne nettleseren.</p>
-      <ul class="logg" id="logg"><li><span class="tom">Ingenting registrert ennå.</span></li></ul>
+      <h2>🕹️ Agentroster</h2>
+      <p class="hint">12 agenter. Grønn puls = jobber akkurat nå. XP-baren fylles av faktiske hendelser i dag i denne nettleseren, og nullstilles ved midnatt - ikke pynt.</p>
+      <div class="roster" id="agentRoster"></div>
+
+      <div class="badgerad" id="badgeRad"></div>
     </div>
 
+    <div>
+      <div class="kort" style="margin-bottom: 1.2rem">
+        <h2>🚨 Trusselpanel</h2>
+        <p class="hint">Det som faktisk krever et menneske. Kvitteres med knappen øverst på siden.</p>
+        <div id="trusselListe"></div>
+      </div>
+
+      <div class="kort">
+        <h2>📜 Oppdragslogg</h2>
+        <p class="hint">Alt som har skjedd, nyeste først. Loggen overlever at du laster siden på nytt, og lagres kun i denne nettleseren.</p>
+        <ul class="logg" id="logg"><li><span class="tom">Ingenting registrert ennå.</span></li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="under" style="margin-top: 1.2rem">
+
     <div class="kort">
-      <h2>Helse</h2>
+      <h2>📡 Helse</h2>
       <p class="hint">Alle datakildene tavlen er avhengig av. Grønn betyr at kilden svarer, rød at den er nede, gul at den har blitt stille.</p>
       <ul class="helse" id="helseListe"></ul>
     </div>
 
     <div class="kort">
-      <h2>Kontrollrommet</h2>
+      <h2>🖥️ Kontrollrommet</h2>
       <p class="hint">Claude sitter midt på gulvet med en bane ut til hver avdeling. Banene er svake til vanlig og lyser grønt når en kommando faktisk går der.</p>
       <div class="kvote-rad"><span>Sist utrulling</span><span id="claudeSistDeploy">–</span></div>
       <div class="kvote-rad"><span>Hva ble endret</span><span id="claudeSistHva">–</span></div>
@@ -538,8 +677,8 @@
     </div>
 
     <div class="kort">
-      <h2>Skrivekvote</h2>
-      <p class="hint">Cloudflare-lageret tåler 1000 skrivinger i døgnet på gratisnivået. Går den tom, slutter tavlen å lagre - uten feilmelding. Dette er et anslag regnet ut fra kjente skrivemønstre, ikke en avlest fasit.</p>
+      <h2>💾 Skrivekvote</h2>
+      <p class="hint">Cloudflare-lageret tåler 1000 skrivinger i døgnet på gratisnivået. Går den tom, slutter tavlen å lagre - uten feilmelding.</p>
       <div class="kvote-sum" id="kvoteSum">– <small>av 1000</small></div>
       <div class="maaler" id="kvoteMaaler"><span></span></div>
       <div id="kvoteRader"></div>
@@ -1056,8 +1195,15 @@
     }
   }
 
-  function leggILogg(tekst, farge) {
-    loggRader = [{ tid: Date.now(), tekst, farge }, ...loggRader].slice(0, MAKS_LOGG);
+  // Prefikset id-form ("sone-recman", "benk-notat") er den samme koden allerede bruker
+  // til slaAlarm/tegnVedvarende - gjenbrukt her som nøkkel for å tilskrive dagens
+  // aktivitet ("XP") til riktig(e) agent(er) i kommandosenteret, se beregnAgentXP.
+  function treffIder(soner, benker) {
+    return [...(soner ?? []).map((s) => "sone-" + s), ...(benker ?? []).map((b) => "benk-" + b)];
+  }
+
+  function leggILogg(tekst, farge, treffer) {
+    loggRader = [{ tid: Date.now(), tekst, farge, treffer: treffer ?? [] }, ...loggRader].slice(0, MAKS_LOGG);
     skrivLagretLogg(loggRader);
     tegnLogg();
   }
@@ -1110,6 +1256,7 @@
       node.classList.toggle("treg", !medFeil.has(node.id) && medStille.has(node.id));
     });
     tegnKvitterKnapp();
+    tegnKommandosenter();
   }
 
   function tegnKvitterKnapp() {
@@ -1216,6 +1363,186 @@
     }
   }
 
+  // ---------- kommandosenteret (agentroster, XP, trusselpanel, HUD-målere) ----------
+  // Alt her er avledet av data vi uansett allerede henter og av loggen som allerede
+  // lagres i nettleseren - ingen ny lagring på baksiden, slik Kristian ba om at det
+  // startet som. "XP" er derfor "aktivitet i dag i DENNE nettleseren", ikke en varig
+  // poengsum - den nullstilles naturlig hver gang datoen i loggen ikke lenger er i dag.
+  const XP_PER_NIVA = 6;
+
+  function dagensDato() { return new Date().toDateString(); }
+
+  function beregnAgentXP(robot) {
+    const iDag = dagensDato();
+    let xp = 0;
+    for (const rad of loggRader) {
+      if (new Date(rad.tid).toDateString() !== iDag) continue;
+      if ((rad.treffer ?? []).some((id) => robot.utloser?.includes(id))) xp++;
+    }
+    return xp;
+  }
+
+  function tegnAgentRoster() {
+    const rot = el("agentRoster");
+    rot.innerHTML = "";
+    for (const r of ROBOTER) {
+      const xp = beregnAgentXP(r);
+      const niva = 1 + Math.floor(xp / XP_PER_NIVA);
+      const prosent = Math.round(((xp % XP_PER_NIVA) / XP_PER_NIVA) * 100);
+
+      const domRobot = document.getElementById(r.stasjonaer ? "claudeAgent" : "robot-" + r.nr);
+      const jobber = domRobot?.classList.contains("jobber") ?? false;
+      const nede = (r.utloser ?? []).some((id) => document.getElementById(id)?.classList.contains("feil"));
+
+      const div = document.createElement("div");
+      div.className = "agent" + (jobber ? " jobber" : "") + (nede ? " nede" : "");
+
+      const lvl = document.createElement("span");
+      lvl.className = "lvl";
+      lvl.textContent = "Lv." + niva;
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.style.background = r.farge;
+      avatar.textContent = String(r.nr).padStart(2, "0");
+
+      const info = document.createElement("div");
+      info.className = "info";
+      const navnrad = document.createElement("div");
+      navnrad.className = "navnrad";
+      const puls = document.createElement("span");
+      puls.className = "puls";
+      const navn = document.createElement("span");
+      navn.className = "navn";
+      navn.textContent = r.navn;
+      navnrad.append(puls, navn);
+
+      const rolle = document.createElement("div");
+      rolle.className = "rolle";
+      rolle.textContent = r.sone;
+
+      const xpbar = document.createElement("div");
+      xpbar.className = "xpbar";
+      const xpspan = document.createElement("span");
+      xpspan.style.width = prosent + "%";
+      xpbar.append(xpspan);
+
+      const sist = document.createElement("div");
+      sist.className = "sist";
+      sist.textContent = nede ? "Trenger tilsyn" : jobber ? "Jobber akkurat nå" : xp > 0 ? xp + " hendelser i dag" : "Venter på oppgave";
+
+      info.append(navnrad, rolle, xpbar, sist);
+      div.append(lvl, avatar, info);
+      rot.append(div);
+    }
+  }
+
+  function tegnBadges() {
+    const rot = el("badgeRad");
+    rot.innerHTML = "";
+    const kilderTotalt = HELSESJEKKER.length;
+    const kilderNede = HELSESJEKKER.filter((h) => feilende.has(h.id)).length;
+    const oppdrag = forrigeData.get("oppdrag-tung")?.oppdrag?.length;
+    const avviste = forrigeData.get("avviste")?.antall ?? 0;
+    const kvote = forrigeData.get("kvforbruk");
+
+    const rader = [
+      ["🛡️", avviste === 0 ? "0 avviste skriveforsøk totalt" : avviste + " avviste skriveforsøk totalt"],
+      ["⚡", (kilderTotalt - kilderNede) + "/" + kilderTotalt + " kilder friske"],
+      ["📦", oppdrag != null ? oppdrag + " oppdrag på tavlen" : "henter oppdragstall…"],
+      ["💾", kvote?.tilgjengelig ? kvote.skriv + "/1000 skrivinger i dag" : "kvote ukjent"]
+    ];
+    for (const [emoji, tekst] of rader) {
+      const span = document.createElement("span");
+      span.className = "badge";
+      const em = document.createElement("span");
+      em.textContent = emoji;
+      const b = document.createElement("b");
+      b.textContent = tekst;
+      span.append(em, b);
+      rot.append(span);
+    }
+  }
+
+  function tegnTrusselpanel() {
+    const rot = el("trusselListe");
+    rot.innerHTML = "";
+    if (varslet.size === 0) {
+      const div = document.createElement("div");
+      div.className = "rolig";
+      div.textContent = "✅ Alt fungerer - ingen agenter trenger tilsyn akkurat nå.";
+      rot.append(div);
+      return;
+    }
+    for (const [id, v] of varslet) {
+      const div = document.createElement("div");
+      div.className = "trussel";
+      const rad = document.createElement("div");
+      rad.className = "rad";
+      const infoDiv = document.createElement("div");
+      const navn = document.createElement("div");
+      navn.className = "navn";
+      navn.textContent = v.navn;
+      const grunn = document.createElement("div");
+      grunn.className = "grunn";
+      grunn.textContent = v.grunn + (feilende.has(id) ? "" : " - rettet, venter på kvittering");
+      infoDiv.append(navn, grunn);
+      rad.append(infoDiv);
+      div.append(rad);
+      rot.append(div);
+    }
+  }
+
+  // Enkel, gjennomsiktig poengsum - ikke en fasit, men et raskt førsteinntrykk: trekk
+  // fra for hver uavklarte alarm og hver stillhet. Aldri under 0 eller over 100.
+  function systemhelseScore() {
+    return Math.max(0, Math.min(100, 100 - varslet.size * 14 - stille.size * 6));
+  }
+
+  function tegnHudMaalere() {
+    const score = systemhelseScore();
+    const farge = score >= 80 ? "var(--ok)" : score >= 50 ? "var(--advarsel)" : "var(--feil)";
+    el("hudHelse").innerHTML = score + "<small>/100</small>";
+    el("hudHelse").style.color = farge;
+    const bar = document.querySelector("#hudHelseMaaler span");
+    bar.style.width = score + "%";
+    bar.style.background = farge;
+
+    const oppdrag = forrigeData.get("oppdrag-tung")?.oppdrag?.length;
+    el("hudOppdrag").textContent = oppdrag != null ? oppdrag : "–";
+
+    const kvote = forrigeData.get("kvforbruk");
+    el("hudKvote").textContent = kvote?.tilgjengelig ? kvote.skriv + "/1000" : "–";
+
+    const kilderTotalt = HELSESJEKKER.length;
+    const kilderNede = HELSESJEKKER.filter((h) => feilende.has(h.id)).length;
+    el("hudKilder").textContent = (kilderTotalt - kilderNede) + "/" + kilderTotalt;
+  }
+
+  function tegnVarselBanner() {
+    const banner = el("varselBanner");
+    if (varslet.size === 0) {
+      banner.classList.remove("vis");
+      return;
+    }
+    const forste = [...varslet.values()][0];
+    const tekstEl = el("varselBannerTekst");
+    tekstEl.innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = varslet.size === 1 ? "1 alarm krever kvittering" : varslet.size + " alarmer krever kvittering";
+    const resten = " - " + forste.navn + (forste.grunn ? " (" + forste.grunn + ")" : "") + (varslet.size > 1 ? " og flere - se trusselpanelet" : "");
+    tekstEl.append(b, document.createTextNode(resten));
+    banner.classList.add("vis");
+  }
+
+  function tegnKommandosenter() {
+    tegnHudMaalere();
+    tegnAgentRoster();
+    tegnBadges();
+    tegnTrusselpanel();
+    tegnVarselBanner();
+  }
+
   // ---------- skrivekvote ----------
   // Cloudflare KV har ingen måte å lese av faktisk forbruk fra nettleseren, så dette er
   // et anslag regnet ut fra kjente skrivemønstre i koden. Det er godt nok til å se at
@@ -1307,7 +1634,7 @@
 
       (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s));
       (k.benker ?? []).forEach((b) => slaAlarm("benk-" + b));
-      leggILogg(k.beskriv(data, gammelData), k.farge);
+      leggILogg(k.beskriv(data, gammelData), k.farge, treffIder(k.soner, k.benker));
     }
 
     oppdaterTall();
@@ -1356,10 +1683,10 @@
 
     if (bootstrap) return;
     for (const [id, v] of stille) {
-      if (!forrige.has(id)) leggILogg("Blitt stille: " + v.navn + " (" + v.grunn + ")", "var(--advarsel)");
+      if (!forrige.has(id)) leggILogg("Blitt stille: " + v.navn + " (" + v.grunn + ")", "var(--advarsel)", treffIder(v.soner, v.benker));
     }
     for (const [id, v] of forrige) {
-      if (!stille.has(id)) leggILogg("Friskmeldt: " + v.navn + " leverer igjen", "var(--ok)");
+      if (!stille.has(id)) leggILogg("Friskmeldt: " + v.navn + " leverer igjen", "var(--ok)", treffIder(v.soner, v.benker));
     }
   }
 
@@ -1375,13 +1702,13 @@
           feilende.delete(h.id);
           // "varslet" beholdes bevisst - den lyser rødt til Kristian selv kvitterer den
           // ut med knappen, selv om kilden er frisk igjen.
-          leggILogg("Friskmeldt: " + h.navn + " svarer igjen", "var(--ok)");
+          leggILogg("Friskmeldt: " + h.navn + " svarer igjen", "var(--ok)", treffIder(h.soner, h.benker));
         }
       } catch (err) {
         const grunn = String(err.message ?? err);
         feilende.set(h.id, { navn: h.navn, soner: h.soner, benker: h.benker, grunn });
         varslet.set(h.id, { navn: h.navn, soner: h.soner, benker: h.benker, grunn });
-        if (!varNede) leggILogg("FEIL: " + h.navn + " svarer ikke (" + grunn + ")", "var(--feil)");
+        if (!varNede) leggILogg("FEIL: " + h.navn + " svarer ikke (" + grunn + ")", "var(--feil)", treffIder(h.soner, h.benker));
       }
     }));
     await sjekkAgentStatus();
@@ -1410,13 +1737,13 @@
         if (info.ok) {
           if (varNede) {
             feilende.delete(id);
-            leggILogg("Friskmeldt: " + oppgave + " kjørte igjen", "var(--ok)");
+            leggILogg("Friskmeldt: " + oppgave + " kjørte igjen", "var(--ok)", ["sone-claude"]);
           }
         } else {
           const grunn = info.grunn || "ukjent feil";
           feilende.set(id, { navn: oppgave, soner: ["claude"], grunn });
           varslet.set(id, { navn: oppgave, soner: ["claude"], grunn });
-          if (!varNede) leggILogg("FEIL: planlagt jobb " + oppgave + " feilet (" + grunn + ")", "var(--feil)");
+          if (!varNede) leggILogg("FEIL: planlagt jobb " + oppgave + " feilet (" + grunn + ")", "var(--feil)", ["sone-claude"]);
         }
       }
     } catch {
@@ -1501,7 +1828,7 @@
     el("claudeSistHva").textContent = hva;
     el("versjonPille").textContent = "Ny versjon " + naa;
     el("versjonPille").classList.add("ny-versjon");
-    leggILogg("Claude rullet ut ny kode: " + hva, "var(--hendelse)");
+    leggILogg("Claude rullet ut ny kode: " + hva, "var(--hendelse)", ["sone-claude", ...soner.map((s) => "sone-" + s)]);
   }
 
   // ---------- runde 3: tungt ----------
@@ -1538,6 +1865,7 @@
   byggAktorer();
   plasserAlle();
   tegnRobotliste();
+  tegnKommandosenter();
   requestAnimationFrame(steg);
   start();
 </script>
