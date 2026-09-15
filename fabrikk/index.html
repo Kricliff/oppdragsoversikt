@@ -30,7 +30,10 @@
     --staal-myk: #eceae6;
     --aktiv-myk: #fdf0d6;
 
-    --hendelse: #d92d20;   /* noe skjedde - kortvarig */
+    /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
+       problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
+       gulvet alltid betyr "her må noen gjøre noe". */
+    --hendelse: #16a34a;   /* trafikk - noe skjedde nå, kortvarig */
     --feil: #b42318;       /* noe er ødelagt - står til det er fikset */
     --advarsel: #d98100;   /* noe har blitt stille - står til det er ferskt igjen */
     --ok: #16a34a;
@@ -131,7 +134,19 @@
   .sone.feil .sonebar { fill: var(--feil); animation: none; }
 
   @keyframes gloPuls { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
-  @keyframes barPuls { 0%, 100% { fill: var(--hendelse); } 50% { fill: #f97066; } }
+  @keyframes barPuls { 0%, 100% { fill: var(--hendelse); } 50% { fill: #4ade80; } }
+
+  /* Robotene og lastene kjøres av requestAnimationFrame, ikke av SVG-animasjon, nettopp
+     fordi farten skal kunne trappes jevnt opp og ned. Å endre varigheten på en SMIL-
+     eller CSS-animasjon underveis gir et synlig hopp i stedet for en gradvis endring. */
+  .robot .nr-bg { fill: #fff; stroke: currentColor; stroke-width: 1.5; }
+  .robot .nr { fill: currentColor; }
+  .robot.jobber .nr-bg { fill: currentColor; }
+  .robot.jobber .nr { fill: #fff; }
+  .robot .jobbring { opacity: 0; }
+  .robot.jobber .jobbring { opacity: 1; }
+  .last .merkelapp { fill: var(--text-muted); }
+  .last.jobber .merkelapp { fill: var(--text); font-weight: 700; }
 
   .statusmerke { opacity: 0; }
   .sone.feil .statusmerke, .sone.treg .statusmerke,
@@ -383,50 +398,14 @@
           <g class="alarmpil"><circle cx="1144" cy="89" r="6" fill="#fff"/><circle cx="1144" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
-        <!-- ============ DATALASTER ============ -->
-        <g>
-          <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--aktiv)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
-            <animateMotion dur="14s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
-          </g>
-          <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--teal)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
-            <animateMotion dur="14s" begin="-4.6s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
-          </g>
-          <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--staal)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
-            <animateMotion dur="14s" begin="-9.3s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
-          </g>
-        </g>
+        <!-- Banene robotene og lastene går på. Usynlige - de finnes kun for at koden
+             skal kunne spørre om posisjon og retning underveis (getPointAtLength). -->
+        <g id="baner" fill="none" stroke="none"></g>
 
-        <!-- ============ ROBOTENE ============ -->
-        <g style="color: var(--staal)"><use href="#robot"/>
-          <animateMotion dur="11s" repeatCount="indefinite" rotate="auto" path="M 78 246 L 194 246 L 194 426 L 78 426 Z"/></g>
-        <g style="color: var(--staal)"><use href="#robot"/>
-          <animateMotion dur="10s" begin="-4s" repeatCount="indefinite" rotate="auto" path="M 66 504 L 210 504 L 210 592 L 66 592 Z"/></g>
-
-        <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="9s" repeatCount="indefinite" rotate="auto" path="M 300 112 L 508 112 L 508 216 L 300 216 Z"/></g>
-        <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="10.5s" begin="-3s" repeatCount="indefinite" rotate="auto" path="M 300 232 L 508 232 L 508 290 L 300 290 Z"/></g>
-        <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="12s" begin="-6s" repeatCount="indefinite" rotate="auto" path="M 300 380 L 508 380 L 508 470 L 300 470 Z"/></g>
-        <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="8s" begin="-2s" repeatCount="indefinite" rotate="auto" path="M 302 528 L 506 528 L 506 560 L 302 560 Z"/></g>
-
-        <g style="color: var(--staal-mork)"><use href="#robot"/>
-          <animateMotion dur="7s" repeatCount="indefinite" rotate="auto" path="M 600 262 L 654 262 L 654 344 L 600 344 Z"/></g>
-
-        <g style="color: var(--aktiv)"><use href="#robot"/>
-          <animateMotion dur="8.5s" repeatCount="indefinite" rotate="auto" path="M 730 190 L 890 190 L 890 212 L 730 212 Z"/></g>
-
-        <g style="color: var(--staal)"><use href="#robot"/>
-          <animateMotion dur="9.5s" begin="-2.5s" repeatCount="indefinite" rotate="auto" path="M 730 458 L 890 458 L 890 496 L 730 496 Z"/></g>
-
-        <g style="color: var(--aktiv)"><use href="#robot"/>
-          <animateMotion dur="13s" repeatCount="indefinite" rotate="auto" path="M 962 268 L 1138 268 L 1138 452 L 962 452 Z"/></g>
-        <g style="color: var(--text)"><use href="#robot"/>
-          <animateMotion dur="16s" begin="-8s" repeatCount="indefinite" rotate="auto" path="M 956 108 L 1144 108 L 1144 560 L 956 560 Z"/></g>
+        <!-- Lastene på banen og robotene i avdelingene settes inn her av koden, slik at
+             de kan deles med listen nederst på siden og aldri komme i utakt med den. -->
+        <g id="laster"></g>
+        <g id="roboter"></g>
       </g>
     </svg>
   </div>
@@ -475,10 +454,17 @@
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
       </ul>
 
-      <h3>Det som beveger seg</h3>
-      <ul class="forklaring to-spalter">
-        <li><span class="rute" style="background: var(--vei)"></span><div><b>Veien og kassene</b><span class="tekst">Pynt. Den viser at det er drift i fabrikken, men den er ikke koblet til ekte trafikk - les ingenting ut av hvor kassene står.</span></div></li>
-        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Robotene</b><span class="tekst">Også pynt. Én per arbeidsområde, så hallen ser bemannet ut. Hvor de står betyr ingenting - det er lysene du skal se etter.</span></div></li>
+      <h3>Robotene - hvem gjør hva</h3>
+      <p class="hint">Hver robot har en nummerskilt på gulvet. Uten oppgave går den i halv fart. Får avdelingen dens trafikk, trapper den opp til full fart og nummerskiltet fylles - da ser du med én gang hvem som faktisk jobber.</p>
+      <ul class="forklaring to-spalter" id="robotListe"></ul>
+
+      <h3>Lastene på banen</h3>
+      <p class="hint">De tre kassene er ikke pynt. Hver av dem er én navngitt datastrøm som faktisk går mellom kildene og tavlen, og den setter opp farten når nettopp den strømmen har trafikk.</p>
+      <ul class="forklaring to-spalter" id="lastListe"></ul>
+
+      <h3>Selve banen</h3>
+      <ul class="forklaring">
+        <li><span class="rute" style="background: var(--vei)"></span><div><b>Den mørke veien</b><span class="tekst">Ruten lastene går mellom kildene til venstre og tavlen til høyre. Selve veien er tegnet, ikke målt - det er kassene på den som betyr noe.</span></div></li>
       </ul>
 
       <h3>Øverste linje</h3>
@@ -624,6 +610,154 @@
 
   const DEPLOY_FILER = ["/app.js", "/index.html", "/style.css"];
 
+  // ---------- robotene og lastene ----------
+  // Hver robot svarer til en faktisk jobb i systemet, og "utloser" sier hvilke felt på
+  // gulvet som betyr at nettopp den har noe å gjøre. Uten oppgave går den i halv fart.
+  const BANE_TRACK = "M 135 258 L 1052 258 L 1052 392 L 135 392 Z";
+
+  const ROBOTER = [
+    { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--staal)", varighet: 11,
+      bane: "M 78 246 L 194 246 L 194 426 L 78 426 Z", utloser: ["sone-recman"],
+      jobb: "Henter oppdrag og kandidater fra Recman. Dataen mellomlagres i 20 minutter, så den går ikke tur-retur oftere enn det." },
+    { nr: 2, navn: "Budbringeren", sone: "Eksterne kilder", farge: "var(--staal)", varighet: 10,
+      bane: "M 66 504 L 210 504 L 210 592 L 66 592 Z", utloser: ["sone-eksterne"],
+      jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra. Faller én av dem, lyser boksen hans rødt." },
+    { nr: 3, navn: "Oppslagsvakten", sone: "Functions", farge: "var(--teal)", varighet: 9,
+      bane: "M 300 110 L 508 110 L 508 162 L 300 162 Z", utloser: ["benk-notat", "benk-bilde"],
+      jobb: "Passer post-it-lappen og bilde-oppslaget. Går for full maskin når noen legger ut eller fjerner noe fra admin." },
+    { nr: 4, navn: "Listeføreren", sone: "Functions", farge: "var(--teal)", varighet: 10.5,
+      bane: "M 300 166 L 508 166 L 508 218 L 300 218 Z", utloser: ["benk-bursdager", "benk-skjulte"],
+      jobb: "Holder styr på bursdagslisten og hvilke oppdrag som er parkert bort fra tavlen." },
+    { nr: 5, navn: "Bryterbetjenten", sone: "Functions", farge: "var(--teal)", varighet: 12,
+      bane: "M 300 222 L 508 222 L 508 274 L 300 274 Z", utloser: ["benk-innstillinger", "benk-skjermer"],
+      jobb: "Tar imot bryterendringer fra admin og holder skjermregisteret oppdatert." },
+    { nr: 6, navn: "Lagerarbeideren", sone: "Functions", farge: "var(--teal)", varighet: 13,
+      bane: "M 300 300 L 508 300 L 508 370 L 300 370 Z", utloser: ["sone-functions"],
+      jobb: "Selve lagerarbeidet i KV. Han rører på seg ved enhver lagring, uansett hvilken benk den kom fra." },
+    { nr: 7, navn: "Vakten", sone: "Slusen", farge: "var(--staal-mork)", varighet: 7,
+      bane: "M 600 262 L 654 262 L 654 344 L 600 344 Z", utloser: ["sone-sluse"],
+      jobb: "Sjekker adminnøkkelen på hver eneste skriving. Setter opp farten når noen blir avvist." },
+    { nr: 8, navn: "Operatøren", sone: "/admin", farge: "var(--aktiv)", varighet: 8.5,
+      bane: "M 730 190 L 890 190 L 890 212 L 730 212 Z", utloser: ["sone-admin"],
+      jobb: "Står ved kontrollpulten. Rører på seg hver gang noen endrer noe fra admin-siden." },
+    { nr: 9, navn: "Postbudet", sone: "Teamskanal", farge: "var(--staal)", varighet: 9.5,
+      bane: "M 730 458 L 890 458 L 890 496 L 730 496 Z", utloser: ["sone-teamskanal"],
+      jobb: "Henter meldinger fra Teams hvert 15. minutt på hverdager. Blir han gående i halv fart i arbeidstiden, har jobben stoppet." },
+    { nr: 10, navn: "Skjermpasseren", sone: "Tavla", farge: "var(--aktiv)", varighet: 13,
+      bane: "M 962 268 L 1138 268 L 1138 452 L 962 452 Z", utloser: ["sone-tavle"],
+      jobb: "Holder storskjermen på veggen oppdatert og følger med på at skjermene svarer." },
+    { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--text)", varighet: 10,
+      bane: "M 956 462 L 1144 462 L 1144 558 L 956 558 Z", utloser: ["sone-tavle"],
+      jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." }
+  ];
+
+  // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
+  // faktisk går mellom kildene og tavlen. De setter opp farten når nettopp deres
+  // strøm har hatt trafikk.
+  const LASTER = [
+    { navn: "oppdrag", farge: "var(--aktiv)", varighet: 14, start: 0, utloser: ["sone-recman"],
+      hva: "Oppdragene fra Recman på vei til tavlen. Friskes opp hvert 20. minutt." },
+    { navn: "livstegn", farge: "var(--teal)", varighet: 14, start: 0.34, utloser: ["sone-tavle", "benk-skjermer"],
+      hva: "Skjermene på veggen melder seg levende hvert 15. sekund, så admin vet hvilke som er på nett." },
+    { navn: "meldinger", farge: "var(--staal)", varighet: 14, start: 0.67, utloser: ["sone-teamskanal"],
+      hva: "Teams-meldingene på vei til panelet på tavlen." }
+  ];
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const aktorer = [];
+
+  function lagBane(d) {
+    const p = document.createElementNS(SVG_NS, "path");
+    p.setAttribute("d", d);
+    el("baner").append(p);
+    return p;
+  }
+
+  function byggAktorer() {
+    const robotLag = el("roboter");
+    for (const r of ROBOTER) {
+      const g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute("class", "robot");
+      g.setAttribute("id", "robot-" + r.nr);
+      g.style.color = r.farge;
+      g.innerHTML =
+        '<circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>' +
+        '<g class="kropp"><use href="#robot"/></g>' +
+        '<circle class="nr-bg" cx="0" cy="-20" r="8"/>' +
+        '<text class="nr" x="0" y="-17" text-anchor="middle" font-size="9" font-weight="700">' + r.nr + "</text>";
+      robotLag.append(g);
+      const bane = lagBane(r.bane);
+      const lengde = bane.getTotalLength();
+      aktorer.push({
+        el: g, kropp: g.querySelector(".kropp"), bane, lengde,
+        varighet: r.varighet, pos: Math.random() * lengde, fart: 0.5, aktivTil: 0, utloser: r.utloser
+      });
+    }
+
+    const lastLag = el("laster");
+    const bane = lagBane(BANE_TRACK);
+    const lengde = bane.getTotalLength();
+    for (const l of LASTER) {
+      const g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute("class", "last");
+      g.innerHTML =
+        '<rect x="-10" y="-10" width="20" height="20" rx="2" fill="' + l.farge + '"/>' +
+        '<rect x="-10" y="-3" width="20" height="4" fill="#fff" opacity=".45"/>' +
+        '<text class="merkelapp" x="0" y="26" text-anchor="middle" font-size="8" font-weight="600">' + l.navn + "</text>";
+      lastLag.append(g);
+      aktorer.push({
+        el: g, kropp: null, bane, lengde,
+        varighet: l.varighet, pos: l.start * lengde, fart: 0.5, aktivTil: 0, utloser: l.utloser
+      });
+    }
+  }
+
+  // Full fart mens feltet de hører til er i trafikk, ellers halv. Farten glir mykt
+  // mellom de to - et brått hopp ville sett ut som en feil i tegningen.
+  const FART_HVILE = 0.5;
+  const FART_JOBB = 1;
+  let sisteBilde = 0;
+
+  function aktiverAktorer(velger) {
+    const til = Date.now() + ALARM_MS;
+    for (const a of aktorer) if (a.utloser.includes(velger)) a.aktivTil = til;
+  }
+
+  // Bilde-løkken står stille mens fanen er skjult (nettleseren kjører ikke
+  // requestAnimationFrame da). Uten denne førstegangsplasseringen ville alle robotene
+  // ligget oppå hverandre i hjørnet til noen faktisk så på siden.
+  function plasserAlle() {
+    for (const a of aktorer) {
+      const p = a.bane.getPointAtLength(a.pos);
+      a.el.setAttribute("transform", "translate(" + p.x.toFixed(1) + " " + p.y.toFixed(1) + ")");
+      if (a.kropp) {
+        const p2 = a.bane.getPointAtLength((a.pos + 2) % a.lengde);
+        const v = (Math.atan2(p2.y - p.y, p2.x - p.x) * 180) / Math.PI;
+        a.kropp.setAttribute("transform", "rotate(" + v.toFixed(1) + ")");
+      }
+    }
+  }
+
+  function steg(naa) {
+    const dt = Math.min(0.05, (naa - sisteBilde) / 1000);
+    sisteBilde = naa;
+    const tid = Date.now();
+    for (const a of aktorer) {
+      const mal = tid < a.aktivTil ? FART_JOBB : FART_HVILE;
+      a.fart += (mal - a.fart) * Math.min(1, dt * 2.2);
+      a.pos = (a.pos + (a.lengde / a.varighet) * a.fart * dt) % a.lengde;
+      const p = a.bane.getPointAtLength(a.pos);
+      a.el.setAttribute("transform", "translate(" + p.x.toFixed(1) + " " + p.y.toFixed(1) + ")");
+      if (a.kropp) {
+        const p2 = a.bane.getPointAtLength((a.pos + 2) % a.lengde);
+        const v = (Math.atan2(p2.y - p.y, p2.x - p.x) * 180) / Math.PI;
+        a.kropp.setAttribute("transform", "rotate(" + v.toFixed(1) + ")");
+      }
+      a.el.classList.toggle("jobber", a.fart > 0.78);
+    }
+    requestAnimationFrame(steg);
+  }
+
   const forrigeNokkel = new Map();
   const forrigeData = new Map();
   const alarmTimere = new Map();
@@ -721,6 +855,7 @@
 
   // ---------- tilstander på gulvet ----------
   function slaAlarm(velger) {
+    aktiverAktorer(velger);
     const node = document.getElementById(velger);
     if (!node) return;
     node.classList.add("alarm");
@@ -778,20 +913,87 @@
     }
   }
 
+  // Listene under kartet bygges av de SAMME definisjonene som robotene på gulvet, slik
+  // at et nummerskilt ute på gulvet og raden i listen aldri kan komme i utakt.
+  function tegnRobotliste() {
+    const liste = el("robotListe");
+    liste.innerHTML = "";
+    for (const r of ROBOTER) {
+      const li = document.createElement("li");
+      const prikk = document.createElement("span");
+      prikk.className = "prikk";
+      prikk.style.background = r.farge;
+      const innhold = document.createElement("div");
+      const navn = document.createElement("b");
+      navn.textContent = r.nr + ". " + r.navn + " - " + r.sone;
+      const tekst = document.createElement("span");
+      tekst.className = "tekst";
+      tekst.textContent = r.jobb;
+      innhold.append(navn, tekst);
+      li.append(prikk, innhold);
+      liste.append(li);
+    }
+
+    const lastListe = el("lastListe");
+    lastListe.innerHTML = "";
+    for (const l of LASTER) {
+      const li = document.createElement("li");
+      const rute = document.createElement("span");
+      rute.className = "rute";
+      rute.style.background = l.farge;
+      const innhold = document.createElement("div");
+      const navn = document.createElement("b");
+      navn.textContent = l.navn;
+      const tekst = document.createElement("span");
+      tekst.className = "tekst";
+      tekst.textContent = l.hva;
+      innhold.append(navn, tekst);
+      li.append(rute, innhold);
+      lastListe.append(li);
+    }
+  }
+
   // ---------- skrivekvote ----------
   // Cloudflare KV har ingen måte å lese av faktisk forbruk fra nettleseren, så dette er
   // et anslag regnet ut fra kjente skrivemønstre i koden. Det er godt nok til å se at
   // man nærmer seg taket - som med to skjermer i drift faktisk er innenfor rekkevidde.
   const KVOTE_TAK = 1000;
   function tegnKvote() {
-    const skjermer = (forrigeData.get("skjermer")?.skjermer ?? []).filter((s) => s.aktiv).length;
-    const skjermSkriv = skjermer * Math.round((24 * 60) / 5);        // heartbeat maks hvert 5. min
-    const teamsSkriv = erHverdag() ? 4 * 12 : 0;                     // 4 kjøringer i timen, 07-19
-    const oppdragSkriv = Math.round((24 * 60) / 20);                 // endringsloggen ved hvert cache-bom
-    const adminSkriv = loggRader.filter((r) => Date.now() - r.tid < 24 * 60 * 60 * 1000).length;
-    const sum = skjermSkriv + teamsSkriv + oppdragSkriv + adminSkriv;
+    const maalt = forrigeData.get("kvforbruk");
+    const harMaalt = maalt?.tilgjengelig === true;
 
-    el("kvoteSum").innerHTML = "~" + sum + ' <small>av ' + KVOTE_TAK + "</small>";
+    let sum, rader, merknad;
+    if (harMaalt) {
+      // Målt tall fra Cloudflares egen analyse. Døgnet følger UTC, fordi det er slik
+      // kvoten faktisk nullstilles - ikke etter norsk midnatt.
+      sum = maalt.skriv;
+      rader = [
+        ["Skrivinger og slettinger i dag", maalt.skriv],
+        ["Lesinger i dag (egen, romsligere kvote)", maalt.les],
+        ["Døgnet gjelder fra", maalt.dato + " 00:00 UTC"]
+      ];
+      merknad = "Målt hos Cloudflare";
+    } else {
+      // Reserve når analyse-tokenet ikke er satt. Anslaget er bevisst grovt og kan
+      // bomme flere ganger på fasiten - derfor er det tydelig merket som anslag.
+      const skjermer = (forrigeData.get("skjermer")?.skjermer ?? []).filter((s) => s.aktiv).length;
+      const skjermSkriv = skjermer * Math.round((24 * 60) / 5);
+      const teamsSkriv = erHverdag() ? 4 * 12 : 0;
+      const oppdragSkriv = Math.round((24 * 60) / 20);
+      const adminSkriv = loggRader.filter((r) => Date.now() - r.tid < 24 * 60 * 60 * 1000).length;
+      sum = skjermSkriv + teamsSkriv + oppdragSkriv + adminSkriv;
+      rader = [
+        ["Skjermer (" + skjermer + " aktive, hvert 5. min)", "~" + skjermSkriv],
+        ["Teamskanal-jobben", "~" + teamsSkriv],
+        ["Oppdragsloggen (hvert 20. min)", "~" + oppdragSkriv],
+        ["Observerte endringer siste døgn", "~" + adminSkriv]
+      ];
+      merknad = maalt?.grunn ? "Anslag - " + maalt.grunn : "Anslag";
+    }
+
+    const prefiks = harMaalt ? "" : "~";
+    el("kvoteSum").innerHTML = prefiks + sum + ' <small>av ' + KVOTE_TAK + " · " + merknad + "</small>";
+
     const andel = Math.min(100, Math.round((sum / KVOTE_TAK) * 100));
     const maaler = el("kvoteMaaler");
     maaler.querySelector("span").style.width = andel + "%";
@@ -800,20 +1002,14 @@
 
     el("kvoteBar").setAttribute("width", Math.round((andel / 100) * 228));
     el("kvoteBar").setAttribute("fill", andel >= 90 ? "var(--feil)" : andel >= 70 ? "var(--advarsel)" : "var(--ok)");
-    el("kvoteTekst").textContent = "~" + sum + " av " + KVOTE_TAK;
+    el("kvoteTekst").textContent = prefiks + sum + " av " + KVOTE_TAK;
 
-    const rader = [
-      ["Skjermer (" + skjermer + " aktive, hvert 5. min)", skjermSkriv],
-      ["Teamskanal-jobben", teamsSkriv],
-      ["Oppdragsloggen (hvert 20. min)", oppdragSkriv],
-      ["Observerte endringer siste døgn", adminSkriv]
-    ];
     el("kvoteRader").innerHTML = "";
     for (const [navn, tall] of rader) {
       const rad = document.createElement("div");
       rad.className = "kvote-rad";
       const a = document.createElement("span"); a.textContent = navn;
-      const b = document.createElement("span"); b.textContent = "~" + tall;
+      const b = document.createElement("span"); b.textContent = String(tall);
       rad.append(a, b);
       el("kvoteRader").append(rad);
     }
@@ -922,7 +1118,20 @@
     }));
     tegnVedvarende();
     tegnHelse();
+    await sjekkKvforbruk();
     await sjekkDeploy();
+  }
+
+  // Selve endepunktet mellomlagrer i 5 minutter, så det er ingen grunn til å hente
+  // dette oftere enn helserunden - og ingen grunn til å la det velte noe om det feiler.
+  async function sjekkKvforbruk() {
+    try {
+      const r = await fetch("/api/kvforbruk", { cache: "no-store" });
+      forrigeData.set("kvforbruk", await r.json());
+    } catch {
+      forrigeData.set("kvforbruk", { tilgjengelig: false, grunn: "ikke tilgjengelig" });
+    }
+    tegnKvote();
   }
 
   // ---------- deploy ----------
@@ -979,6 +1188,11 @@
     timere = [];
   }
   document.addEventListener("visibilitychange", () => (document.hidden ? stopp() : start()));
+
+  byggAktorer();
+  plasserAlle();
+  tegnRobotliste();
+  requestAnimationFrame(steg);
   start();
 </script>
 </body>
