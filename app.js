@@ -149,8 +149,6 @@ async function init() {
   lastVaer();
   setInterval(tikkKlokke, 1000);
   setInterval(sjekkTema, TEMA_SJEKK_MS); // slår nattmodus av/på når klokka passerer grensene
-  sjekkGjestevindu();
-  setInterval(sjekkGjestevindu, GJESTE_SJEKK_MS); // gjestesiden 11:00-11:30
   setInterval(lastOppdrag, AUTO_REFRESH_MS);
   setInterval(rullSider, SIDE_BYTT_MS);
   setInterval(lastNotat, AUTO_REFRESH_MS);
@@ -225,36 +223,6 @@ function settGjestevisning(skalVises) {
   gjestevisningEl.classList.toggle("vis", skalVises);
   if (skalVises) renderGjestevisning();
   meldSkjermStatus({ gjestevisning: skalVises, heartbeat: true });
-}
-
-// Gjestesiden slår seg på av seg selv i lunsjvinduet, når det er mest besøk i huset.
-// Reagerer KUN på selve overgangene (11:00 på, 11:30 av) - ikke kontinuerlig - slik at
-// den fortsatt kan skrus av eller på manuelt underveis (hurtigtast, knappen nede til
-// venstre, eller fjernstyring fra /admin) uten å bli overstyrt sekundet etter.
-const GJESTE_AUTO_FRA_TIME = 11; // 11:00
-const GJESTE_AUTO_TIL_TIME = 11.5; // 11:30
-const GJESTE_SJEKK_MS = 20 * 1000;
-let sisteGjesteVindu = null;
-
-function erIGjestevinduet(naa = new Date()) {
-  const time = naa.getHours() + naa.getMinutes() / 60;
-  return time >= GJESTE_AUTO_FRA_TIME && time < GJESTE_AUTO_TIL_TIME;
-}
-
-function sjekkGjestevindu() {
-  const iVinduet = erIGjestevinduet();
-
-  // Første kjøring: starter skjermen midt i vinduet, skal gjestesiden opp med en gang -
-  // ellers gjør vi ingenting før neste overgang.
-  if (sisteGjesteVindu === null) {
-    sisteGjesteVindu = iVinduet;
-    if (iVinduet) settGjestevisning(true);
-    return;
-  }
-
-  if (iVinduet === sisteGjesteVindu) return;
-  sisteGjesteVindu = iVinduet;
-  settGjestevisning(iVinduet);
 }
 
 // Fjernstyring fra admin-siden (functions/api/skjermer.js) - Cloudflare Access forteller

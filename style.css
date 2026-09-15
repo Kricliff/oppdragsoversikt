@@ -1017,8 +1017,9 @@ body {
 
 /* ---------- Gjestevisning (Ctrl+Shift+G) ---------- */
 
-/* Gjestesiden er det besøkende og kunder ser (aktiveres automatisk 11:00-11:30, se
-   sjekkGjestevindu i app.js). Formspråket er hentet fra greatpeople.no: Poppins i vekt
+/* Gjestesiden er det besøkende og kunder ser (skrus på manuelt - hurtigtast, knapp,
+   eller fjernstyring fra /admin, se settGjestevisning i app.js). Formspråket er hentet
+   fra greatpeople.no: Poppins i vekt
    500 på store overskrifter, skarpe kanter, hvit flate med sort tekst og oransje aksent,
    og et venstrestilt hero-utsagn i stedet for en midtstilt tallvegg. Ingen kandidat-
    eller kundenavn skal forekomme her - kun aggregerte tall. */
