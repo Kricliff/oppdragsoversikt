@@ -339,6 +339,12 @@
     </div>
 
     <div class="kort">
+      <h2>Toppseksjon</h2>
+      <p class="storrelse-hint">Velg hvilke av de fem tallene som skal vises øverst på tavlen.</p>
+      <div id="statlinjeListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
       <h2>Bilde-oppslag</h2>
       <p class="storrelse-hint">Vises stort over det meste av tavlen - f.eks. en plakat eller noe å feire. Fjernes automatisk etter 2 timer hvis du ikke fjerner det selv under.</p>
       <div id="bildeStatus"><p class="endring-tom">Laster…</p></div>
@@ -918,17 +924,27 @@
   setInterval(lastSkjermer, 15 * 1000);
 
   const innstillingerListeEl = document.getElementById("innstillingerListe");
+  const statlinjeListeEl = document.getElementById("statlinjeListe");
   const BRYTER_NAVN = { kundenytt: "Kundenytt", feiring: "Feiring", bursdager: "Bursdager", teamskanal: "Teamskanal" };
+  const STAT_NAVN = {
+    statAktive: "Aktive Prosjekter",
+    statUtfort: "Utført i år",
+    statSignerte: "Signerte tilbud denne mnd",
+    statAvsluttet: "Avsluttet denne mnd",
+    statSalgsmoter: "Salgsmøter"
+  };
 
-  function renderInnstillinger(innstillinger) {
-    innstillingerListeEl.replaceChildren(
-      ...Object.keys(BRYTER_NAVN).map((felt) => {
+  // Begge kortene (Innstillinger og Toppseksjon) leser/skriver samme innstillinger-objekt
+  // i functions/api/innstillinger.js - bare med hver sin liste over hvilke felt som vises.
+  function tegnBrytere(container, felterOgNavn, innstillinger) {
+    container.replaceChildren(
+      ...Object.keys(felterOgNavn).map((felt) => {
         const rad = document.createElement("div");
         rad.className = "bryter-rad";
 
         const navn = document.createElement("span");
         navn.className = "bryter-navn";
-        navn.textContent = BRYTER_NAVN[felt];
+        navn.textContent = felterOgNavn[felt];
         rad.appendChild(navn);
 
         const pa = !!innstillinger[felt];
@@ -937,13 +953,18 @@
         bryter.className = "bryter" + (pa ? " pa" : "");
         bryter.setAttribute("role", "switch");
         bryter.setAttribute("aria-checked", String(pa));
-        bryter.setAttribute("aria-label", BRYTER_NAVN[felt]);
+        bryter.setAttribute("aria-label", felterOgNavn[felt]);
         bryter.addEventListener("click", () => settInnstilling(felt, !pa));
         rad.appendChild(bryter);
 
         return rad;
       })
     );
+  }
+
+  function renderInnstillinger(innstillinger) {
+    tegnBrytere(innstillingerListeEl, BRYTER_NAVN, innstillinger);
+    tegnBrytere(statlinjeListeEl, STAT_NAVN, innstillinger);
   }
 
   async function lastInnstillinger() {
@@ -953,6 +974,7 @@
       renderInnstillinger(data);
     } catch (err) {
       innstillingerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
+      statlinjeListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
       console.warn(err);
     }
   }

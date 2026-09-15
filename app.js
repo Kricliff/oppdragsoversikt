@@ -42,7 +42,17 @@ const INNSTILLINGER_SJEKK_MS = 5 * 60 * 1000; // hvor ofte skjermen sjekker om e
 const BILDE_SJEKK_MS = 20 * 1000; // hvor ofte skjermen sjekker om admin har lagt ut/fjernet et bilde-oppslag
 
 let alleOppdrag = [];
-let innstillinger = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
+let innstillinger = {
+  kundenytt: true,
+  feiring: true,
+  bursdager: true,
+  teamskanal: true,
+  statAktive: true,
+  statUtfort: true,
+  statSignerte: true,
+  statAvsluttet: true,
+  statSalgsmoter: true
+};
 let sisteInnstillingerInnhold = null; // for å vite når en bryter faktisk har endret seg, se sjekkInnstillinger
 let sisteAvganger = [];
 let sisteTog = { motDrammen: [], motOslo: [] };
@@ -1026,12 +1036,12 @@ function renderStats(liste) {
 
   statsRow.innerHTML = "";
   [
-    { label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
-    { label: "Utført i år", value: utfortIAr, accent: "utfort" },
-    { label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
-    { label: "Avsluttet denne mnd", value: sisteAvsluttet },
-    { label: "Salgsmøter", value: sisteTelling.moter }
-  ].forEach(({ label, value, accent }) => {
+    { felt: "statAktive", label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
+    { felt: "statUtfort", label: "Utført i år", value: utfortIAr, accent: "utfort" },
+    { felt: "statSignerte", label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
+    { felt: "statAvsluttet", label: "Avsluttet denne mnd", value: sisteAvsluttet },
+    { felt: "statSalgsmoter", label: "Salgsmøter", value: sisteTelling.moter }
+  ].filter(({ felt }) => innstillinger[felt] !== false).forEach(({ label, value, accent }) => {
     const el = document.createElement("div");
     el.className = accent ? `stat-card accent-${accent}` : "stat-card";
     el.innerHTML = `<span class="value">${value}</span><span class="label">${label}</span>`;

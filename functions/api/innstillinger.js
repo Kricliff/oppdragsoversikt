@@ -6,7 +6,20 @@
 import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
 
 const KV_KEY = "innstillinger";
-const STANDARD = { kundenytt: true, feiring: true, bursdager: true, teamskanal: true };
+// Alle felt er rene av/på-brytere (boolean), standard PÅ. Statlinje-feltene styrer
+// hvilke av de fem tallene øverst på tavlen som vises - se STAT_FELT i app.js sin
+// renderStats(), som må ha nøyaktig samme feltnavn.
+const STANDARD = {
+  kundenytt: true,
+  feiring: true,
+  bursdager: true,
+  teamskanal: true,
+  statAktive: true,
+  statUtfort: true,
+  statSignerte: true,
+  statAvsluttet: true,
+  statSalgsmoter: true
+};
 
 export async function onRequestGet(context) {
   const lagret = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {};
@@ -24,12 +37,10 @@ export async function onRequestPost(context) {
   }
 
   const forrige = { ...STANDARD, ...((await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? {}) };
-  const nye = {
-    kundenytt: typeof body?.kundenytt === "boolean" ? body.kundenytt : forrige.kundenytt,
-    feiring: typeof body?.feiring === "boolean" ? body.feiring : forrige.feiring,
-    bursdager: typeof body?.bursdager === "boolean" ? body.bursdager : forrige.bursdager,
-    teamskanal: typeof body?.teamskanal === "boolean" ? body.teamskanal : forrige.teamskanal
-  };
+  const nye = { ...forrige };
+  for (const felt of Object.keys(STANDARD)) {
+    if (typeof body?.[felt] === "boolean") nye[felt] = body[felt];
+  }
 
   try {
     await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(nye));
