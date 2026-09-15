@@ -12,6 +12,11 @@ const MAKS_BYTES = 6_000_000; // grovt vern - KV tåler mye mer, men en veggskje
 
 export async function onRequestGet(context) {
   const data = (await context.env.NOTAT_KV.get(KV_KEY, "json")) ?? null;
+  // ?status brukes av fabrikkvisningen (/fabrikk), som sjekker ofte og kun trenger å
+  // vite OM det ligger et oppslag der - ikke selve bildet, som kan være flere megabyte.
+  if (new URL(context.request.url).searchParams.has("status")) {
+    return json({ harBilde: !!data?.bilde, lagtUt: data?.lagtUt ?? null });
+  }
   return json(data ?? { bilde: null, lagtUt: null });
 }
 
