@@ -13,6 +13,7 @@ import { bestemStatus } from "../_lib/oppdragStatus.js";
 // Cache-nøkkelen (og versjonen) ligger i _lib fordi skjulte.js må kunne blanke den når
 // skjulelista endres - bump OPPDRAG_CACHE_VERSION der ved endringer i logikken under.
 import { oppdragCacheKey } from "../_lib/oppdragCache.js";
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
 
 const CACHE_SECONDS = 20 * 60;
 
@@ -57,6 +58,29 @@ async function hentSkjulteIder(kv) {
 }
 
 export async function onRequestGet(context) {
+  // ?diagnose=<del av tittel> svarer med HVILKET filter som tok et oppdrag, i stedet for
+  // at man må gjette. Krever adminnøkkel og går bevisst utenom cachen, siden poenget er
+  // å se tilstanden akkurat nå. Returnerer aldri hele porteføljen - kun treff på søket.
+  const diagnoseSok = new URL(context.request.url).searchParams.get("diagnose");
+  if (diagnoseSok) {
+    if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "oppdrag-diagnose");
+    try {
+      const svar = await hentOgNormaliser(
+        context.env.RECMAN_API_KEY,
+        await hentSkjulteIder(context.env.NOTAT_KV),
+        diagnoseSok
+      );
+      return new Response(JSON.stringify({ kilde: svar.kilde, diagnose: svar.diagnose }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: String(err) }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }
+
   const cache = caches.default;
   const cacheKey = oppdragCacheKey();
   const cached = await cache.match(cacheKey);
@@ -182,21 +206,57 @@ async function merkNyeOppdrag(oppdrag, kv) {
   });
 }
 
-async function hentOgNormaliser(apiKey, skjulteIder = new Set()) {
+// Recman leverer prosjekter sidevis. Vi hentet tidligere KUN side 1, og alt som lå
+// utenfor den siden fantes rett og slett ikke for tavlen. Fordi Recman sorterer listen
+// selv, flyttet prosjekter seg inn og ut av side 1 hver gang noe ble redigert - da
+// forsvant oppdrag fra tavlen og dukket opp igjen av seg selv, uten at noe var endret
+// på selve oppdraget. Bekreftet 2026-09-15: "FLO AS - Kommersiell Leder" og et
+// Cegal-oppdrag forsvant i nøyaktig samme sekund, og Cegal hadde vært innom samme
+// forsvinning og gjenkomst dagen før.
+const MAKS_SIDER = 20;
+
+async function hentAlleProsjekter(apiKey, projectFields) {
+  const alle = {};
+  let sider = 0;
+
+  for (let side = 1; side <= MAKS_SIDER; side++) {
+    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=${side}`;
+    const json = await fetch(url).then((r) => r.json());
+
+    if (!json.success) {
+      // Feiler den aller første siden har vi ingenting å vise, og da skal det smelle.
+      // Feiler en senere side er et delvis resultat bedre enn å miste hele tavlen.
+      if (side === 1) throw new Error("Recman project-feil: " + JSON.stringify(json.error));
+      break;
+    }
+
+    const rader = Object.values(json.data ?? {});
+    if (!rader.length) break;
+
+    const forAntall = Object.keys(alle).length;
+    for (const p of rader) alle[p.projectId] = p;
+    sider = side;
+
+    // Skulle Recman ignorere page-parameteren og gi samme side om igjen, stopper vi her
+    // i stedet for å hente det samme 20 ganger. Nøkling på projectId gjør at et slikt
+    // svar uansett ikke kan gi duplikater.
+    if (Object.keys(alle).length === forAntall) break;
+  }
+
+  return { prosjekter: Object.values(alle), sider };
+}
+
+async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = null) {
   if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
 
   const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members,startDate,endDate";
-  const projectUrl = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=1`;
   const userUrl = `https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`;
 
-  const [projectJson, userJson] = await Promise.all([
-    fetch(projectUrl).then((r) => r.json()),
+  const [prosjektKilde, userJson] = await Promise.all([
+    hentAlleProsjekter(apiKey, projectFields),
     fetch(userUrl).then((r) => r.json()).catch(() => null)
   ]);
-
-  if (!projectJson.success) {
-    throw new Error("Recman project-feil: " + JSON.stringify(projectJson.error));
-  }
+  const projectJson = { data: prosjektKilde.prosjekter };
 
   // Rådgivernavn - "user"-scope. Slår aldri hele svaret i stykker om dette skulle feile.
   const radgiverNavn = {};
@@ -232,25 +292,51 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set()) {
     }
   }
 
+  // Når et oppdrag mangler fra tavlen er det nesten alltid fordi ETT av filtrene under
+  // slo til - men utenfra er alle utfallene like usynlige. diagnose samler derfor opp
+  // hvilket filter som faktisk tok et gitt oppdrag, slik at spørsmålet kan besvares med
+  // en måling i stedet for gjetting. Se ?diagnose= i onRequestGet (krever adminnøkkel).
+  const diagnose = [];
+  const sokTekst = (diagnoseSok ?? "").toLowerCase();
+  const merk = (p, grunn) => {
+    if (!sokTekst || !String(p.name ?? "").toLowerCase().includes(sokTekst)) return;
+    diagnose.push({
+      tittel: p.name,
+      grunn,
+      raaStatus: p.status,
+      fremdrift: p.completePercent,
+      oppdatert: p.updated,
+      dagerSidenOppdatert: p.updated
+        ? Math.round((Date.now() - new Date(p.updated.replace(" ", "T") + "Z").getTime()) / 86400000)
+        : null,
+      kundeType: kundeType[p.companyId] ?? null,
+      ansvarligFunnet: !!radgiverNavn[p.responsibleUserId]
+    });
+  };
+
   const oppdrag = Object.values(projectJson.data)
     .map((p) => {
-      if (skjulteIder.has(String(p.projectId))) return null;
+      if (skjulteIder.has(String(p.projectId))) { merk(p, "parkert fra admin"); return null; }
 
       const status = bestemStatus(p);
-      if (!status) return null; // cancelled/lost/solvedOngoing under 100% - skjules
+      if (!status) { merk(p, "statusfilter (avlyst/tapt, eller aktiv uten oppdatering på over 90 dager)"); return null; }
 
       // Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/osv). Prosjekter
       // knyttet til f.eks. et "prospect" er salgsoppfølging, ikke et reelt kundeoppdrag -
       // luk dem bort så tavlen bare viser arbeid for faktiske kunder. Slår aldri filteret på
       // hvis kundedata ikke lot seg hente (kundedataLastetOk === false) - da vises alt,
       // heller enn å risikere å skjule ekte oppdrag pga. en API-feil.
-      if (kundedataLastetOk && kundeType[p.companyId] && kundeType[p.companyId] !== "customer") return null;
+      if (kundedataLastetOk && kundeType[p.companyId] && kundeType[p.companyId] !== "customer") {
+        merk(p, "kunden er ikke av typen customer (" + kundeType[p.companyId] + ")");
+        return null;
+      }
 
       // Kan vi ikke slå opp en faktisk rådgiver, viser vi ikke oppdraget i det hele tatt -
       // et "Ukjent rådgiver"-oppdrag er uverifiserbart (person som har forlatt firmaet,
       // feilregistrering, e.l.) og skal ikke telle med i "Utført i år" eller stå på tavlen.
       const ansvarlig = radgiverNavn[p.responsibleUserId];
-      if (!ansvarlig) return null;
+      if (!ansvarlig) { merk(p, "fant ingen rådgiver for responsibleUserId " + p.responsibleUserId); return null; }
+      merk(p, "VISES på tavlen");
 
       let fremdriftProsent = p.completePercent != null ? Math.round(Number(p.completePercent)) : null;
       if (PERIODE_PROSENT_RADGIVERE.has(ansvarlig) && p.startDate && p.endDate) {
@@ -273,5 +359,15 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set()) {
     })
     .filter(Boolean);
 
-  return { oppdrag };
+  // Tellere som gjør det mulig å se utenfra hvorfor et oppdrag ikke står på tavlen:
+  // ble det aldri hentet fra Recman, eller ble det filtrert bort her?
+  return {
+    oppdrag,
+    kilde: {
+      raaAntall: prosjektKilde.prosjekter.length,
+      sider: prosjektKilde.sider,
+      filtrertBort: prosjektKilde.prosjekter.length - oppdrag.length
+    },
+    diagnose: diagnoseSok ? diagnose : undefined
+  };
 }
