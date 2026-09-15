@@ -474,7 +474,7 @@
       </div>
       <!-- Agentmoduler settes inn av JS (byggAgentmoduler/plasserAgenter) -->
     </div>
-    <svg id="visningRom" viewBox="0 0 1200 740" preserveAspectRatio="xMidYMid meet" hidden>
+    <svg id="visningRom" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet" hidden>
       <!-- Soner, patruljestier og agent-blips bygges av JS (byggRomvisning) -->
     </svg>
   </div>
@@ -760,17 +760,30 @@
   // pulserende punkt midt i rommet sitt i stedet for en bane.
   // ============================================================
   const SVG_NS = "http://www.w3.org/2000/svg";
+  // Samme kart-oppsett (soneplassering/-størrelse) som fabrikk/index.html sine "glo"-
+  // rektangler (se der, rundt linje 495-775) - gjenbrukt tall for tall, kun omstylet til
+  // CRT-cyberpunk i stedet for 80-talls pixel-art. Sonen "OBSERVASJONSDEKKET" er utelatt
+  // her, siden den ikke representerer noen agent. Multi-agent-soner (FUNCTIONS, TAVLA) får
+  // et eksplisitt "rect" per agent, hentet fra de samme sonenes indre "benk"-oppsett i
+  // fabrikk, i stedet for å dele sonen opp likt/mekanisk.
   const ROM_SONER = [
-    { navn: "RECMAN", x: 20, y: 20, w: 340, h: 200, agenter: ["uthenteren"] },
-    { navn: "CLOUDFLARE FUNCTIONS", x: 400, y: 20, w: 360, h: 460,
-      agenter: ["oppslagsvakten", "listeforeren", "bryterbetjenten", "lagerarbeideren"] },
-    { navn: "ADMIN", x: 800, y: 20, w: 360, h: 200, agenter: ["operatoren"] },
-    { navn: "EKSTERNE KILDER", x: 20, y: 260, w: 340, h: 220, agenter: ["budbringeren"] },
-    { navn: "TEAMSKANAL", x: 800, y: 260, w: 360, h: 220, agenter: ["postbudet"] },
-    { navn: "KONTROLLROMMET", x: 20, y: 520, w: 340, h: 200, agenter: ["claude"] },
-    { navn: "TAVLA", x: 400, y: 520, w: 360, h: 200, agenter: ["skjermpasseren", "gjesteverten"] },
-    { navn: "SLUSEN", x: 800, y: 520, w: 170, h: 200, agenter: ["vakten"] },
-    { navn: "OBSIDIAN-HVELVET", x: 990, y: 520, w: 170, h: 200, agenter: ["arkivaren"] }
+    { navn: "RECMAN", x: 34, y: 188, w: 204, h: 266, agenter: [{ id: "uthenteren" }] },
+    { navn: "CLOUDFLARE FUNCTIONS", x: 258, y: 68, w: 292, h: 516, agenter: [
+        { id: "oppslagsvakten", rect: [280, 112, 122, 52] },
+        { id: "listeforeren", rect: [280, 168, 122, 52] },
+        { id: "bryterbetjenten", rect: [280, 224, 122, 52] },
+        { id: "lagerarbeideren", rect: [280, 300, 244, 110] }
+      ] },
+    { navn: "ADMIN", x: 698, y: 68, w: 224, h: 166, agenter: [{ id: "operatoren" }] },
+    { navn: "EKSTERNE KILDER", x: 34, y: 462, w: 204, h: 156, agenter: [{ id: "budbringeren" }] },
+    { navn: "TEAMSKANAL", x: 698, y: 416, w: 224, h: 168, agenter: [{ id: "postbudet" }] },
+    { navn: "TAVLA", x: 932, y: 68, w: 236, h: 516, agenter: [
+        { id: "skjermpasseren", rect: [962, 116, 176, 104] },
+        { id: "gjesteverten", rect: [962, 470, 176, 80] }
+      ] },
+    { navn: "SLUSEN", x: 566, y: 218, w: 122, h: 214, agenter: [{ id: "vakten" }] },
+    { navn: "KONTROLLROMMET", x: 566, y: 424, w: 122, h: 156, agenter: [{ id: "claude", stasjonaer: true }] },
+    { navn: "OBSIDIAN-HVELVET", x: 566, y: 588, w: 122, h: 112, agenter: [{ id: "arkivaren", stasjonaer: true }] }
   ];
   const romAktorer = []; // {id, path, lengde, pos, stasjonaer}
 
@@ -793,7 +806,11 @@
 
     ROM_SONER.forEach((sone) => {
       const g = svgEl("g", { class: "sone" });
-      g.appendChild(svgEl("rect", { class: "sone-panel", x: sone.x, y: sone.y, width: sone.w, height: sone.h, rx: 3 }));
+      // Selve panelfyllet legges 8px innenfor sonens yttergrense (samme innrykk som
+      // fabrikkens "glo"→indre-panel-forhold) - to naboer sin yttergrense kan i fabrikk
+      // ligge inntil/overlappe litt (kun en usynlig glødekant der), men et FYLT panel her
+      // ville da synlig overlappet naboen (bekreftet: SLUSEN/KONTROLLROMMET-grensen).
+      g.appendChild(svgEl("rect", { class: "sone-panel", x: sone.x + 8, y: sone.y + 8, width: sone.w - 16, height: sone.h - 16, rx: 3 }));
       // HUD-hjørnemarkører, avledet direkte fra sonens egne mål - samme idé som
       // .scope sine hjørner i telemetri-panelene, bare tegnet som SVG-linjer her.
       const arm = Math.min(16, sone.w / 6, sone.h / 6);
@@ -807,37 +824,33 @@
       g.lastChild.textContent = sone.navn;
       svg.appendChild(g);
 
-      const n = sone.agenter.length;
-      sone.agenter.forEach((agentId, i) => {
+      sone.agenter.forEach((agentSpec) => {
+        const agentId = agentSpec.id;
         const a = agentMap.get(agentId);
         if (!a) return;
-        // Flere agenter i samme sone deler den opp i like brede/høye underceller
-        // (bredest retning delt) - hver får sin egen lille patruljerute inni.
-        const delerVannrett = sone.w >= sone.h;
-        const cellW = delerVannrett ? sone.w / n : sone.w;
-        const cellH = delerVannrett ? sone.h : sone.h / n;
-        const cellX = sone.x + (delerVannrett ? i * cellW : 0);
-        const cellY = sone.y + (delerVannrett ? 0 : i * cellH);
+        // Enkelt-agent-soner bruker sonens eget indre areal (innenfor sonebar-headeren);
+        // multi-agent-soner (Functions/Tavla) bruker et eksplisitt rect satt over.
+        const [cellX, cellY, cellW, cellH] = agentSpec.rect || [sone.x + 10, sone.y + 34, sone.w - 20, sone.h - 44];
 
-        if (a.stasjonaer) {
+        if (agentSpec.stasjonaer) {
           const cx = cellX + cellW / 2, cy = cellY + cellH / 2;
           const bg = svgEl("g", { class: "blip", id: "blip-" + agentId, "data-status": state.agentStatus.get(agentId).status, transform: "translate(" + cx + "," + cy + ")" });
           bg.appendChild(svgEl("circle", { class: "glo" }));
           bg.appendChild(svgEl("circle", { class: "kropp" }));
           svg.appendChild(bg);
-          const navnEl = svgEl("text", { class: "agent-navn-liten", x: cx, y: cy + 24, "text-anchor": "middle" });
+          const navnEl = svgEl("text", { class: "agent-navn-liten", x: cx, y: cy + 26, "text-anchor": "middle" });
           navnEl.textContent = a.navn;
           svg.appendChild(navnEl);
           romAktorer.push({ id: agentId, stasjonaer: true });
           return;
         }
 
-        const margin = Math.min(18, cellW * 0.18, cellH * 0.18);
+        const margin = Math.min(14, cellW * 0.15, cellH * 0.3);
         const d = patruljeSti(cellX, cellY, cellW, cellH, margin);
         const pathEl = svgEl("path", { class: "bane", d });
         svg.appendChild(pathEl);
 
-        const navnEl = svgEl("text", { class: "agent-navn-liten", x: cellX + margin, y: cellY + margin - 6 });
+        const navnEl = svgEl("text", { class: "agent-navn-liten", x: cellX, y: cellY - 6 });
         navnEl.textContent = a.navn;
         svg.appendChild(navnEl);
 
@@ -881,8 +894,12 @@
   }
 
   function settVisning(visning) {
-    el("visningBro").hidden = visning !== "bro";
-    el("visningRom").hidden = visning !== "rom";
+    // Bruker style.display direkte (ikke .hidden) - .hidden er kun EN attributt blant
+    // flere som til slutt avgjør beregnet display, og ble observert å ikke alene være
+    // nok til å skjule #visningRom pålitelig (gulvkartet ble stående synlig oppå/bak
+    // agentkortene). Inline style vinner alltid over enhver annen CSS-regel, uansett.
+    el("visningBro").style.display = visning === "bro" ? "" : "none";
+    el("visningRom").style.display = visning === "rom" ? "" : "none";
     document.querySelectorAll(".visning-knapp").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.visning === visning)));
     try { localStorage.setItem("kommando-visning", visning); } catch {}
     const url = new URL(location.href);
