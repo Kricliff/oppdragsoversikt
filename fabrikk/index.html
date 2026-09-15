@@ -46,6 +46,10 @@
     --teamskanal-myk: #351a29;
     --obsidian: #6c5fd8;
     --obsidian-myk: #201c3a;
+    /* Skjermens egen fargeidentitet - brukt til roboten og loggprikken. Selve
+       headerlinjen på TAVLA-modulen bruker bevisst --staal-mork (som Sluse/Claude), ikke
+       denne - hvit bar med hvit tittel var uleselig. */
+    --tavle: #8fd9ff;
 
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
@@ -570,7 +574,7 @@
         <g class="sone" id="sone-tavle">
           <rect class="glo" x="932" y="68" width="236" height="516" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="940" y="76" width="220" height="500" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="940" y="76" width="220" height="26" fill="var(--text)"/>
+          <rect class="sonebar" x="940" y="76" width="220" height="26" fill="var(--staal-mork)"/>
           <text x="1050" y="94" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">TAVLA</text>
           <rect x="962" y="116" width="176" height="104" rx="2" fill="var(--text)"/>
           <rect x="970" y="123" width="160" height="90" rx="1" fill="#fff"/>
@@ -772,7 +776,7 @@
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span class="tekst">Adminnøkkelen. Stolpene er porten. Teller hvor mange skriveforsøk som er blitt avvist fordi de manglet gyldig nøkkel, og blinker når det skjer. Er det tallet større enn null uten at du selv har rotet med nøkkelen, har noen forsøkt seg.</span></div></li>
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
-        <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
+        <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
       </ul>
@@ -898,7 +902,7 @@
     },
     {
       id: "skjermer", url: "/api/skjermer", navn: "Skjermer",
-      soner: ["tavle", "functions"], benker: ["skjermer"], farge: "var(--text)",
+      soner: ["tavle", "functions"], benker: ["skjermer"], farge: "var(--tavle)",
       // sistSett utelates - den bumpes ved hver heartbeat og ville fått alarmen til å
       // blinke konstant uten at det faktisk har skjedd noe.
       nokkel: (d) => (d.skjermer ?? []).map((s) => [s.id, s.navn, s.aktiv, s.gjestevisning].join("|")).sort().join(";"),
@@ -1043,7 +1047,7 @@
     { nr: 10, navn: "Skjermpasseren", sone: "Tavla", farge: "var(--aktiv)", varighet: 13,
       bane: "M 962 268 L 1138 268 L 1138 452 L 962 452 Z", utloser: ["sone-tavle"],
       jobb: "Holder storskjermen på veggen oppdatert og følger med på at skjermene svarer." },
-    { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--text)", varighet: 10,
+    { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--tavle)", varighet: 10,
       bane: "M 956 462 L 1144 462 L 1144 558 L 956 558 Z", utloser: ["sone-tavle"],
       jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." },
     // Sitter i ro ved maskinen og har derfor ingen rute å gå. Tegnet direkte i kartet,
