@@ -21,11 +21,12 @@
     --aktiv: #f0b429;
 
     --gulv: #0b0f16;
-    --gulv-rute: #161d29;
+    --gulv-rute: #1c2740;
     --sone: #10161f;
     --sone-kant: #26334480;
-    --vei: #060809;
-    --vei-stripe: #2a3444;
+    /* Transportbåndet er nå en energiledning i skroget - mørk kjerne, glødende plasma. */
+    --vei: #030608;
+    --vei-stripe: #5fd4ff;
     --teal: #2fd4c4;
     --teal-myk: #0f2e2c;
     --staal: #647186;
@@ -59,10 +60,21 @@
   h1, h2, h3, .tal, .merke, .klokke, button.pille { font-family: "Chakra Petch", sans-serif; }
   html, body {
     margin: 0; color: var(--text); font-family: "Inter", -apple-system, "Segoe UI", sans-serif;
+    /* Stjernehimmel: samme knep gjentatt i seks ulike størrelser/posisjoner og flislagt
+       over hele siden, pluss to tåkeskyer og bunnfargen - ingen bilder, ingen eksterne
+       ressurser, bare CSS. */
     background:
+      radial-gradient(1.6px 1.6px at 20px 32px, #fff, transparent),
+      radial-gradient(1.1px 1.1px at 92px 78px, #cfe0ff, transparent),
+      radial-gradient(1.4px 1.4px at 146px 18px, #fff, transparent),
+      radial-gradient(1px 1px at 58px 132px, #cfe0ff, transparent),
+      radial-gradient(1.3px 1.3px at 178px 108px, #fff, transparent),
+      radial-gradient(1px 1px at 8px 168px, #a9c4ff, transparent),
       radial-gradient(1100px 560px at 12% -8%, #101c30 0%, transparent 60%),
       radial-gradient(900px 520px at 108% 8%, #1c1236 0%, transparent 55%),
       var(--bg-0);
+    background-size: 210px 210px, 210px 210px, 210px 210px, 210px 210px, 210px 210px, 210px 210px, auto, auto, auto;
+    background-attachment: fixed;
   }
   .side { max-width: 1240px; margin: 0 auto; padding: clamp(28px, 6vh, 64px) clamp(16px, 4vw, 28px) 80px; }
 
@@ -304,12 +316,19 @@
   /* Status-prikken: alltid synlig, i motsetning til den gamle "!"-merkelappen som bare
      dukket opp ved feil - uten den var det umulig å se at en grå avdeling faktisk svarte
      helt fint. Grønn til vanlig, gul ved stillhet, rød (med en rolig puls) ved feil. */
+  /* HUD-hjørner: målsøker-braketter i modulenes hjørner, som et romskip-grensesnitt.
+     Lagt til av leggTilHudHjorner() ut fra modulens egen geometri - se der. */
+  .hud-hjorne path { fill: none; stroke: var(--staal); stroke-width: 1.5; stroke-linecap: round; opacity: .55; }
+  .sone.alarm .hud-hjorne path { stroke: var(--hendelse); opacity: .9; }
+  .sone.feil .hud-hjorne path { stroke: var(--feil); opacity: .9; }
+  .sone.treg .hud-hjorne path { stroke: var(--advarsel); opacity: .9; }
+
   .statusdot { fill: var(--ok); transition: fill 0.25s ease; }
   .sone.treg .statusdot, .benk.treg .statusdot { fill: var(--advarsel); }
   .sone.feil .statusdot, .benk.feil .statusdot { fill: var(--feil); animation: dotPuls 1.3s ease-in-out infinite; }
   @keyframes dotPuls { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-  .vei-stripe { animation: kryp 1s linear infinite; }
+  .vei-stripe { animation: kryp 1s linear infinite; filter: drop-shadow(0 0 3px var(--vei-stripe)); }
   @keyframes kryp { to { stroke-dashoffset: -26; } }
 
   @media (prefers-reduced-motion: reduce) {
@@ -330,7 +349,7 @@
     <a class="tilbake" href="../admin/">&larr; Tilbake til admin</a>
   </div>
   <h1>Kommandosenteret</h1>
-  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv, og agentene som faktisk driver den. Skjer det noe, blinker avdelingen grønt - det er normal trafikk. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Alt under gulvet - agentroster, alarmer, målere - er sanntidstall fra de samme kildene, ikke pynt. Forklaringen på hele kartet står nederst.</p>
+  <p class="ingress">Tavlen sett som et dekk-kart over en romstasjon, og agentene som faktisk driver den. Skjer det noe, blinker modulen grønt - det er normal trafikk. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Alt under dekket - agentroster, alarmer, målere - er sanntidstall fra de samme kildene, ikke pynt. Forklaringen på hele kartet står nederst.</p>
 
   <div class="varselbanner" id="varselBanner">
     <span class="prikk"></span>
@@ -346,20 +365,31 @@
   </div>
 
   <div class="scene">
-    <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fabrikkgulvet sett ovenfra">
+    <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Romstasjonens dekk-kart, sett ovenfra">
       <defs>
-        <pattern id="fliser" width="40" height="40" patternUnits="userSpaceOnUse">
-          <rect width="40" height="40" fill="var(--gulv)"/>
-          <path d="M40,0 V40 M0,40 H40" stroke="var(--gulv-rute)" stroke-width="1"/>
+        <!-- Avfaset dekkplating i stedet for et enkelt rutenett - hvert panel har hjørnene
+             kuttet, slik at sømmene danner et lite fasettert mønster mellom platene, som
+             en romstasjons gulvplater. Bygget på et rutenett (garantert sømløs flislegging),
+             kuttene er bare dekor på selve sømmen. -->
+        <pattern id="fliser" width="52" height="52" patternUnits="userSpaceOnUse">
+          <rect width="52" height="52" fill="var(--gulv)"/>
+          <path d="M8,0 H44 L52,8 V44 L44,52 H8 L0,44 V8 Z" fill="none" stroke="var(--gulv-rute)" stroke-width="1"/>
         </pattern>
         <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
+        <!-- Svevende dronedroide i stedet for en hjulet fabrikkrobot: glødende
+             skyggeellipse under (antyder svevehøyde), en tynn gyro-ring rundt kroppen,
+             en liten sensorantenne, og det samme sensor-"øyet" som før (bevisst beholdt -
+             det er det du følger med blikket når den beveger seg). -->
         <g id="robot">
-          <ellipse cx="1" cy="3" rx="12" ry="11" fill="rgba(23,23,23,.14)"/>
-          <circle cx="0" cy="0" r="11" fill="currentColor"/>
-          <rect x="-3" y="-13" width="6" height="4" rx="2" fill="currentColor"/>
-          <rect x="-3" y="9" width="6" height="4" rx="2" fill="currentColor"/>
-          <circle cx="5.5" cy="0" r="3.6" fill="#fff" opacity=".92"/>
-          <circle cx="6.5" cy="0" r="1.5" fill="#171717" opacity=".7"/>
+          <ellipse cx="0" cy="5" rx="11" ry="3.2" fill="#000" opacity=".35"/>
+          <ellipse cx="0" cy="1" rx="14" ry="6" fill="currentColor" opacity=".16"/>
+          <line x1="0" y1="-9" x2="0" y2="-13.5" stroke="currentColor" stroke-width="1.4"/>
+          <circle cx="0" cy="-14" r="1.6" fill="currentColor"/>
+          <circle cx="0" cy="0" r="10.5" fill="currentColor"/>
+          <ellipse cx="0" cy="0" rx="10.5" ry="10.5" fill="none" stroke="#fff" stroke-width=".7" opacity=".22" transform="rotate(-18)"/>
+          <path d="M -8.5,-3.5 A 9,9 0 0 1 8.5,-3.5" fill="none" stroke="#fff" stroke-width="1.1" opacity=".45" stroke-linecap="round"/>
+          <circle cx="5.6" cy="0" r="3.6" fill="#fff" opacity=".94"/>
+          <circle cx="6.6" cy="0" r="1.5" fill="#060809" opacity=".8"/>
         </g>
       </defs>
 
@@ -643,8 +673,8 @@
   </div>
 
   <div class="seksjonstittel">
-    <h2>🎮 AI Ops Kommandosenter</h2>
-    <p class="hint">Samme sanntidsdata som gulvet over - bare som agenter, XP og alarmer i stedet for bokser.</p>
+    <h2>🛰️ AI Ops Kommandosenter</h2>
+    <p class="hint">Samme sanntidsdata som dekket over - bare som agenter, XP og alarmer i stedet for moduler.</p>
   </div>
 
   <div class="maalere">
@@ -669,7 +699,7 @@
 
   <div class="to-kolonner">
     <div class="kort">
-      <h2>🕹️ Agentroster</h2>
+      <h2>🤖 Agentroster</h2>
       <p class="hint">13 agenter. Grønn puls = jobber akkurat nå. XP-baren fylles av faktiske hendelser i dag i denne nettleseren, og nullstilles ved midnatt - ikke pynt.</p>
       <div class="roster" id="agentRoster"></div>
 
@@ -684,7 +714,7 @@
       </div>
 
       <div class="kort">
-        <h2>📜 Oppdragslogg</h2>
+        <h2>📡 Oppdragslogg</h2>
         <p class="hint">Alt som har skjedd, nyeste først. Loggen overlever at du laster siden på nytt, og lagres kun i denne nettleseren.</p>
         <ul class="logg" id="logg"><li><span class="tom">Ingenting registrert ennå.</span></li></ul>
       </div>
@@ -694,7 +724,7 @@
   <div class="under" style="margin-top: 1.2rem">
 
     <div class="kort">
-      <h2>📡 Helse</h2>
+      <h2>⚙️ Helse</h2>
       <p class="hint">Alle datakildene tavlen er avhengig av. Grønn betyr at kilden svarer, rød at den er nede, gul at den har blitt stille.</p>
       <ul class="helse" id="helseListe"></ul>
     </div>
@@ -718,37 +748,37 @@
 
     <div class="kort bred">
       <h2>Slik leser du kartet</h2>
-      <p class="hint">Alt på gulvet betyr noe bestemt. Her er hele oversikten.</p>
+      <p class="hint">Alt på dekket betyr noe bestemt. Her er hele oversikten.</p>
 
       <h3>Status-prikken</h3>
-      <p class="hint">Hver boks har en liten prikk i det øverste hjørnet. Den er alltid synlig, uansett hvilken farge boksen ellers har - det er den som faktisk sier om noe svarer eller ikke.</p>
+      <p class="hint">Hver modul har en liten prikk i det øverste hjørnet. Den er alltid synlig, uansett hvilken farge modulen ellers har - det er den som faktisk sier om noe svarer eller ikke.</p>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--ok)"></span><div><b>Grønn - svarer normalt</b><span class="tekst">Standardtilstanden. Ingen ting å se her, og det er poenget: en grå eller nøytral boks skal ikke se "avslått" ut bare fordi fargen dens er dempet.</span></div></li>
+        <li><span class="prikk" style="background: var(--ok)"></span><div><b>Grønn - svarer normalt</b><span class="tekst">Standardtilstanden. Ingen ting å se her, og det er poenget: en grå eller nøytral modul skal ikke se "avslått" ut bare fordi fargen dens er dempet.</span></div></li>
         <li><span class="prikk" style="background: var(--advarsel)"></span><div><b>Gul - har blitt stille</b><span class="tekst">Kilden svarer, men har ikke levert noe nytt på lenge. Den farligste feiltypen, fordi ingenting krasjer - det bare stopper. Retter seg selv når data er ferskt igjen.</span></div></li>
-        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rød, med en rolig puls - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Hele boksen får i tillegg en rød ramme. Blir stående til noen trykker "Kvitter alarm" øverst - selv om kilden retter seg i mellomtiden, slik at en feil som varte om natten fortsatt er synlig neste morgen. Knappen nekter å fjerne en alarm som fortsatt er aktiv.</span></div></li>
+        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rød, med en rolig puls - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Hele modulen får i tillegg en rød ramme. Blir stående til noen trykker "Kvitter alarm" øverst - selv om kilden retter seg i mellomtiden, slik at en feil som varte om natten fortsatt er synlig neste morgen. Knappen nekter å fjerne en alarm som fortsatt er aktiv.</span></div></li>
       </ul>
 
       <h3>De to grønne pulsene</h3>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Full puls rundt hele boksen - det skjedde noe</b><span class="tekst">Varer maks 15 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
-        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Svakt, kort blaff - avdelingen ble nettopp spurt</b><span class="tekst">Under ett sekund. Vises hver gang tavlen faktisk henter data fra kilden, uansett om svaret var nytt. Mye svakere enn hendelsespulsen, og vises aldri oppå en rød eller gul boks.</span></div></li>
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Full puls rundt hele modulen - det skjedde noe</b><span class="tekst">Varer maks 15 sekunder. Skjer det noe nytt i samme modul imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Svakt, kort blaff - modulen ble nettopp spurt</b><span class="tekst">Under ett sekund. Vises hver gang tavlen faktisk henter data fra kilden, uansett om svaret var nytt. Mye svakere enn hendelsespulsen, og vises aldri oppå en rød eller gul modul.</span></div></li>
       </ul>
 
-      <h3>Avdelingene</h3>
+      <h3>Modulene</h3>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--recman)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, boksene er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
-        <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver boks lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
-        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinhallen. De seks benkene er de seks funksjonene som lagrer noe. Hele hallen lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
+        <li><span class="prikk" style="background: var(--recman)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, rektanglene under er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
+        <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver modul lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
+        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinrommet. De seks benkene er de seks funksjonene som lagrer noe. Hele rommet lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span class="tekst">Adminnøkkelen. Stolpene er porten. Teller hvor mange skriveforsøk som er blitt avvist fordi de manglet gyldig nøkkel, og blinker når det skjer. Er det tallet større enn null uten at du selv har rotet med nøkkelen, har noen forsøkt seg.</span></div></li>
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de avdelingene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
-      <p class="hint">Hver robot har en nummerskilt på gulvet. Uten oppgave går den i halv fart. Får avdelingen dens trafikk, trapper den opp til full fart og nummerskiltet fylles - da ser du med én gang hvem som faktisk jobber.</p>
+      <p class="hint">Hver robot har en nummerskilt på dekket. Uten oppgave går den i halv fart. Får modulen dens trafikk, trapper den opp til full fart og nummerskiltet fylles - da ser du med én gang hvem som faktisk jobber.</p>
       <ul class="forklaring to-spalter" id="robotListe"></ul>
 
       <h3>Lastene på banen</h3>
@@ -757,7 +787,7 @@
 
       <h3>Selve banen</h3>
       <ul class="forklaring">
-        <li><span class="rute" style="background: var(--vei)"></span><div><b>Den mørke veien</b><span class="tekst">Ruten lastene går mellom kildene til venstre og tavlen til høyre. Selve veien er tegnet, ikke målt - det er kassene på den som betyr noe.</span></div></li>
+        <li><span class="rute" style="background: var(--vei-stripe)"></span><div><b>Energiledningen</b><span class="tekst">Ruten lastene går mellom kildene til venstre og tavlen til høyre. Selve ledningen er tegnet, ikke målt - det er kassene på den som betyr noe.</span></div></li>
       </ul>
 
       <h3>Øverste linje</h3>
@@ -1040,6 +1070,35 @@
 
   const SVG_NS = "http://www.w3.org/2000/svg";
   const aktorer = [];
+
+  // HUD-hjørnemarkører (målsøker-braketter) på hver modul, avledet direkte fra modulens
+  // egen panel-rect - ikke hardkodede koordinater. Kjøres én gang: hver ny modul som
+  // legges til på gulvet får braketter helt automatisk uten noen manuell utregning.
+  function leggTilHudHjorner() {
+    document.querySelectorAll(".sone").forEach((sone) => {
+      const panel = sone.querySelectorAll("rect")[1]; // [0]=.glo, [1]=selve panelet
+      if (!panel) return;
+      const x = parseFloat(panel.getAttribute("x"));
+      const y = parseFloat(panel.getAttribute("y"));
+      const w = parseFloat(panel.getAttribute("width"));
+      const h = parseFloat(panel.getAttribute("height"));
+      const arm = Math.min(14, w / 5, h / 5);
+      const hjorner = [
+        [x, y, arm, 0, 0, arm],
+        [x + w, y, -arm, 0, 0, arm],
+        [x, y + h, arm, 0, 0, -arm],
+        [x + w, y + h, -arm, 0, 0, -arm]
+      ];
+      const g = document.createElementNS(SVG_NS, "g");
+      g.setAttribute("class", "hud-hjorne");
+      for (const [cx, cy, dx1, dy1, dx2, dy2] of hjorner) {
+        const p = document.createElementNS(SVG_NS, "path");
+        p.setAttribute("d", "M " + (cx + dx1) + " " + (cy + dy1) + " L " + cx + " " + cy + " L " + (cx + dx2) + " " + (cy + dy2));
+        g.append(p);
+      }
+      sone.append(g);
+    });
+  }
 
   function lagBane(d) {
     const p = document.createElementNS(SVG_NS, "path");
@@ -1936,6 +1995,7 @@
   document.addEventListener("visibilitychange", () => (document.hidden ? stopp() : start()));
 
   byggBaneNett();
+  leggTilHudHjorner();
   byggAktorer();
   plasserAlle();
   tegnRobotliste();
