@@ -120,7 +120,7 @@
   /* ---------- tilstander på gulvet ---------- */
   .glo { opacity: 0; }
 
-  /* hendelse: kortvarig, rød puls */
+  /* trafikk: kortvarig, grønn puls */
   .sone.alarm .glo, .benk.alarm .glo { animation: gloPuls 0.85s ease-in-out infinite; stroke: var(--hendelse); }
   .sone.alarm .sonebar { animation: barPuls 0.85s ease-in-out infinite; }
   .alarmpil { opacity: 0; }
@@ -174,7 +174,7 @@
     <a class="tilbake" href="../admin/">&larr; Tilbake til admin</a>
   </div>
   <h1>Fabrikken</h1>
-  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv. Skjer det noe, blinker avdelingen rødt. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Forklaringen på alt sammen står nederst.</p>
+  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv. Skjer det noe, blinker avdelingen grønt - det er normal trafikk. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Forklaringen på alt sammen står nederst.</p>
 
   <div class="statuslinje">
     <span class="pille" id="tilkoblingPille"><span class="pip"></span><span id="tilkoblingTekst">Overvåker</span></span>
@@ -184,13 +184,13 @@
   </div>
 
   <div class="scene">
-    <svg viewBox="0 0 1200 660" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fabrikkgulvet sett ovenfra">
+    <svg viewBox="0 0 1200 790" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fabrikkgulvet sett ovenfra">
       <defs>
         <pattern id="fliser" width="40" height="40" patternUnits="userSpaceOnUse">
           <rect width="40" height="40" fill="var(--gulv)"/>
           <path d="M40,0 V40 M0,40 H40" stroke="var(--gulv-rute)" stroke-width="1"/>
         </pattern>
-        <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="660"/></clipPath>
+        <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="790"/></clipPath>
         <g id="robot">
           <ellipse cx="1" cy="3" rx="12" ry="11" fill="rgba(23,23,23,.14)"/>
           <circle cx="0" cy="0" r="11" fill="currentColor"/>
@@ -202,7 +202,7 @@
       </defs>
 
       <g clip-path="url(#gulvClip)">
-        <rect x="0" y="0" width="1200" height="660" fill="url(#fliser)"/>
+        <rect x="0" y="0" width="1200" height="790" fill="url(#fliser)"/>
 
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="30" stroke-linejoin="round"/>
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="3" stroke-dasharray="12 14" stroke-linejoin="round" class="vei-stripe"/>
@@ -398,9 +398,56 @@
           <g class="alarmpil"><circle cx="1144" cy="89" r="6" fill="#fff"/><circle cx="1144" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
+        <!-- ============ KONTROLLROMMET (CLAUDE) ============ -->
+        <g class="sone" id="sone-claude">
+          <rect class="glo" x="34" y="632" width="1134" height="146" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="42" y="640" width="1118" height="130" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="42" y="640" width="1118" height="26" fill="var(--staal-mork)"/>
+          <text x="601" y="658" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">KONTROLLROM - CLAUDE</text>
+
+          <!-- maskinen og agenten som sitter ved den -->
+          <rect x="96" y="678" width="86" height="54" rx="2" fill="var(--text)"/>
+          <rect x="102" y="684" width="74" height="42" rx="1" fill="var(--teal-myk)"/>
+          <g fill="var(--teal)" opacity=".75">
+            <rect x="108" y="690" width="44" height="4" rx="2"/>
+            <rect x="108" y="699" width="60" height="4" rx="2"/>
+            <rect x="108" y="708" width="36" height="4" rx="2"/>
+            <rect x="108" y="717" width="52" height="4" rx="2"/>
+          </g>
+          <rect x="88" y="736" width="102" height="6" rx="2" fill="var(--staal-mork)"/>
+
+          <g class="robot" id="claudeAgent" style="color: var(--staal-mork)" transform="translate(228 706)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <g transform="rotate(180)"><use href="#robot"/></g>
+            <circle class="nr-bg" cx="0" cy="-20" r="8"/>
+            <text class="nr" x="0" y="-17" text-anchor="middle" font-size="9" font-weight="700">12</text>
+          </g>
+
+          <!-- avlesninger -->
+          <text x="330" y="692" font-size="9" fill="var(--text-muted)">Sist utrulling</text>
+          <text x="330" y="712" font-size="13" font-weight="700" fill="var(--text)" id="claudeSistDeploy">–</text>
+          <text x="330" y="732" font-size="8" fill="var(--text-muted)" id="claudeSistHva"></text>
+
+          <text x="560" y="692" font-size="9" fill="var(--text-muted)">Kommandoer sendt i økten</text>
+          <text x="560" y="712" font-size="13" font-weight="700" fill="var(--text)" id="claudeKommandoer">0</text>
+
+          <text x="800" y="692" font-size="9" fill="var(--text-muted)">Hva en kommando er</text>
+          <text x="800" y="710" font-size="8" fill="var(--text-muted)">Ny kode rullet ut. Pulsen viser hvilke</text>
+          <text x="800" y="722" font-size="8" fill="var(--text-muted)">avdelinger den nye koden gjelder for.</text>
+          <text x="800" y="734" font-size="8" fill="var(--text-muted)">Endringer Kristian selv gjør i /admin</text>
+          <text x="800" y="746" font-size="8" fill="var(--text-muted)">lyser der, ikke her.</text>
+
+          <g class="statusmerke"><circle class="merkesirkel" cx="58" cy="653" r="9" fill="var(--feil)"/><text x="58" y="658" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="1144" cy="653" r="6" fill="#fff"/><circle cx="1144" cy="653" r="3.2" fill="var(--hendelse)"/></g>
+        </g>
+
         <!-- Banene robotene og lastene går på. Usynlige - de finnes kun for at koden
              skal kunne spørre om posisjon og retning underveis (getPointAtLength). -->
         <g id="baner" fill="none" stroke="none"></g>
+
+        <!-- Kommandoer fra kontrollrommet ut til avdelingene. Tegnes over gulvet, og kun
+             mens de faktisk er underveis - står det ingenting her, går det ingen trafikk. -->
+        <g id="kommandoer"></g>
 
         <!-- Lastene på banen og robotene i avdelingene settes inn her av koden, slik at
              de kan deles med listen nederst på siden og aldri komme i utakt med den. -->
@@ -438,7 +485,7 @@
 
       <h3>De tre lysene</h3>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Rød puls - det skjedde noe nå</b><span class="tekst">Varer 25 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Grønn puls - det skjedde noe nå</b><span class="tekst">Varer 25 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
         <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rødt med utropstegn - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Slukker ikke av seg selv, men først når kilden svarer igjen. Dette er det som faktisk krever at noen gjør noe.</span></div></li>
         <li><span class="prikk" style="background: var(--advarsel)"></span><div><b>Gult med utropstegn - noe har blitt stille</b><span class="tekst">Kilden svarer, men har ikke levert noe nytt på lenge. Den farligste feiltypen, fordi ingenting krasjer - det bare stopper.</span></div></li>
       </ul>
@@ -452,6 +499,7 @@
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
         <li><span class="prikk" style="background: var(--staal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, nederst. Herfra går kommandoene ut som buer over gulvet når ny kode rulles ut, én til hver avdeling koden gjelder for. Går det ingen buer, går det ingen trafikk - da sitter agenten bare og venter.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
@@ -608,7 +656,62 @@
     { id: "kundenytt", url: "/api/kundenytt", navn: "Kundenytt", soner: ["eksterne"], benker: ["kundenytt"] }
   ];
 
-  const DEPLOY_FILER = ["/app.js", "/index.html", "/style.css"];
+  // Der kommandoene starter (agent 12 ved maskinen) og hvor de lander i hver avdeling.
+  const KOMMANDO_START = { x: 228, y: 700 };
+  const SONE_ANKER = {
+    recman: { x: 136, y: 320 },
+    eksterne: { x: 136, y: 540 },
+    functions: { x: 404, y: 330 },
+    sluse: { x: 627, y: 325 },
+    admin: { x: 810, y: 150 },
+    teamskanal: { x: 810, y: 500 },
+    tavle: { x: 1050, y: 330 },
+    claude: { x: 601, y: 700 }
+  };
+  const KOMMANDO_VARIGHET = 1.8;
+  const kommandoer = [];
+  let kommandoTeller = 0;
+
+  function sendKommando(sone) {
+    const anker = SONE_ANKER[sone];
+    if (!anker) return;
+
+    // Buet bane, ikke rett strek - en rett linje tvers over gulvet leses som en kant i
+    // tegningen, mens buen tydelig er noe som er underveis.
+    const toppY = Math.min(KOMMANDO_START.y, anker.y) - 70;
+    const d = "M " + KOMMANDO_START.x + " " + KOMMANDO_START.y +
+      " Q " + (KOMMANDO_START.x + anker.x) / 2 + " " + toppY + " " + anker.x + " " + anker.y;
+
+    const g = document.createElementNS(SVG_NS, "g");
+    g.setAttribute("class", "kommando");
+    g.innerHTML =
+      '<path d="' + d + '" fill="none" stroke="var(--hendelse)" stroke-width="2" stroke-dasharray="5 6" opacity=".5"/>' +
+      '<circle r="5.5" fill="var(--hendelse)"/>';
+    el("kommandoer").append(g);
+
+    const bane = g.querySelector("path");
+    kommandoer.push({ g, bane, prikk: g.querySelector("circle"), lengde: bane.getTotalLength(), t: 0 });
+
+    kommandoTeller++;
+    el("claudeKommandoer").textContent = kommandoTeller;
+  }
+
+  function flyttKommandoer(dt) {
+    for (let i = kommandoer.length - 1; i >= 0; i--) {
+      const k = kommandoer[i];
+      k.t += dt;
+      const andel = k.t / KOMMANDO_VARIGHET;
+      if (andel >= 1) {
+        k.g.remove();
+        kommandoer.splice(i, 1);
+        continue;
+      }
+      const p = k.bane.getPointAtLength(andel * k.lengde);
+      k.prikk.setAttribute("cx", p.x.toFixed(1));
+      k.prikk.setAttribute("cy", p.y.toFixed(1));
+      k.g.setAttribute("opacity", (1 - andel * andel * andel).toFixed(2));
+    }
+  }
 
   // ---------- robotene og lastene ----------
   // Hver robot svarer til en faktisk jobb i systemet, og "utloser" sier hvilke felt på
@@ -648,7 +751,12 @@
       jobb: "Holder storskjermen på veggen oppdatert og følger med på at skjermene svarer." },
     { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--text)", varighet: 10,
       bane: "M 956 462 L 1144 462 L 1144 558 L 956 558 Z", utloser: ["sone-tavle"],
-      jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." }
+      jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." },
+    // Sitter i ro ved maskinen og har derfor ingen rute å gå. Tegnet direkte i kartet,
+    // men står med i listen som de andre - den gjør en like reell jobb.
+    { nr: 12, navn: "Claude", sone: "Kontrollrommet", farge: "var(--staal-mork)", stasjonaer: true,
+      utloser: ["sone-claude"],
+      jobb: "Meg. Sitter ved maskinen og ruller ut ny kode på det Kristian ber om. Hver utrulling sender en kommando ut til avdelingene den nye koden gjelder for - det er buene du ser gå over gulvet. Endringer Kristian selv gjør i /admin lyser der, ikke her: de to ser helt like ut utenfra, så de kan ikke tilskrives noen." }
   ];
 
   // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
@@ -676,6 +784,7 @@
   function byggAktorer() {
     const robotLag = el("roboter");
     for (const r of ROBOTER) {
+      if (r.stasjonaer) continue; // tegnet direkte i kartet, har ingen rute å gå
       const g = document.createElementNS(SVG_NS, "g");
       g.setAttribute("class", "robot");
       g.setAttribute("id", "robot-" + r.nr);
@@ -755,6 +864,10 @@
       }
       a.el.classList.toggle("jobber", a.fart > 0.78);
     }
+    flyttKommandoer(dt);
+    // Agent 12 sitter i ro ved maskinen, så den har ingen bane - men skal fortsatt vise
+    // at den jobber mens en kommando er underveis.
+    document.getElementById("claudeAgent").classList.toggle("jobber", kommandoer.length > 0);
     requestAnimationFrame(steg);
   }
 
@@ -763,7 +876,6 @@
   const alarmTimere = new Map();
   const feilende = new Map();   // sjekk-id -> { navn, soner, benker, grunn }
   const stille = new Map();     // vakt-id  -> { navn, soner, benker, grunn }
-  let deployMerke = null;
   let bootstrap = true;
 
   const el = (id) => document.getElementById(id);
@@ -1134,29 +1246,71 @@
     tegnKvote();
   }
 
-  // ---------- deploy ----------
+  // ---------- deploy = kommandoene fra kontrollrommet ----------
+  // Dette er den ENESTE delen av Claudes arbeid som faktisk er målbar utenfra. Skriving
+  // mot /admin-endepunktene ser identisk ut enten Kristian gjør den i admin eller Claude
+  // gjør den fra terminalen - samme nøkkel, samme kall - så den kan ikke tilskrives noen
+  // og lyser i /admin, der den hører hjemme. En utrulling derimot er utvetydig: da er det
+  // ny kode, og hver fil sier hvilke avdelinger den nye koden gjelder for.
+  const DEPLOY_MAAL = [
+    { fil: "/app.js", soner: ["tavle", "functions"], hva: "tavlens kode" },
+    { fil: "/style.css", soner: ["tavle"], hva: "tavlens utseende" },
+  ];
+  const deployMerker = new Map();
+  let sisteUtrulling = null;
+
   async function sjekkDeploy() {
+    // /api/versjon er fasiten på OM det er rullet ut - Cloudflare gir hver utrulling sin
+    // egen id. ETag-ene under brukes kun til å avgjøre HVA som ble endret, og dekker ikke
+    // alt: Pages gir ETag på .js og .css, men IKKE på HTML-sider (de svarer uten både
+    // ETag, Last-Modified og Content-Length). En utrulling som bare rørte admin-siden
+    // eller en Function ville derfor gått helt ubemerket hvis vi stolte på ETag alene.
+    let utrulling = null;
     try {
-      const merker = await Promise.all(DEPLOY_FILER.map(async (f) => {
-        const r = await fetch(f, { method: "HEAD", cache: "no-store" });
-        return r.headers.get("etag") ?? "";
-      }));
-      const samlet = merker.join("|");
-      if (deployMerke === null) {
-        deployMerke = samlet;
-        el("versjonPille").textContent = "Versjon: uendret";
-        return;
-      }
-      if (samlet !== deployMerke) {
-        deployMerke = samlet;
-        el("versjonPille").textContent = "Ny versjon " + tidFmt.format(new Date());
-        el("versjonPille").classList.add("ny-versjon");
-        slaAlarm("sone-functions");
-        leggILogg("Ny kode rullet ut - tavlen laster seg selv på nytt", "var(--hendelse)");
-      }
-    } catch {
+      utrulling = (await fetch("/api/versjon", { cache: "no-store" }).then((r) => r.json())).utrulling;
+    } catch { /* faller til ukjent under */ }
+
+    if (!utrulling) {
       el("versjonPille").textContent = "Versjon: ukjent";
+      return;
     }
+
+    // Merkene leses hver runde uansett, slik at de er ferske til neste gang - ellers
+    // ville første utrulling etter en sideinnlasting sett ut som om ingenting var rørt.
+    const endret = [];
+    await Promise.all(DEPLOY_MAAL.map(async (m) => {
+      try {
+        const r = await fetch(m.fil, { method: "HEAD", cache: "no-store" });
+        const merke = r.headers.get("etag") ?? "";
+        if (!merke) return;
+        const forrige = deployMerker.get(m.fil);
+        deployMerker.set(m.fil, merke);
+        if (forrige !== undefined && merke !== forrige) endret.push(m);
+      } catch { /* at filen ikke svarer fanges av helsesjekken, ikke her */ }
+    }));
+
+    // Første runde leser bare inn utgangspunktet, ellers ville hver sideinnlasting
+    // meldt en utrulling som aldri har skjedd.
+    if (sisteUtrulling === null) {
+      sisteUtrulling = utrulling;
+      el("versjonPille").textContent = "Versjon: uendret";
+      return;
+    }
+    if (utrulling === sisteUtrulling) return;
+    sisteUtrulling = utrulling;
+
+    const naa = tidFmt.format(new Date());
+    const hva = endret.length ? endret.map((m) => m.hva).join(", ") : "funksjoner eller en side";
+    const soner = endret.length ? [...new Set(endret.flatMap((m) => m.soner))] : ["functions"];
+
+    slaAlarm("sone-claude");
+    soner.forEach((s) => { sendKommando(s); slaAlarm("sone-" + s); });
+
+    el("claudeSistDeploy").textContent = naa;
+    el("claudeSistHva").textContent = hva;
+    el("versjonPille").textContent = "Ny versjon " + naa;
+    el("versjonPille").classList.add("ny-versjon");
+    leggILogg("Claude rullet ut ny kode: " + hva, "var(--hendelse)");
   }
 
   // ---------- runde 3: tungt ----------
