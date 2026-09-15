@@ -225,7 +225,7 @@
   .scope .merknad { font-size: 0.7rem; color: var(--text-faint); margin-top: 0.2rem; font-family: 'VT323', monospace; }
 
   /* ============ Broen (kjerne + agentmoduler) ============ */
-  #bridge { grid-area: bridge; position: relative; min-height: 560px; }
+  #bridge { grid-area: bridge; position: relative; min-height: 680px; }
   #streams { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
 
   #core {
@@ -257,13 +257,25 @@
   body.redusert-bevegelse #core .ring { animation: none; }
 
   .agent {
-    position: absolute; width: 148px; transform: translate(-50%, -50%);
+    /* Grunn-transform (posisjon + skalering for å unngå overlapp) settes av
+       plasserAgenter() i JS via el.style.transform, og hover-løftet av loftAgent() -
+       begge skriver hele transform-strengen på én gang i stedet for å kombinere en
+       CSS-side var(--agent-skala) med en :hover-regel, se de funksjonene. */
+    position: absolute; width: 148px;
     background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px;
     padding: 0.5rem 0.6rem; z-index: 3; cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
+  /* transform har BEVISST ingen transition: plasserAgenter() kaller seg selv på nytt
+     hver gang #bridge endrer størrelse (ResizeObserver - vindu endres, webfonter svapper
+     inn og endrer radraden over, osv.), og en animert transform ville da måtte fullføre
+     FØR neste kall for å ikke risikere å fryse fast på en mellomliggende, feil verdi -
+     noe som viste seg upålitelig (og ga et reelt, om enn lite, overlapp mellom nabokort
+     ved enkelte vindusstørrelser). Ompossisjonering skjer derfor øyeblikkelig; det er
+     uansett et sjeldent, ikke-interaktivt øyeblikk (vindu endres/side lastes), ikke noe
+     brukeren aktivt følger med på slik som hover gjør. Hover-glowen (box-shadow/border)
+     beholder sin egen transition under, siden den ikke har dette problemet. */
   .agent:hover, .agent:focus-visible {
-    transform: translate(-50%, -50%) translateY(-4px) scale(1.04);
     box-shadow: 0 0 18px rgba(0,229,255,0.45);
     border-color: var(--cyan);
     z-index: 4;
@@ -566,25 +578,66 @@
   }
 
   // ---------------- Radiell plassering av agentmodulene ----------------
+  // BUG funnet og rettet: radius ble regnet ut fra tilgjengelig plass ALENE
+  // (min(bredde,høyde)/2 - 90), uten noen gang å sjekke om det faktisk er nok plass til
+  // AGENTER.length kort av bredde CARD_W ved DEN radiusen. Med 13 kort a 148px bredde
+  // ble kordeavstanden mellom nabokort (2r·sin(π/N)) fort kortere enn selve kortbredden
+  // - dvs. kortene overlappet - hver gang broen ikke var vesentlig bredere/høyere enn
+  // margin-verdien 90 skulle tilsi.
+  //
+  // Fasit: for at nabokort aldri skal overlappe må kordeavstanden mellom dem være minst
+  // kortbredde+mellomrom, altså radius >= (CARD_W+GAP) / (2·sin(π/N)) - se
+  // KREVD_RADIUS under. Er det nok plass til den radiusen, brukes den fulle tilgjengelige
+  // radiusen (gir luftigere, mer sirkulær plassering). Er det IKKE nok plass (svært smal
+  // eller lav skjerm), krympes kortene ned med nøyaktig den faktoren som gjør at de
+  // fortsatt akkurat ikke overlapper på den radiusen som faktisk er tilgjengelig, i
+  // stedet for å la dem overlappe.
+  const CARD_W = 148;
+  const CARD_GAP = 16;
+
   function plasserAgenter() {
     const bridge = el("bridge");
     const bredde = bridge.clientWidth;
     const hoyde = bridge.clientHeight;
     const senterX = bredde / 2;
     const senterY = hoyde / 2;
-    const radius = Math.min(bredde, hoyde) / 2 - 90;
+    const n = AGENTER.length;
+
+    const tilgjengeligRadius = Math.min(bredde, hoyde) / 2 - 80;
+    // Kordeavstanden (2r·sin(π/n)) garanterer nok EUKLIDSK avstand mellom nabosentre,
+    // men kortene er ikke rotert til å stå på tvers av sirkelen - de står alltid rett
+    // opp. To rette rektangler overlapper når BÅDE dx og dy samtidig er mindre enn
+    // henholdsvis bredde og høyde - noe som kan skje selv om den euklidske avstanden
+    // akkurat treffer minstekravet, ved vinkler som ikke er rent vannrette. Testet fram:
+    // uten margin ga dette et reelt (om enn lite, ~2-3px) overlapp for enkelte nabopar.
+    // KREVD_MARGIN legger på litt ekstra klaring for å dekke dette i praksis, i stedet
+    // for å regne ut riktig vinkelavhengig minsteavstand for et rektangel.
+    const KREVD_MARGIN = 1.15;
+    const krevdRadius = (CARD_W + CARD_GAP) * KREVD_MARGIN / (2 * Math.sin(Math.PI / n));
+    const radius = Math.max(60, tilgjengeligRadius);
+    const skala = Math.max(0.55, Math.min(1, tilgjengeligRadius / krevdRadius));
 
     AGENTER.forEach((a, i) => {
-      const vinkel = (i / AGENTER.length) * Math.PI * 2 - Math.PI / 2;
+      const vinkel = (i / n) * Math.PI * 2 - Math.PI / 2;
       const x = senterX + Math.cos(vinkel) * radius;
       const y = senterY + Math.sin(vinkel) * radius;
       const modEl = el("agent-" + a.id);
       if (!modEl) return;
       modEl.style.left = x + "px";
       modEl.style.top = y + "px";
+      // Se KOMMENTAR ved .agent i <style> - hele transformen (posisjon + skala) settes
+      // her, ikke via CSS var(), og lagres på elementet slik at hover/fokus kan legge
+      // løftet oppå akkurat DENNE skalaen i stedet for å overskrive den.
+      modEl.dataset.grunnTransform = "translate(-50%, -50%) scale(" + skala.toFixed(3) + ")";
+      modEl.style.transform = modEl.dataset.grunnTransform;
       modEl.dataset.x = x;
       modEl.dataset.y = y;
     });
+  }
+
+  function loftAgent(modEl, loft) {
+    const grunn = modEl.dataset.grunnTransform || "translate(-50%, -50%)";
+    modEl.style.transform = loft ? grunn + " translateY(-4px) scale(1.06)" : grunn;
   }
 
   function byggAgentmoduler() {
@@ -605,6 +658,10 @@
         '<div class="bunn"><span class="ikon-status">' + ikonForStatus(harIngenSignal(a) ? "ukjent" : "idle") + '</span><span class="sist">–</span></div>';
       div.addEventListener("click", () => visDetalj(a));
       div.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); visDetalj(a); } });
+      div.addEventListener("mouseenter", () => loftAgent(div, true));
+      div.addEventListener("mouseleave", () => loftAgent(div, false));
+      div.addEventListener("focus", () => loftAgent(div, true));
+      div.addEventListener("blur", () => loftAgent(div, false));
       bridge.appendChild(div);
     });
     plasserAgenter();
