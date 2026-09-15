@@ -6,23 +6,33 @@
 //
 // Denne middleware-en kjører foran ALT (alle ruter, all HTML) og stenger hver eneste
 // grendeploy som ikke er selve produksjonsgrenen ("master", som Cloudflare Access
-// beskytter) - MED ETT unntak: /api/teamskanal, som automatiseringen faktisk trenger å
-// nå uten innlogging, og som selv krever sin egen hemmelige nøkkel (TEAMSKANAL_SKRIVENOKKEL).
+// beskytter) - MED unntak for et lite knippe ruter som en automatisert jobb faktisk
+// trenger å nå uten innlogging (se UNNTATTE_RUTER under).
 //
 // ADMIN_SKRIVENOKKEL som header ("x-adminnokkel") gir i tillegg unntak for ALT på en
 // forhåndsvisning - brukes kun til å teste endringer før de går til produksjon.
+//
+// UNNTATTE_RUTER er bevisst begrenset til ruter som ALLEREDE er trygge å nå uten nøkkel:
+// enten har de ingen skrivehandler i det hele tatt (rene GET-oppslag), eller så beskytter
+// de sin egen skriving med en egen hemmelig nøkkel uavhengig av denne sperren (teamskanal.js
+// med TEAMSKANAL_SKRIVENOKKEL, agentstatus.js med AGENT_STATUS_NOKKEL). /api/skjermer er
+// et bevisst UNNTAK fra unntaket - den har en skrivehandler UTEN egen nøkkelsjekk (skjermer
+// skal kunne melde seg inn uten nøkkel), og er derfor kun beskyttet av nettopp denne
+// grense-sperren. Legg den ALDRI til her uten samtidig å legge en ekte nøkkelsjekk i den.
+const UNNTATTE_RUTER = new Set(["/api/teamskanal", "/api/endringslogg", "/api/avviste", "/api/agentstatus", "/api/kvforbruk"]);
+
 export async function onRequest(context) {
   const branch = context.env.CF_PAGES_BRANCH;
   const erProduksjon = branch === "master";
   if (erProduksjon) return context.next();
 
   const url = new URL(context.request.url);
-  const erTeamskanalRute = url.pathname === "/api/teamskanal";
+  const erUnntattRute = UNNTATTE_RUTER.has(url.pathname);
 
   const adminNokkel = context.env.ADMIN_SKRIVENOKKEL;
   const harAdminNokkel = !!adminNokkel && context.request.headers.get("x-adminnokkel") === adminNokkel;
 
-  if (erTeamskanalRute || harAdminNokkel) return context.next();
+  if (erUnntattRute || harAdminNokkel) return context.next();
 
   return new Response(
     "Denne forhåndsvisningen er stengt av sikkerhetshensyn - se master/produksjon i stedet.",
