@@ -322,6 +322,8 @@
      helt fint. Grønn til vanlig, gul ved stillhet, rød (med en rolig puls) ved feil. */
   /* HUD-hjørner: målsøker-braketter i modulenes hjørner, som et romskip-grensesnitt.
      Lagt til av leggTilHudHjorner() ut fra modulens egen geometri - se der. */
+  .tak-list { fill: rgba(255,255,255,.09); stroke: rgba(255,255,255,.22); stroke-width: 1; }
+
   .hud-hjorne path { fill: none; stroke: var(--staal); stroke-width: 1.5; stroke-linecap: round; opacity: .55; }
   .sone.alarm .hud-hjorne path { stroke: var(--hendelse); opacity: .9; }
   .sone.feil .hud-hjorne path { stroke: var(--feil); opacity: .9; }
@@ -341,9 +343,70 @@
     .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
     .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
   }
+  /* ---------- romstasjon-kulisser: jorden og droner utenfor skroget ---------- */
+  .jorden {
+    position: fixed; z-index: -1; pointer-events: none;
+    left: -12vw; bottom: -22vw; width: 55vw; height: 55vw; border-radius: 50%;
+    background:
+      radial-gradient(circle at 38% 32%, #cfe9ff 0%, transparent 2%),
+      radial-gradient(circle at 62% 70%, #9fd9a0 0%, #6fb875 6%, transparent 9%),
+      radial-gradient(circle at 30% 65%, #5a9bd8 0%, #3f7dc4 40%, #1c3f78 75%, #0a1e42 100%);
+    box-shadow: -10px -10px 60px 0 rgba(120,180,255,.25) inset, 0 0 90px -10px rgba(80,150,255,.35);
+    opacity: .9;
+  }
+  .jorden::after {
+    content: ""; position: absolute; inset: -3%; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, transparent 60%, rgba(140,190,255,.18) 78%, transparent 82%);
+  }
+  .drone { position: fixed; z-index: -1; pointer-events: none; opacity: .8; animation: drone-drift 22s ease-in-out infinite; }
+  .drone.d2 { animation-duration: 27s; animation-delay: -6s; }
+  .drone.d3 { animation-duration: 19s; animation-delay: -12s; }
+  @keyframes drone-drift {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(-18px, 14px) rotate(-3deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .drone { animation: none; } }
 </style>
 </head>
 <body>
+<div class="jorden" aria-hidden="true"></div>
+<svg class="drone" style="top:8%; right:6%; width:46px" viewBox="0 0 40 24" aria-hidden="true">
+  <ellipse cx="20" cy="20" rx="14" ry="2.5" fill="#000" opacity=".3"/>
+  <line x1="7" y1="7" x2="0" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="7" x2="40" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="7" y1="13" x2="0" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="13" x2="40" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <ellipse cx="0" cy="1" rx="4" ry="1.4" fill="#4f86d8" opacity=".7"/>
+  <ellipse cx="40" cy="1" rx="4" ry="1.4" fill="#4f86d8" opacity=".7"/>
+  <ellipse cx="0" cy="19" rx="4" ry="1.4" fill="#4f86d8" opacity=".7"/>
+  <ellipse cx="40" cy="19" rx="4" ry="1.4" fill="#4f86d8" opacity=".7"/>
+  <rect x="12" y="7" width="16" height="13" rx="4" fill="#2a323f" stroke="#4f86d8" stroke-width="1"/>
+  <circle cx="20" cy="13.5" r="3" fill="#5fd4ff" opacity=".85"/>
+</svg>
+<svg class="drone d2" style="top:14%; left:9%; width:34px" viewBox="0 0 40 24" aria-hidden="true">
+  <line x1="7" y1="7" x2="0" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="7" x2="40" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="7" y1="13" x2="0" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="13" x2="40" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <ellipse cx="0" cy="1" rx="4" ry="1.4" fill="#e0699f" opacity=".7"/>
+  <ellipse cx="40" cy="1" rx="4" ry="1.4" fill="#e0699f" opacity=".7"/>
+  <ellipse cx="0" cy="19" rx="4" ry="1.4" fill="#e0699f" opacity=".7"/>
+  <ellipse cx="40" cy="19" rx="4" ry="1.4" fill="#e0699f" opacity=".7"/>
+  <rect x="12" y="7" width="16" height="13" rx="4" fill="#2a323f" stroke="#e0699f" stroke-width="1"/>
+  <circle cx="20" cy="13.5" r="3" fill="#ffd7e8" opacity=".85"/>
+</svg>
+<svg class="drone d3" style="top:5%; left:38%; width:28px" viewBox="0 0 40 24" aria-hidden="true">
+  <line x1="7" y1="7" x2="0" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="7" x2="40" y2="1" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="7" y1="13" x2="0" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <line x1="33" y1="13" x2="40" y2="19" stroke="#7c8aa0" stroke-width="1.2"/>
+  <ellipse cx="0" cy="1" rx="4" ry="1.4" fill="#f0b429" opacity=".7"/>
+  <ellipse cx="40" cy="1" rx="4" ry="1.4" fill="#f0b429" opacity=".7"/>
+  <ellipse cx="0" cy="19" rx="4" ry="1.4" fill="#f0b429" opacity=".7"/>
+  <ellipse cx="40" cy="19" rx="4" ry="1.4" fill="#f0b429" opacity=".7"/>
+  <rect x="12" y="7" width="16" height="13" rx="4" fill="#2a323f" stroke="#f0b429" stroke-width="1"/>
+  <circle cx="20" cy="13.5" r="3" fill="#ffe6a8" opacity=".85"/>
+</svg>
 <div class="side">
 
   <div class="topplinje">
@@ -400,7 +463,22 @@
       <g clip-path="url(#gulvClip)">
         <rect x="0" y="0" width="1200" height="760" fill="url(#fliser)"/>
 
-        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="10" stroke-linejoin="round"/>
+        <!-- Skrogomriss - en dobbel kant innenfor selve lerretet, som antyder tykkelsen
+             på stasjonens ytterskall. Ren dekor, tegnet bak alt annet. -->
+        <rect x="10" y="10" width="1180" height="740" rx="18" fill="none" stroke="var(--staal-mork)" stroke-width="7"/>
+        <rect x="10" y="10" width="1180" height="740" rx="18" fill="none" stroke="var(--vei-stripe)" stroke-width="1" opacity=".3"/>
+
+        <!-- Energiledningen er samtidig stasjonens strukturelle "ryggrad" mellom de to
+             dekkene - derfor en tykkere, nøytral ytterkasse med nagler, ikke bare et rør. -->
+        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="18" stroke-linejoin="round"/>
+        <g fill="var(--staal-mork)">
+          <circle cx="135" cy="258" r="3"/><circle cx="350" cy="258" r="3"/><circle cx="565" cy="258" r="3"/><circle cx="780" cy="258" r="3"/><circle cx="995" cy="258" r="3"/><circle cx="1052" cy="258" r="3"/>
+          <circle cx="135" cy="392" r="3"/><circle cx="350" cy="392" r="3"/><circle cx="565" cy="392" r="3"/><circle cx="780" cy="392" r="3"/><circle cx="995" cy="392" r="3"/><circle cx="1052" cy="392" r="3"/>
+        </g>
+        <!-- Støttebjelker fra ryggraden ut til skroget i hver ende, som knytter dekkene
+             sammen visuelt. -->
+        <path d="M 135 258 L 60 200 M 135 392 L 60 450 M 1052 258 L 1130 200 M 1052 392 L 1130 450"
+              stroke="var(--staal-mork)" stroke-width="4" stroke-linecap="round" opacity=".6"/>
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="2" stroke-dasharray="8 10" stroke-linejoin="round" class="vei-stripe"/>
 
         <!-- Banene fra kontrollrommet ut til hver avdeling. Tegnet HER, altså bak alle
@@ -408,6 +486,44 @@
              stedet for å ligge oppå innholdet deres - det var det som så rotete ut. Alltid
              synlige, men dempet; se #kommandoStrom lenger ned for selve trafikken. -->
         <g id="baneNett"></g>
+
+        <!-- ============ OBSERVASJONSDEKKET ============ -->
+        <!-- Ren atmosfære-stasjon, ikke en overvåket kilde - ingen statusprikk/alarm her,
+             for den overvåker ingenting nytt. Væren er den samme ekte dataen som
+             "vær"-benken i Eksterne kilder, bare med et faktisk tall i stedet for bare en
+             helsesjekk (se sjekkVaer). -->
+        <g class="sone" id="sone-observasjon">
+          <rect class="glo" x="34" y="18" width="204" height="150" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7" opacity="0"/>
+          <rect x="42" y="26" width="188" height="134" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="42" y="26" width="188" height="24" fill="var(--staal-mork)"/>
+          <text x="136" y="42" text-anchor="middle" font-weight="600" font-size="10" fill="#fff">OBSERVASJONSDEKKET</text>
+
+          <!-- porthullet - jorden alltid synlig, uansett hvor mye skjermbredde man har -->
+          <clipPath id="porthull"><circle cx="80" cy="92" r="26"/></clipPath>
+          <circle cx="80" cy="92" r="28" fill="var(--staal-mork)"/>
+          <g clip-path="url(#porthull)">
+            <rect x="52" y="64" width="56" height="56" fill="#050810"/>
+            <circle cx="66" cy="74" r="0.8" fill="#fff" opacity=".8"/>
+            <circle cx="95" cy="70" r="0.6" fill="#fff" opacity=".6"/>
+            <circle cx="100" cy="90" r="0.7" fill="#fff" opacity=".7"/>
+            <circle cx="60" cy="105" r="0.6" fill="#fff" opacity=".6"/>
+            <circle cx="88" cy="110" r="80" fill="#1c3f78"/>
+            <circle cx="88" cy="110" r="80" fill="#5a9bd8" opacity=".5"/>
+            <path d="M 60 90 Q 75 82 92 92 T 120 96" stroke="#9fd9a0" stroke-width="10" fill="none" opacity=".55"/>
+          </g>
+          <circle cx="80" cy="92" r="26" fill="none" stroke="var(--staal)" stroke-width="2"/>
+          <circle cx="80" cy="92" r="29" fill="none" stroke="var(--staal-mork)" stroke-width="2"/>
+
+          <!-- liten dekorativ plante - flid, ikke funksjon -->
+          <path d="M 200 152 V 138 M 200 138 Q 194 130 188 134 M 200 138 Q 206 128 213 133 M 200 142 Q 195 136 190 140"
+                stroke="#3f8f52" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <rect x="193" y="150" width="14" height="10" rx="1.5" fill="var(--staal)"/>
+
+          <text x="160" y="76" text-anchor="middle" font-size="9" fill="var(--text-muted)">Utenfor skroget</text>
+          <text x="160" y="98" text-anchor="middle" font-size="20" font-weight="700" fill="var(--tavle)" id="obsVaerTemp">–°</text>
+          <text x="160" y="115" text-anchor="middle" font-size="9" fill="var(--text-muted)" id="obsVaerTekst">henter data …</text>
+          <text x="160" y="132" text-anchor="middle" font-size="8" fill="var(--advarsel)" id="obsVaerParaply"></text>
+        </g>
 
         <!-- ============ RECMAN ============ -->
         <g class="sone" id="sone-recman">
@@ -770,6 +886,7 @@
 
       <h3>Modulene</h3>
       <ul class="forklaring to-spalter">
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Observasjonsdekket</b><span class="tekst">Ren atmosfære, ikke overvåking - derfor ingen statusprikk her. Porthullet viser jorden og stjernene uansett skjermbredde. Temperaturen er ekte værdata, samme kilde som "vær"-benken i Eksterne kilder, bare hentet med selve verdien i stedet for kun en helsesjekk.</span></div></li>
         <li><span class="prikk" style="background: var(--recman)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, rektanglene under er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver modul lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
         <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinrommet. De seks benkene er de seks funksjonene som lagrer noe. Hele rommet lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
@@ -1101,6 +1218,20 @@
         g.append(p);
       }
       sone.append(g);
+
+      // Takskrå - en tynn, skrå "list" langs toppkanten av modulen, som antyder at
+      // veggen faktisk har tykkelse (et lite isometrisk grep) uten å måtte tegne hele
+      // modulen om i 3D. Samme lyssetting (opp mot høyre) på alle moduler, som om lyset
+      // kommer fra samme kant av stasjonen.
+      const skjev = 9, hoyde = 7;
+      const tak = document.createElementNS(SVG_NS, "path");
+      tak.setAttribute("class", "tak-list");
+      tak.setAttribute("d",
+        "M " + x + " " + y +
+        " L " + (x + w) + " " + y +
+        " L " + (x + w + skjev) + " " + (y - hoyde) +
+        " L " + (x + skjev) + " " + (y - hoyde) + " Z");
+      sone.insertBefore(tak, sone.firstChild);
     });
   }
 
@@ -1835,6 +1966,7 @@
     tegnVedvarende();
     tegnHelse();
     await sjekkKvforbruk();
+    await sjekkVaerVerdi();
     await sjekkDeploy();
   }
 
@@ -1899,6 +2031,30 @@
       forrigeData.set("kvforbruk", { tilgjengelig: false, grunn: "ikke tilgjengelig" });
     }
     tegnKvote();
+  }
+
+  // Observasjonsdekket - samme kilde som "vær"-benken i Eksterne kilder allerede
+  // helsesjekker, men denne henter faktisk INNHOLDET (temperatur, symbol) i stedet for
+  // bare å sjekke at den svarer. Rent informativt, ingen alarm er koblet til dette.
+  const VAERSYMBOL = [
+    [/regn|rain/i, "🌧️"], [/sn(ø|o)|snow/i, "❄️"], [/torden|thunder/i, "⛈️"],
+    [/skyet|cloudy/i, "☁️"], [/delvis|partly/i, "⛅"], [/klar|fair|sun|clear/i, "☀️"], [/tåke|fog/i, "🌫️"]
+  ];
+  function vaerSymbol(kode) {
+    const treff = VAERSYMBOL.find(([m]) => m.test(kode ?? ""));
+    return treff ? treff[1] : "🌡️";
+  }
+  async function sjekkVaerVerdi() {
+    try {
+      const r = await fetch("/api/vaer", { cache: "no-store" });
+      const data = await r.json();
+      pulsHenting("observasjon");
+      el("obsVaerTemp").textContent = Math.round(data.temperatur) + "°";
+      el("obsVaerTekst").textContent = vaerSymbol(data.symbolKode) + " Oslo, akkurat nå";
+      el("obsVaerParaply").textContent = data.taMedParaply ? "☂ Ta med paraply i dag" : "";
+    } catch {
+      el("obsVaerTekst").textContent = "Værdata utilgjengelig";
+    }
   }
 
   // ---------- deploy = kommandoene fra kontrollrommet ----------
