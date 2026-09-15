@@ -30,6 +30,17 @@
     --staal-myk: #eceae6;
     --aktiv-myk: #fdf0d6;
 
+    /* Egne farger for Recman, Eksterne kilder og Teamskanal - de delte grå (--staal) som
+       hele fabrikken tidligere brukte for dem så "avslått" ut ved siden av de fargerike
+       avdelingene (teal/oransje/sort). Selve utstyret inni boksene (siloer, postkasser)
+       beholder grått med vilje - det er tenkt som nøytralt maskinvare, ikke et signal. */
+    --recman: #2f5fa8;
+    --recman-myk: #dde8f7;
+    --eksterne: #7a4fb0;
+    --eksterne-myk: #ece1f7;
+    --teamskanal: #b23a72;
+    --teamskanal-myk: #f6dfeb;
+
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
        gulvet alltid betyr "her må noen gjøre noe". */
@@ -168,32 +179,48 @@
   .last .merkelapp { fill: var(--text-muted); }
   .last.jobber .merkelapp { fill: var(--text); font-weight: 700; }
 
-  /* Banene fra kontrollrommet: alltid synlige, men dempet, så de leses som ledninger i
-     gulvet og ikke som trafikk. Først når en kommando faktisk går, lyser banen opp. */
+  /* Banene fra kontrollrommet: rene, dempede ledninger i gulvet - tegnet BAK avdelingene
+     (se DOM-rekkefølgen i SVG-en) slik at de forsvinner inn under boksene i stedet for å
+     krysse oppå innholdet deres. De skifter aldri farge lenger; selve "det skjer noe her"-
+     signalet er flyttet til en egen strøm som tegnes OVENPÅ alt, kun mens den varer -
+     se #kommandoStrom. To lag i stedet for ett, slik at gulvet er rolig i hvile og tydelig
+     når det faktisk skjer noe. */
   .banelinje {
     fill: none;
     stroke: var(--staal);
     stroke-width: 1.5;
-    stroke-dasharray: 3 5;
-    opacity: 0.25;
-    transition: opacity 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease;
-  }
-  .banelinje.aktiv {
-    stroke: var(--hendelse);
-    stroke-width: 2.5;
-    opacity: 1;
+    stroke-dasharray: 2 6;
+    stroke-linecap: round;
+    opacity: 0.28;
   }
 
-  .statusmerke { opacity: 0; }
-  .sone.feil .statusmerke, .sone.treg .statusmerke,
-  .benk.feil .statusmerke, .benk.treg .statusmerke { opacity: 1; }
-  .sone.treg .merkesirkel, .benk.treg .merkesirkel { fill: var(--advarsel); }
+  /* Den kontinuerlige strømmen - tegnes kun mens en kommando faktisk pågår, og fjernes
+     helt fra DOM-en når den er ferdig (se fjernKommandoStrom). Strekene "renner" mot
+     avdelingen med en jevn, uendelig animasjon så lenge elementet finnes. */
+  .kommandostrom {
+    fill: none;
+    stroke: var(--hendelse);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 7 9;
+    animation: strommer 0.6s linear infinite;
+    filter: drop-shadow(0 0 2px rgba(22, 163, 74, 0.5));
+  }
+  @keyframes strommer { to { stroke-dashoffset: -32; } }
+
+  /* Status-prikken: alltid synlig, i motsetning til den gamle "!"-merkelappen som bare
+     dukket opp ved feil - uten den var det umulig å se at en grå avdeling faktisk svarte
+     helt fint. Grønn til vanlig, gul ved stillhet, rød (med en rolig puls) ved feil. */
+  .statusdot { fill: var(--ok); transition: fill 0.25s ease; }
+  .sone.treg .statusdot, .benk.treg .statusdot { fill: var(--advarsel); }
+  .sone.feil .statusdot, .benk.feil .statusdot { fill: var(--feil); animation: dotPuls 1.3s ease-in-out infinite; }
+  @keyframes dotPuls { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
   .vei-stripe { animation: kryp 1s linear infinite; }
   @keyframes kryp { to { stroke-dashoffset: -26; } }
 
   @media (prefers-reduced-motion: reduce) {
-    .vei-stripe, .pille .pip { animation: none !important; }
+    .vei-stripe, .pille .pip, .kommandostrom, .sone.feil .statusdot { animation: none !important; }
     .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil,
     .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
     .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
@@ -241,15 +268,20 @@
       <g clip-path="url(#gulvClip)">
         <rect x="0" y="0" width="1200" height="660" fill="url(#fliser)"/>
 
-        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="30" stroke-linejoin="round"/>
-        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="3" stroke-dasharray="12 14" stroke-linejoin="round" class="vei-stripe"/>
-        <path d="M 810 258 V 218 M 810 392 V 432" stroke="var(--vei)" stroke-width="16" stroke-linecap="round"/>
+        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="10" stroke-linejoin="round"/>
+        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="2" stroke-dasharray="8 10" stroke-linejoin="round" class="vei-stripe"/>
+
+        <!-- Banene fra kontrollrommet ut til hver avdeling. Tegnet HER, altså bak alle
+             avdelingsboksene i DOM-rekkefølgen, slik at de forsvinner inn under boksene i
+             stedet for å ligge oppå innholdet deres - det var det som så rotete ut. Alltid
+             synlige, men dempet; se #kommandoStrom lenger ned for selve trafikken. -->
+        <g id="baneNett"></g>
 
         <!-- ============ RECMAN ============ -->
         <g class="sone" id="sone-recman">
           <rect class="glo" x="34" y="188" width="204" height="266" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="196" width="188" height="250" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="42" y="196" width="188" height="26" fill="var(--staal)"/>
+          <rect class="sonebar" x="42" y="196" width="188" height="26" fill="var(--recman)"/>
           <text x="136" y="214" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">RECMAN</text>
           <g fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="2">
             <circle cx="82" cy="266" r="17"/><circle cx="136" cy="266" r="17"/><circle cx="190" cy="266" r="17"/>
@@ -261,7 +293,7 @@
             <rect x="64" y="396" width="48" height="28" rx="2"/><rect x="120" y="396" width="48" height="28" rx="2"/>
           </g>
           <text x="136" y="440" text-anchor="middle" font-size="9" fill="var(--text-muted)"><tspan id="recmanAntall">–</tspan> oppdrag på tavlen</text>
-          <g class="statusmerke"><circle class="merkesirkel" cx="58" cy="209" r="9" fill="var(--feil)"/><text x="58" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="58" cy="209" r="5"/>
           <g class="alarmpil"><circle cx="216" cy="209" r="6" fill="#fff"/><circle cx="216" cy="209" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -269,33 +301,33 @@
         <g class="sone" id="sone-eksterne">
           <rect class="glo" x="34" y="462" width="204" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="470" width="188" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="42" y="470" width="188" height="26" fill="var(--staal)"/>
+          <rect class="sonebar" x="42" y="470" width="188" height="26" fill="var(--eksterne)"/>
           <text x="136" y="488" text-anchor="middle" font-weight="600" font-size="12" fill="#fff">EKSTERNE KILDER</text>
           <g class="benk" id="benk-vaer">
             <rect class="glo" x="52" y="504" width="86" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="58" y="510" width="74" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
             <text x="95" y="530" text-anchor="middle" font-size="9" fill="var(--text-muted)">vær</text>
-            <g class="statusmerke"><circle class="merkesirkel" cx="132" cy="512" r="7" fill="var(--feil)"/><text x="132" y="516" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+            <circle class="statusdot" cx="132" cy="512" r="5"/>
           </g>
           <g class="benk" id="benk-avganger">
             <rect class="glo" x="136" y="504" width="88" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="142" y="510" width="76" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
             <text x="180" y="530" text-anchor="middle" font-size="9" fill="var(--text-muted)">buss</text>
-            <g class="statusmerke"><circle class="merkesirkel" cx="218" cy="512" r="7" fill="var(--feil)"/><text x="218" y="516" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+            <circle class="statusdot" cx="218" cy="512" r="5"/>
           </g>
           <g class="benk" id="benk-nrk">
             <rect class="glo" x="52" y="552" width="86" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="58" y="558" width="74" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
             <text x="95" y="578" text-anchor="middle" font-size="9" fill="var(--text-muted)">NRK</text>
-            <g class="statusmerke"><circle class="merkesirkel" cx="132" cy="560" r="7" fill="var(--feil)"/><text x="132" y="564" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+            <circle class="statusdot" cx="132" cy="560" r="5"/>
           </g>
           <g class="benk" id="benk-kundenytt">
             <rect class="glo" x="136" y="552" width="88" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="142" y="558" width="76" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
             <text x="180" y="578" text-anchor="middle" font-size="9" fill="var(--text-muted)">kundenytt</text>
-            <g class="statusmerke"><circle class="merkesirkel" cx="218" cy="560" r="7" fill="var(--feil)"/><text x="218" y="564" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+            <circle class="statusdot" cx="218" cy="560" r="5"/>
           </g>
-          <g class="statusmerke"><circle class="merkesirkel" cx="58" cy="483" r="9" fill="var(--feil)"/><text x="58" y="488" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="58" cy="483" r="5"/>
           <g class="alarmpil"><circle cx="216" cy="483" r="6" fill="#fff"/><circle cx="216" cy="483" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -350,7 +382,7 @@
           <text x="404" y="502" text-anchor="middle" font-size="9" fill="var(--text-muted)">Skrivinger er den knappe ressursen</text>
           <text x="404" y="518" text-anchor="middle" font-size="9" fill="var(--text-muted)">- går den tom, slutter tavlen å lagre</text>
 
-          <g class="statusmerke"><circle class="merkesirkel" cx="282" cy="89" r="9" fill="var(--feil)"/><text x="282" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="282" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="528" cy="89" r="6" fill="#fff"/><circle cx="528" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -365,7 +397,7 @@
           <text x="627" y="362" text-anchor="middle" font-size="9" fill="var(--text-muted)">adminnøkkel</text>
           <text x="627" y="388" text-anchor="middle" font-size="9" fill="var(--text-muted)">Avvist</text>
           <text x="627" y="408" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="avvisteAntall">0</text>
-          <g class="statusmerke"><circle class="merkesirkel" cx="590" cy="239" r="9" fill="var(--feil)"/><text x="590" y="244" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="590" cy="239" r="5"/>
           <g class="alarmpil"><circle cx="666" cy="239" r="6" fill="#fff"/><circle cx="666" cy="239" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -386,7 +418,7 @@
             <rect x="808" y="153" width="26" height="13" rx="6.5" fill="var(--aktiv)"/><circle cx="827" cy="159.5" r="4.6" fill="#fff"/>
           </g>
           <text x="810" y="202" text-anchor="middle" font-size="9" fill="var(--text-muted)">brytere for tavlen</text>
-          <g class="statusmerke"><circle class="merkesirkel" cx="722" cy="89" r="9" fill="var(--feil)"/><text x="722" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="722" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="898" cy="89" r="6" fill="#fff"/><circle cx="898" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -394,7 +426,7 @@
         <g class="sone" id="sone-teamskanal">
           <rect class="glo" x="698" y="416" width="224" height="168" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="424" width="208" height="152" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="706" y="424" width="208" height="26" fill="var(--staal)"/>
+          <rect class="sonebar" x="706" y="424" width="208" height="26" fill="var(--teamskanal)"/>
           <text x="810" y="442" text-anchor="middle" font-weight="600" font-size="12" fill="#fff">TEAMSKANAL</text>
           <g fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5">
             <rect x="726" y="462" width="52" height="28" rx="2"/><rect x="786" y="462" width="52" height="28" rx="2"/><rect x="846" y="462" width="52" height="28" rx="2"/>
@@ -402,7 +434,7 @@
           <text x="810" y="516" text-anchor="middle" font-size="9" fill="var(--text-muted)">Sist hentet fra Teams</text>
           <text x="810" y="538" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="teamsSist">–</text>
           <text x="810" y="560" text-anchor="middle" font-size="9" fill="var(--text-muted)">hvert 15. min, hverdag 07-19</text>
-          <g class="statusmerke"><circle class="merkesirkel" cx="722" cy="437" r="9" fill="var(--feil)"/><text x="722" y="442" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="722" cy="437" r="5"/>
           <g class="alarmpil"><circle cx="898" cy="437" r="6" fill="#fff"/><circle cx="898" cy="437" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -431,14 +463,9 @@
           <rect x="970" y="477" width="160" height="66" rx="1" fill="#fff"/>
           <text x="1050" y="506" text-anchor="middle" font-weight="600" font-size="11" fill="var(--text-muted)">GJESTEVISNING</text>
           <text x="1050" y="522" text-anchor="middle" font-size="8" fill="var(--text-muted)">skrus på manuelt</text>
-          <g class="statusmerke"><circle class="merkesirkel" cx="956" cy="89" r="9" fill="var(--feil)"/><text x="956" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="956" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="1144" cy="89" r="6" fill="#fff"/><circle cx="1144" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
-
-        <!-- Banene fra kontrollrommet ut til hver avdeling. Tegnet svakt hele tiden, slik
-             at det alltid er synlig HVEM kontrollrommet kan nå - og lyser opp i grønt kun
-             mens en kommando faktisk går. Bygges av koden, se byggBaneNett. -->
-        <g id="baneNett"></g>
 
         <!-- ============ KONTROLLROMMET (CLAUDE) ============ -->
         <g class="sone" id="sone-claude">
@@ -465,7 +492,7 @@
             <text class="nr" x="20" y="-3" text-anchor="middle" font-size="9" font-weight="700">12</text>
           </g>
 
-          <g class="statusmerke"><circle class="merkesirkel" cx="590" cy="444" r="9" fill="var(--feil)"/><text x="590" y="449" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <circle class="statusdot" cx="590" cy="444" r="5"/>
           <g class="alarmpil"><circle cx="664" cy="444" r="6" fill="#fff"/><circle cx="664" cy="444" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
@@ -473,14 +500,16 @@
              skal kunne spørre om posisjon og retning underveis (getPointAtLength). -->
         <g id="baner" fill="none" stroke="none"></g>
 
-        <!-- Selve kommandoene som er underveis akkurat nå. Står det ingenting her,
-             går det ingen trafikk. -->
-        <g id="kommandoer"></g>
-
         <!-- Lastene på banen og robotene i avdelingene settes inn her av koden, slik at
              de kan deles med listen nederst på siden og aldri komme i utakt med den. -->
         <g id="laster"></g>
         <g id="roboter"></g>
+
+        <!-- Den kontinuerlige strømmen mens en kommando faktisk pågår. Tegnet HELT til
+             slutt, altså øverst av alt - i motsetning til det dempede #baneNett lenger
+             opp, skal denne være tydelig synlig oppå avdelingene mens den varer. Tom når
+             ingenting pågår. -->
+        <g id="kommandoStrom"></g>
       </g>
     </svg>
   </div>
@@ -520,22 +549,28 @@
       <h2>Slik leser du kartet</h2>
       <p class="hint">Alt på gulvet betyr noe bestemt. Her er hele oversikten.</p>
 
-      <h3>De tre lysene</h3>
+      <h3>Status-prikken</h3>
+      <p class="hint">Hver boks har en liten prikk i det øverste hjørnet. Den er alltid synlig, uansett hvilken farge boksen ellers har - det er den som faktisk sier om noe svarer eller ikke.</p>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Grønn puls - det skjedde noe nå</b><span class="tekst">Varer 25 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
-        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rødt med utropstegn - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Blir stående til noen trykker "Kvitter alarm" øverst på siden - selv om kilden retter seg av seg selv i mellomtiden, slik at en feil som varte om natten fortsatt er synlig neste morgen. Knappen nekter å fjerne en alarm som fortsatt er aktiv.</span></div></li>
-        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Svakt grønt blaff - avdelingen ble nettopp spurt</b><span class="tekst">Vises hver gang tavlen faktisk henter data fra den kilden, uansett om svaret var nytt eller ikke. Mye svakere og kortere enn hendelsespulsen, og vises aldri oppå en rød eller gul avdeling.</span></div></li>
-        <li><span class="prikk" style="background: var(--advarsel)"></span><div><b>Gult med utropstegn - noe har blitt stille</b><span class="tekst">Kilden svarer, men har ikke levert noe nytt på lenge. Den farligste feiltypen, fordi ingenting krasjer - det bare stopper.</span></div></li>
+        <li><span class="prikk" style="background: var(--ok)"></span><div><b>Grønn - svarer normalt</b><span class="tekst">Standardtilstanden. Ingen ting å se her, og det er poenget: en grå eller nøytral boks skal ikke se "avslått" ut bare fordi fargen dens er dempet.</span></div></li>
+        <li><span class="prikk" style="background: var(--advarsel)"></span><div><b>Gul - har blitt stille</b><span class="tekst">Kilden svarer, men har ikke levert noe nytt på lenge. Den farligste feiltypen, fordi ingenting krasjer - det bare stopper. Retter seg selv når data er ferskt igjen.</span></div></li>
+        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rød, med en rolig puls - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Hele boksen får i tillegg en rød ramme. Blir stående til noen trykker "Kvitter alarm" øverst - selv om kilden retter seg i mellomtiden, slik at en feil som varte om natten fortsatt er synlig neste morgen. Knappen nekter å fjerne en alarm som fortsatt er aktiv.</span></div></li>
+      </ul>
+
+      <h3>De to grønne pulsene</h3>
+      <ul class="forklaring to-spalter">
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Full puls rundt hele boksen - det skjedde noe</b><span class="tekst">Varer maks 15 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Svakt, kort blaff - avdelingen ble nettopp spurt</b><span class="tekst">Under ett sekund. Vises hver gang tavlen faktisk henter data fra kilden, uansett om svaret var nytt. Mye svakere enn hendelsespulsen, og vises aldri oppå en rød eller gul boks.</span></div></li>
       </ul>
 
       <h3>Avdelingene</h3>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, boksene er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver boks lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
+        <li><span class="prikk" style="background: var(--recman)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, boksene er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
+        <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver boks lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
         <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinhallen. De seks benkene er de seks funksjonene som lagrer noe. Hele hallen lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span class="tekst">Adminnøkkelen. Stolpene er porten. Teller hvor mange skriveforsøk som er blitt avvist fordi de manglet gyldig nøkkel, og blinker når det skjer. Er det tallet større enn null uten at du selv har rotet med nøkkelen, har noen forsøkt seg.</span></div></li>
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
+        <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, lyser banene til de avdelingene koden gjelder for grønt, og en puls går ut. Ligger alle banene mørke, går det ingen trafikk.</span></div></li>
       </ul>
@@ -593,7 +628,7 @@
   const KILDER = [
     {
       id: "endringslogg", url: "/api/endringslogg", navn: "Endringslogg",
-      soner: ["recman", "functions"], farge: "var(--staal)",
+      soner: ["recman", "functions"], farge: "var(--recman)",
       nokkel: (d) => { const h = d.hendelser ?? []; return h.length + ":" + (h[0]?.tidspunkt ?? 0); },
       beskriv: (d) => {
         const h = (d.hendelser ?? [])[0];
@@ -645,7 +680,7 @@
     },
     {
       id: "teamskanal", url: "/api/teamskanal", navn: "Teamskanal",
-      soner: ["teamskanal", "functions"], farge: "var(--staal)",
+      soner: ["teamskanal", "functions"], farge: "var(--teamskanal)",
       // sistOppdatert er BEVISST utelatt: jobben poster hvert 15. minutt uansett om det
       // finnes nye meldinger eller ei, så en nøkkel basert på den ville slått alarm fire
       // ganger i timen uten at noe faktisk hadde skjedd. Kun innholdet teller som hendelse -
@@ -699,8 +734,10 @@
   ];
 
   // Kontrollrommet ligger midt på gulvet, og har en fast bane ut til hver avdeling.
-  // Banene tegnes svakt hele tiden - da er det alltid synlig hvem det kan nås ut til -
-  // og lyser grønt bare mens en kommando faktisk går der.
+  // Banene (#baneNett, tegnet BAK avdelingene - se markeringen i SVG-en) ligger der hele
+  // tiden, dempet, så det alltid er synlig hvem kontrollrommet kan nå. Selve trafikken
+  // vises i stedet som en egen, kontinuerlig strøm (#kommandoStrom, tegnet HELT øverst)
+  // som varer så lenge kommandoen regnes som aktiv - se sendKommando.
   const KOMMANDO_START = { x: 627, y: 546 };
   const SONE_ANKER = {
     recman: { x: 176, y: 380 },
@@ -711,63 +748,60 @@
     teamskanal: { x: 780, y: 520 },
     tavle: { x: 1010, y: 430 }
   };
-  const KOMMANDO_VARIGHET = 1.8;
-  const kommandoer = [];
-  const baneNett = new Map();
+  const baneD = new Map();
+  const stromElementer = new Map();
+  const stromTimere = new Map();
   let kommandoTeller = 0;
+
+  function beregnBaneD(anker) {
+    // Buet, ikke rett strek: en rett linje tvers over gulvet leses som en kant i
+    // tegningen. Buen bøyes alltid samme vei, så vifta ut fra rommet blir ryddig.
+    const dx = anker.x - KOMMANDO_START.x;
+    const dy = anker.y - KOMMANDO_START.y;
+    const lengde = Math.hypot(dx, dy) || 1;
+    const kx = (KOMMANDO_START.x + anker.x) / 2 + (-dy / lengde) * lengde * 0.16;
+    const ky = (KOMMANDO_START.y + anker.y) / 2 + (dx / lengde) * lengde * 0.16;
+    return "M " + KOMMANDO_START.x + " " + KOMMANDO_START.y +
+      " Q " + kx.toFixed(1) + " " + ky.toFixed(1) + " " + anker.x + " " + anker.y;
+  }
 
   function byggBaneNett() {
     for (const [sone, anker] of Object.entries(SONE_ANKER)) {
-      // Buet, ikke rett strek: en rett linje tvers over gulvet leses som en kant i
-      // tegningen. Buen bøyes alltid samme vei, så vifta ut fra rommet blir ryddig.
-      const dx = anker.x - KOMMANDO_START.x;
-      const dy = anker.y - KOMMANDO_START.y;
-      const lengde = Math.hypot(dx, dy) || 1;
-      const kx = (KOMMANDO_START.x + anker.x) / 2 + (-dy / lengde) * lengde * 0.16;
-      const ky = (KOMMANDO_START.y + anker.y) / 2 + (dx / lengde) * lengde * 0.16;
-
+      const d = beregnBaneD(anker);
+      baneD.set(sone, d);
       const p = document.createElementNS(SVG_NS, "path");
       p.setAttribute("class", "banelinje");
-      p.setAttribute("d", "M " + KOMMANDO_START.x + " " + KOMMANDO_START.y +
-        " Q " + kx.toFixed(1) + " " + ky.toFixed(1) + " " + anker.x + " " + anker.y);
+      p.setAttribute("d", d);
       el("baneNett").append(p);
-      baneNett.set(sone, p);
     }
   }
 
+  // Kristian opplevde den forrige varianten (én prikk som løp langs banen på under to
+  // sekunder) som "veldig kort". Strømmen er derfor ikke lenger en engangsbevegelse, men
+  // en linje som renner kontinuerlig så lenge kommandoen varer - samme ALARM_MS som
+  // resten av de grønne pulsene i fabrikken, slik at "aktiv" betyr det samme overalt.
   function sendKommando(sone) {
-    const bane = baneNett.get(sone);
-    if (!bane) return;
+    const d = baneD.get(sone);
+    if (!d) return;
 
-    bane.classList.add("aktiv");
+    let p = stromElementer.get(sone);
+    if (!p) {
+      p = document.createElementNS(SVG_NS, "path");
+      p.setAttribute("class", "kommandostrom");
+      p.setAttribute("d", d);
+      el("kommandoStrom").append(p);
+      stromElementer.set(sone, p);
+    }
 
-    const prikk = document.createElementNS(SVG_NS, "circle");
-    prikk.setAttribute("r", "5.5");
-    prikk.setAttribute("fill", "var(--hendelse)");
-    el("kommandoer").append(prikk);
+    clearTimeout(stromTimere.get(sone));
+    stromTimere.set(sone, setTimeout(() => {
+      p.remove();
+      stromElementer.delete(sone);
+      stromTimere.delete(sone);
+    }, ALARM_MS));
 
-    kommandoer.push({ bane, prikk, lengde: bane.getTotalLength(), t: 0 });
     kommandoTeller++;
     el("claudeKommandoer").textContent = kommandoTeller;
-  }
-
-  function flyttKommandoer(dt) {
-    for (let i = kommandoer.length - 1; i >= 0; i--) {
-      const k = kommandoer[i];
-      k.t += dt;
-      const andel = k.t / KOMMANDO_VARIGHET;
-      if (andel >= 1) {
-        k.prikk.remove();
-        kommandoer.splice(i, 1);
-        // Banen dempes igjen først når ingen andre kommandoer fortsatt går på den -
-        // to utrullinger tett etter hverandre skal ikke slukke hverandres lys.
-        if (!kommandoer.some((a) => a.bane === k.bane)) k.bane.classList.remove("aktiv");
-        continue;
-      }
-      const p = k.bane.getPointAtLength(andel * k.lengde);
-      k.prikk.setAttribute("cx", p.x.toFixed(1));
-      k.prikk.setAttribute("cy", p.y.toFixed(1));
-    }
   }
 
   // ---------- robotene og lastene ----------
@@ -776,10 +810,10 @@
   const BANE_TRACK = "M 135 258 L 1052 258 L 1052 392 L 135 392 Z";
 
   const ROBOTER = [
-    { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--staal)", varighet: 11,
+    { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--recman)", varighet: 11,
       bane: "M 78 246 L 194 246 L 194 426 L 78 426 Z", utloser: ["sone-recman"],
       jobb: "Henter oppdrag og kandidater fra Recman. Dataen mellomlagres i 20 minutter, så den går ikke tur-retur oftere enn det." },
-    { nr: 2, navn: "Budbringeren", sone: "Eksterne kilder", farge: "var(--staal)", varighet: 10,
+    { nr: 2, navn: "Budbringeren", sone: "Eksterne kilder", farge: "var(--eksterne)", varighet: 10,
       bane: "M 66 504 L 210 504 L 210 592 L 66 592 Z", utloser: ["sone-eksterne"],
       jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra. Faller én av dem, lyser boksen hans rødt." },
     { nr: 3, navn: "Oppslagsvakten", sone: "Functions", farge: "var(--teal)", varighet: 9,
@@ -800,7 +834,7 @@
     { nr: 8, navn: "Operatøren", sone: "/admin", farge: "var(--aktiv)", varighet: 8.5,
       bane: "M 730 190 L 890 190 L 890 212 L 730 212 Z", utloser: ["sone-admin"],
       jobb: "Står ved kontrollpulten. Rører på seg hver gang noen endrer noe fra admin-siden." },
-    { nr: 9, navn: "Postbudet", sone: "Teamskanal", farge: "var(--staal)", varighet: 9.5,
+    { nr: 9, navn: "Postbudet", sone: "Teamskanal", farge: "var(--teamskanal)", varighet: 9.5,
       bane: "M 730 458 L 890 458 L 890 496 L 730 496 Z", utloser: ["sone-teamskanal"],
       jobb: "Henter meldinger fra Teams hvert 15. minutt på hverdager. Blir han gående i halv fart i arbeidstiden, har jobben stoppet." },
     { nr: 10, navn: "Skjermpasseren", sone: "Tavla", farge: "var(--aktiv)", varighet: 13,
@@ -824,7 +858,7 @@
       hva: "Oppdragene fra Recman på vei til tavlen. Friskes opp hvert 20. minutt." },
     { navn: "livstegn", farge: "var(--teal)", varighet: 14, start: 0.34, utloser: ["sone-tavle", "benk-skjermer"],
       hva: "Skjermene på veggen melder seg levende hvert 15. sekund, så admin vet hvilke som er på nett." },
-    { navn: "meldinger", farge: "var(--staal)", varighet: 14, start: 0.67, utloser: ["sone-teamskanal"],
+    { navn: "meldinger", farge: "var(--teamskanal)", varighet: 14, start: 0.67, utloser: ["sone-teamskanal"],
       hva: "Teams-meldingene på vei til panelet på tavlen." }
   ];
 
@@ -921,10 +955,9 @@
       }
       a.el.classList.toggle("jobber", a.fart > 0.78);
     }
-    flyttKommandoer(dt);
     // Agent 12 sitter i ro ved maskinen, så den har ingen bane - men skal fortsatt vise
-    // at den jobber mens en kommando er underveis.
-    document.getElementById("claudeAgent").classList.toggle("jobber", kommandoer.length > 0);
+    // at den jobber mens minst én kommando faktisk strømmer ut.
+    document.getElementById("claudeAgent").classList.toggle("jobber", stromElementer.size > 0);
     requestAnimationFrame(steg);
   }
 
