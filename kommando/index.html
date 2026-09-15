@@ -202,6 +202,21 @@
   }
   #search input::placeholder { color: var(--text-faint); }
   #search .hint { color: var(--text-faint); font-size: 0.95rem; }
+  .visning-bytter { display: flex; gap: 2px; flex: none; }
+  .visning-knapp {
+    background: none; border: 1px solid var(--panel-border); color: var(--text-dim);
+    font-family: 'VT323', monospace; font-size: 1.05rem; letter-spacing: 0.05em;
+    padding: 0.25rem 0.7rem; cursor: pointer;
+  }
+  .visning-knapp:first-child { border-radius: 3px 0 0 3px; }
+  .visning-knapp:last-child { border-radius: 0 3px 3px 0; }
+  .visning-knapp[aria-pressed="true"] { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
+  #popUtKnapp {
+    background: none; border: 1px solid var(--panel-border); color: var(--text-dim);
+    font-family: 'VT323', monospace; font-size: 1.05rem; padding: 0.25rem 0.7rem;
+    border-radius: 3px; cursor: pointer; flex: none;
+  }
+  #popUtKnapp:hover { color: var(--cyan); border-color: var(--cyan); }
 
   /* ============ Telemetri (sider) ============ */
   .telemetri { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -226,7 +241,42 @@
 
   /* ============ Broen (kjerne + agentmoduler) ============ */
   #bridge { grid-area: bridge; position: relative; min-height: 680px; }
+  #visningBro { position: absolute; inset: 0; width: 100%; height: 100%; }
   #streams { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+
+  /* ============ Gulvkart (romvisning) - agenter som går i hvert sitt rom,
+     samme prinsipp som fabrikk/index.html sin ROBOTER/bane-teknikk (SVG-sti +
+     getPointAtLength i requestAnimationFrame-løkken, se oppdaterRomAktorer), bare
+     omstylet til samme CRT-cyberpunk-språk som resten av kommandosenteret i stedet
+     for 80-talls pixel-art. ============ */
+  #visningRom { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .sone-panel { fill: var(--panel); stroke: var(--panel-border); stroke-width: 1.5; }
+  .sone-hjorne { stroke: var(--cyan); stroke-width: 2; fill: none; opacity: 0.8; }
+  .sone-navn {
+    fill: var(--cyan); font-family: 'VT323', monospace; font-size: 17px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .agent-navn-liten {
+    fill: var(--text-dim); font-family: 'VT323', monospace; font-size: 12px;
+  }
+  .bane { fill: none; stroke: var(--panel-border); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.5; }
+  .blip circle.kropp { r: 7; }
+  .blip circle.glo { r: 13; opacity: 0.35; }
+  .blip[data-status="ok"] circle.kropp { fill: var(--green); }
+  .blip[data-status="ok"] circle.glo { fill: var(--green); }
+  .blip[data-status="aktiv"] circle.kropp { fill: var(--cyan); }
+  .blip[data-status="aktiv"] circle.glo { fill: var(--cyan); }
+  .blip[data-status="feil"] circle.kropp { fill: var(--red); animation: blipBlink 0.9s steps(2) infinite; }
+  .blip[data-status="feil"] circle.glo { fill: var(--red); }
+  .blip[data-status="idle"] circle.kropp { fill: var(--text-faint); }
+  .blip[data-status="idle"] circle.glo { fill: none; }
+  .blip[data-status="ukjent"] circle.kropp { fill: none; stroke: var(--text-faint); stroke-dasharray: 2 2; }
+  .blip[data-status="ukjent"] circle.glo { fill: none; }
+  .blip .kropp { animation: blipPuls 2.4s ease-in-out infinite; }
+  @keyframes blipPuls { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+  @keyframes blipBlink { 50% { opacity: 0.3; } }
+  body.redusert-bevegelse .blip .kropp { animation: none; }
+  body.redusert-bevegelse .blip[data-status="feil"] circle.kropp { animation: none; }
 
   #core {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
@@ -390,6 +440,11 @@
     <span class="prompt">&gt;</span>
     <input type="text" id="sokFelt" placeholder="filtrer agenter... (navn eller oppgave)" autocomplete="off">
     <span class="hint">/ for å søke · ? for hjelp</span>
+    <div class="visning-bytter" role="group" aria-label="Velg visning">
+      <button class="visning-knapp" data-visning="bro" aria-pressed="true">BRO</button>
+      <button class="visning-knapp" data-visning="rom" aria-pressed="false">GULVKART</button>
+    </div>
+    <button id="popUtKnapp" title="Åpne gjeldende visning i eget vindu">⧉ EGET VINDU</button>
   </div>
 
   <div id="telemL" class="telemetri">
@@ -410,13 +465,18 @@
   </div>
 
   <div id="bridge">
-    <canvas id="streams"></canvas>
-    <div id="core">
-      <div class="ring"></div>
-      <div class="kjerne-lys"></div>
-      <div class="etikett">REAKTOR</div>
+    <div id="visningBro">
+      <canvas id="streams"></canvas>
+      <div id="core">
+        <div class="ring"></div>
+        <div class="kjerne-lys"></div>
+        <div class="etikett">REAKTOR</div>
+      </div>
+      <!-- Agentmoduler settes inn av JS (byggAgentmoduler/plasserAgenter) -->
     </div>
-    <!-- Agentmoduler settes inn av JS (plasseresRadielt) -->
+    <svg id="visningRom" viewBox="0 0 1200 740" preserveAspectRatio="xMidYMid meet" hidden>
+      <!-- Soner, patruljestier og agent-blips bygges av JS (byggRomvisning) -->
+    </svg>
   </div>
 
   <div id="telemR" class="telemetri">
@@ -641,7 +701,7 @@
   }
 
   function byggAgentmoduler() {
-    const bridge = el("bridge");
+    const visningBro = el("visningBro");
     AGENTER.forEach((a, i) => {
       const div = document.createElement("div");
       div.className = "agent";
@@ -662,7 +722,7 @@
       div.addEventListener("mouseleave", () => loftAgent(div, false));
       div.addEventListener("focus", () => loftAgent(div, true));
       div.addEventListener("blur", () => loftAgent(div, false));
-      bridge.appendChild(div);
+      visningBro.appendChild(div);
     });
     plasserAgenter();
     // Et vanlig window "resize" holder ikke alene: webfontene (Press Start 2P/VT323/IBM
@@ -671,7 +731,7 @@
     // trigge noen resize-hendelse. Første forsøk plasserte derfor hele agent-ringen for
     // høyt oppe, klemt sammen i toppen av broen. ResizeObserver fanger ALLE endringer i
     // #bridge sin faktiske størrelse, uansett årsak.
-    new ResizeObserver(plasserAgenter).observe(bridge);
+    new ResizeObserver(plasserAgenter).observe(el("bridge"));
   }
 
   // Status skal ALDRI vises med farge alene - hver status har også et eget ikon/tekst.
@@ -686,16 +746,181 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  // ============================================================
+  // GULVKART - andre visning av de SAMME 13 agentene (samme AGENTER-liste, samme
+  // state.agentStatus), der agentene går rundt i hvert sitt rom i stedet for å stå
+  // som kort i en ring. Rommene her er ikke ment å pixel-matche fabrikk/index.html -
+  // det er en ny, selvstendig visning i samme CRT-cyberpunk-språk - men selve
+  // teknikken (SVG-sti + getPointAtLength() drevet av rAF-løkken i frame()) er
+  // hentet direkte derfra, siden den allerede er utprøvd og fungerer pålitelig.
+  //
+  // Sonene grupperer agentene omtrent slik fabrikk gjorde det (flere agenter kan
+  // dele ett rom/en sone, med hver sin lille patruljerute inni). Stasjonære agenter
+  // (Claude, Arkivaren - de har ingen "rute" i fabrikk heller) får bare et fast,
+  // pulserende punkt midt i rommet sitt i stedet for en bane.
+  // ============================================================
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const ROM_SONER = [
+    { navn: "RECMAN", x: 20, y: 20, w: 340, h: 200, agenter: ["uthenteren"] },
+    { navn: "CLOUDFLARE FUNCTIONS", x: 400, y: 20, w: 360, h: 460,
+      agenter: ["oppslagsvakten", "listeforeren", "bryterbetjenten", "lagerarbeideren"] },
+    { navn: "ADMIN", x: 800, y: 20, w: 360, h: 200, agenter: ["operatoren"] },
+    { navn: "EKSTERNE KILDER", x: 20, y: 260, w: 340, h: 220, agenter: ["budbringeren"] },
+    { navn: "TEAMSKANAL", x: 800, y: 260, w: 360, h: 220, agenter: ["postbudet"] },
+    { navn: "KONTROLLROMMET", x: 20, y: 520, w: 340, h: 200, agenter: ["claude"] },
+    { navn: "TAVLA", x: 400, y: 520, w: 360, h: 200, agenter: ["skjermpasseren", "gjesteverten"] },
+    { navn: "SLUSEN", x: 800, y: 520, w: 170, h: 200, agenter: ["vakten"] },
+    { navn: "OBSIDIAN-HVELVET", x: 990, y: 520, w: 170, h: 200, agenter: ["arkivaren"] }
+  ];
+  const romAktorer = []; // {id, path, lengde, pos, stasjonaer}
+
+  function svgEl(navn, attrs) {
+    const e = document.createElementNS(SVG_NS, navn);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // Enkel rektangulær patruljesti innenfor en gitt boks - samme "gå langs kanten av
+  // rommet"-idé som fabrikkens roboter, bare uten den isometriske vinkelen.
+  function patruljeSti(x, y, w, h, margin) {
+    const x0 = x + margin, y0 = y + margin, x1 = x + w - margin, y1 = y + h - margin;
+    return "M " + x0 + " " + y0 + " L " + x1 + " " + y0 + " L " + x1 + " " + y1 + " L " + x0 + " " + y1 + " Z";
+  }
+
+  function byggRomvisning() {
+    const svg = el("visningRom");
+    const agentMap = new Map(AGENTER.map((a) => [a.id, a]));
+
+    ROM_SONER.forEach((sone) => {
+      const g = svgEl("g", { class: "sone" });
+      g.appendChild(svgEl("rect", { class: "sone-panel", x: sone.x, y: sone.y, width: sone.w, height: sone.h, rx: 3 }));
+      // HUD-hjørnemarkører, avledet direkte fra sonens egne mål - samme idé som
+      // .scope sine hjørner i telemetri-panelene, bare tegnet som SVG-linjer her.
+      const arm = Math.min(16, sone.w / 6, sone.h / 6);
+      [[sone.x, sone.y, arm, 0, 0, arm], [sone.x + sone.w, sone.y, -arm, 0, 0, arm],
+       [sone.x, sone.y + sone.h, arm, 0, 0, -arm], [sone.x + sone.w, sone.y + sone.h, -arm, 0, 0, -arm]]
+        .forEach(([cx, cy, dx1, dy1, dx2, dy2]) => {
+          g.appendChild(svgEl("path", { class: "sone-hjorne",
+            d: "M " + (cx + dx1) + " " + (cy + dy1) + " L " + cx + " " + cy + " L " + (cx + dx2) + " " + (cy + dy2) }));
+        });
+      g.appendChild(svgEl("text", { class: "sone-navn", x: sone.x + 10, y: sone.y + 22 }));
+      g.lastChild.textContent = sone.navn;
+      svg.appendChild(g);
+
+      const n = sone.agenter.length;
+      sone.agenter.forEach((agentId, i) => {
+        const a = agentMap.get(agentId);
+        if (!a) return;
+        // Flere agenter i samme sone deler den opp i like brede/høye underceller
+        // (bredest retning delt) - hver får sin egen lille patruljerute inni.
+        const delerVannrett = sone.w >= sone.h;
+        const cellW = delerVannrett ? sone.w / n : sone.w;
+        const cellH = delerVannrett ? sone.h : sone.h / n;
+        const cellX = sone.x + (delerVannrett ? i * cellW : 0);
+        const cellY = sone.y + (delerVannrett ? 0 : i * cellH);
+
+        if (a.stasjonaer) {
+          const cx = cellX + cellW / 2, cy = cellY + cellH / 2;
+          const bg = svgEl("g", { class: "blip", id: "blip-" + agentId, "data-status": state.agentStatus.get(agentId).status, transform: "translate(" + cx + "," + cy + ")" });
+          bg.appendChild(svgEl("circle", { class: "glo" }));
+          bg.appendChild(svgEl("circle", { class: "kropp" }));
+          svg.appendChild(bg);
+          const navnEl = svgEl("text", { class: "agent-navn-liten", x: cx, y: cy + 24, "text-anchor": "middle" });
+          navnEl.textContent = a.navn;
+          svg.appendChild(navnEl);
+          romAktorer.push({ id: agentId, stasjonaer: true });
+          return;
+        }
+
+        const margin = Math.min(18, cellW * 0.18, cellH * 0.18);
+        const d = patruljeSti(cellX, cellY, cellW, cellH, margin);
+        const pathEl = svgEl("path", { class: "bane", d });
+        svg.appendChild(pathEl);
+
+        const navnEl = svgEl("text", { class: "agent-navn-liten", x: cellX + margin, y: cellY + margin - 6 });
+        navnEl.textContent = a.navn;
+        svg.appendChild(navnEl);
+
+        const bg = svgEl("g", { class: "blip", id: "blip-" + agentId, "data-status": state.agentStatus.get(agentId).status });
+        bg.appendChild(svgEl("circle", { class: "glo" }));
+        bg.appendChild(svgEl("circle", { class: "kropp" }));
+        svg.appendChild(bg);
+
+        const lengde = pathEl.getTotalLength();
+        romAktorer.push({ id: agentId, path: pathEl, lengde, pos: Math.random() * lengde });
+      });
+    });
+  }
+
+  // Kalles fra frame() (samme rAF-løkke som partiklene/reaktoren) - beveger hver
+  // agent langs sin egen sti, med fart avledet av AKKURAT den samme status-dataen
+  // som resten av siden (state.agentStatus/state.agentHeat) - INGEN egen kø/fart-
+  // modell er funnet opp for gulvkartet, det er bare en annen VISNING av samme tall.
+  const ROM_FART_IDLE = 0.006; // px/ms - sakte, ambient "i live"-bevegelse
+  const ROM_FART_AKTIV = 0.09; // tydelig raskere når noe faktisk skjer akkurat nå
+
+  function oppdaterRomAktorer(dt) {
+    romAktorer.forEach((r) => {
+      if (r.stasjonaer) return;
+      const status = state.agentStatus.get(r.id).status;
+      const heat = state.agentHeat.get(r.id) ?? 0;
+      const fart = ROM_FART_IDLE + (ROM_FART_AKTIV - ROM_FART_IDLE) * Math.min(1, heat + (status === "ok" ? 0.3 : 0));
+      r.pos = (r.pos + fart * dt) % r.lengde;
+      const pt = r.path.getPointAtLength(r.pos);
+      const blip = document.getElementById("blip-" + r.id);
+      if (blip) blip.setAttribute("transform", "translate(" + pt.x.toFixed(1) + "," + pt.y.toFixed(1) + ")");
+    });
+  }
+
+  // ---------------- Visningsbytte (bro/gulvkart) + eget vindu ----------------
+  function lesVisningFraUrl() {
+    const q = new URLSearchParams(location.search).get("visning");
+    if (q === "bro" || q === "rom") return q;
+    try { const lagret = localStorage.getItem("kommando-visning"); if (lagret === "bro" || lagret === "rom") return lagret; } catch {}
+    return "bro";
+  }
+
+  function settVisning(visning) {
+    el("visningBro").hidden = visning !== "bro";
+    el("visningRom").hidden = visning !== "rom";
+    document.querySelectorAll(".visning-knapp").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.visning === visning)));
+    try { localStorage.setItem("kommando-visning", visning); } catch {}
+    const url = new URL(location.href);
+    url.searchParams.set("visning", visning);
+    history.replaceState(null, "", url);
+  }
+
+  function koblVisningsbytte() {
+    document.querySelectorAll(".visning-knapp").forEach((b) => {
+      b.addEventListener("click", () => settVisning(b.dataset.visning));
+    });
+    // Åpner NÅVÆRENDE visning i et helt eget vindu (egen fane/skjerm) - lar Kristian
+    // ha f.eks. gulvkartet på én skjerm og agentkortene på en annen samtidig, siden
+    // begge vinduene bare er denne samme siden med ?visning= satt til hver sin verdi.
+    el("popUtKnapp").addEventListener("click", () => {
+      const url = new URL(location.href);
+      url.searchParams.set("visning", document.querySelector('.visning-knapp[aria-pressed="true"]').dataset.visning);
+      window.open(url.toString(), "_blank", "width=1400,height=900,noopener");
+    });
+    settVisning(lesVisningFraUrl());
+  }
+
   function settAgentStatus(id, status, sist, grunn) {
     const gammel = state.agentStatus.get(id);
     state.agentStatus.set(id, { status, sist: sist ?? gammel.sist, grunn: grunn ?? null });
     const modEl = el("agent-" + id);
-    if (!modEl) return;
-    modEl.dataset.status = status;
-    modEl.querySelector(".ikon-status").textContent = ikonForStatus(status);
-    const sistEl = modEl.querySelector(".sist");
-    const t = sist ?? gammel.sist;
-    sistEl.textContent = t ? sidenTekst(t) : "–";
+    if (modEl) {
+      modEl.dataset.status = status;
+      modEl.querySelector(".ikon-status").textContent = ikonForStatus(status);
+      const sistEl = modEl.querySelector(".sist");
+      const t = sist ?? gammel.sist;
+      sistEl.textContent = t ? sidenTekst(t) : "–";
+    }
+    // Gulvkart-blippen (om den finnes for denne agenten) speiler samme status - se
+    // byggRomvisning(). Egen "aktiv"-farge (cyan) markerer en fersk puls, "ok" (grønn)
+    // er hviletilstanden etterpå - akkurat som statuslyset på selve agentkortet.
+    const blipEl = document.getElementById("blip-" + id);
+    if (blipEl) blipEl.dataset.status = status;
     oppdaterTopptall();
     if (status === "feil" && gammel.status !== "feil") pipp(220);
   }
@@ -1048,6 +1273,7 @@
       });
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
+      oppdaterRomAktorer(dt);
     }
 
     requestAnimationFrame(frame);
@@ -1134,6 +1360,8 @@
   // ---------------- Init ----------------
   function init() {
     byggAgentmoduler();
+    byggRomvisning();
+    koblVisningsbytte();
     tilpassCanvas();
     window.addEventListener("resize", tilpassCanvas);
     tikkKlokke();
