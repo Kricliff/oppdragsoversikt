@@ -572,7 +572,7 @@
         <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, lyser banene til de avdelingene koden gjelder for grønt, og en puls går ut. Ligger alle banene mørke, går det ingen trafikk.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på gulvet. Derfra går det en fast bane ut til hver avdeling - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de avdelingene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk. Claudes egne planlagte jobber (i dag: Teamskanal-oppdateringen) melder også fra hit etter hver kjøring - feiler en, får boksen en rød ramme til det er kvittert ut, selv om avdelingen jobben skriver til fortsatt svarer helt fint.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
@@ -971,6 +971,9 @@
   const varslet = new Map();
   const stille = new Map();     // vakt-id  -> { navn, soner, benker, grunn }
   const hentTimere = new Map();
+  // Siste svar fra /api/agentstatus - hva Claudes egne planlagte jobber selv har
+  // rapportert om sin siste kjøring, se sjekkAgentStatus.
+  let sisteAgentStatus = { oppgaver: {} };
   let bootstrap = true;
 
   const el = (id) => document.getElementById(id);
@@ -1143,11 +1146,19 @@
         verdi: feilende.has(h.id) ? feilende.get(h.id).grunn : (stille.get(h.id)?.grunn ?? "svarer")
       })),
       {
-        navn: "Teamskanal-jobben",
+        navn: "Teamskanal - meldinger",
         nede: false,
         treg: stille.has("teamskanal-stille"),
         verdi: stille.get("teamskanal-stille")?.grunn ?? (erArbeidstid() ? "i rute" : "utenfor arbeidstid")
-      }
+      },
+      ...Object.entries(sisteAgentStatus.oppgaver ?? {}).map(([oppgave, info]) => ({
+        navn: oppgave + " (kjøring)",
+        nede: feilende.has("agent-" + oppgave),
+        treg: false,
+        verdi: info.ok
+          ? "kjørte sist " + siden(info.sist)
+          : "feilet " + siden(info.sist) + (info.grunn ? " - " + info.grunn : "")
+      }))
     ];
     for (const r of rader) {
       const li = document.createElement("li");
@@ -1373,10 +1384,45 @@
         if (!varNede) leggILogg("FEIL: " + h.navn + " svarer ikke (" + grunn + ")", "var(--feil)");
       }
     }));
+    await sjekkAgentStatus();
     tegnVedvarende();
     tegnHelse();
     await sjekkKvforbruk();
     await sjekkDeploy();
+  }
+
+  // Claudes egne planlagte jobber (i dag: teamskanal-oppdatering) kjører som fristilte
+  // økter uten noen levende forbindelse til denne siden - de kan derfor bare fortelle om
+  // sin egen status i etterkant, via /api/agentstatus. En feilet kjøring tegner en rød
+  // ramme rundt selve CLAUDE-boksen, siden det er Claudes eget arbeid som feilet - ikke
+  // avdelingen jobben skriver til (som fortsatt kan være helt frisk).
+  async function sjekkAgentStatus() {
+    try {
+      const r = await fetch("/api/agentstatus", { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      sisteAgentStatus = data;
+      pulsHenting("claude");
+
+      for (const [oppgave, info] of Object.entries(data.oppgaver ?? {})) {
+        const id = "agent-" + oppgave;
+        const varNede = feilende.has(id);
+        if (info.ok) {
+          if (varNede) {
+            feilende.delete(id);
+            leggILogg("Friskmeldt: " + oppgave + " kjørte igjen", "var(--ok)");
+          }
+        } else {
+          const grunn = info.grunn || "ukjent feil";
+          feilende.set(id, { navn: oppgave, soner: ["claude"], grunn });
+          varslet.set(id, { navn: oppgave, soner: ["claude"], grunn });
+          if (!varNede) leggILogg("FEIL: planlagt jobb " + oppgave + " feilet (" + grunn + ")", "var(--feil)");
+        }
+      }
+    } catch {
+      // Endepunktet er nytt og valgfritt for jobber å bruke - ingen jobber har rapportert
+      // ennå er en helt normal tilstand, ikke en feil å varsle om.
+    }
   }
 
   // Selve endepunktet mellomlagrer i 5 minutter, så det er ingen grunn til å hente
