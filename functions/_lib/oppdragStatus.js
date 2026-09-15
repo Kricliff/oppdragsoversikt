@@ -37,6 +37,27 @@ export function bestemStatus(p) {
   return status;
 }
 
+// Recman-kunder er typet (customer/prospect/ownCompany/formerCustomer/subcontractor/...).
+// Prosjekter på f.eks. et "prospect" er salgsoppfølging, ikke et reelt kundeoppdrag, og
+// skal ikke stå på tavlen.
+//
+// formerCustomer er unntaket (lagt til 2026-09-15): en TIDLIGERE kunde kan ikke ha et
+// pågående oppdrag - det er en selvmotsigelse i dataene. Da er prosjektet det ferske
+// signalet og kundetypen den som henger etter. Bakgrunn: "FLO AS - Kommersiell Leder"
+// og et Cegal-oppdrag forsvant fra tavlen mens de var aktive og oppdatert samme dag,
+// kun fordi kunden var merket som tidligere kunde. Unntaket gjelder BARE aktive oppdrag -
+// et utført oppdrag for en tidligere kunde er ingen selvmotsigelse, og telleverket for
+// "Utført i år" skal derfor ikke endre seg av dette.
+//
+// Merk: funksjonen svarer kun på hva en KJENT type skal føre til. Hva som skjer når typen
+// mangler avgjør kallstedet selv - tavlen viser da heller for mye enn å skjule ekte
+// arbeid, mens feiringen heller lar være å feire enn å feire noe feil.
+export function kundeTypeSkalVises(kundeType, status) {
+  if (kundeType === "customer") return true;
+  if (kundeType === "formerCustomer" && status === "aktiv") return true;
+  return false;
+}
+
 function erForGammelTilAVaereAktiv(updated) {
   if (!updated) return true;
   const dagerSiden = (Date.now() - new Date(updated.replace(" ", "T") + "Z").getTime()) / 86400000;

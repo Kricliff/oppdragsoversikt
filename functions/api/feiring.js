@@ -29,7 +29,7 @@
 // - aktive: ferdigbygde {tekst, utloper}-poster som fortsatt skal vises, uavhengig av om
 //   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
-import { bestemStatus } from "../_lib/oppdragStatus.js";
+import { bestemStatus, kundeTypeSkalVises } from "../_lib/oppdragStatus.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
@@ -156,7 +156,11 @@ async function hentAktiveFeiringer(apiKey, kv) {
   const aktiveOppdrag = Object.values(projectById)
     .filter((p) => bestemStatus(p) === "aktiv")
     .filter((p) => !erInternKunde(p))
-    .filter((p) => companyById[p.companyId]?.type === "customer")
+    // Samme kundetyperegel som tavlen (delt i _lib/oppdragStatus.js), slik at et oppdrag
+    // som vises der også kan feires her. Mangler typen, feires det IKKE - i motsetning til
+    // tavlen, som heller viser for mye: en uteblitt feiring kan rettes, en feilaktig
+    // feiring av noe som ikke er et reelt oppdrag kan den ikke.
+    .filter((p) => kundeTypeSkalVises(companyById[p.companyId]?.type, "aktiv"))
     .map((p) => ({
       id: String(p.projectId),
       rolle: p.name,

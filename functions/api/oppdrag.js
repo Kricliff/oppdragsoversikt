@@ -9,7 +9,7 @@
 // og cacher svaret CACHE_SECONDS på Cloudflares edge, så gjentatte sideinnlastinger fra
 // skjermen ikke bruker opp kvoten.
 
-import { bestemStatus } from "../_lib/oppdragStatus.js";
+import { bestemStatus, kundeTypeSkalVises } from "../_lib/oppdragStatus.js";
 // Cache-nøkkelen (og versjonen) ligger i _lib fordi skjulte.js må kunne blanke den når
 // skjulelista endres - bump OPPDRAG_CACHE_VERSION der ved endringer i logikken under.
 import { oppdragCacheKey } from "../_lib/oppdragCache.js";
@@ -326,8 +326,8 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = n
       // luk dem bort så tavlen bare viser arbeid for faktiske kunder. Slår aldri filteret på
       // hvis kundedata ikke lot seg hente (kundedataLastetOk === false) - da vises alt,
       // heller enn å risikere å skjule ekte oppdrag pga. en API-feil.
-      if (kundedataLastetOk && kundeType[p.companyId] && kundeType[p.companyId] !== "customer") {
-        merk(p, "kunden er ikke av typen customer (" + kundeType[p.companyId] + ")");
+      if (kundedataLastetOk && kundeType[p.companyId] && !kundeTypeSkalVises(kundeType[p.companyId], status)) {
+        merk(p, "kundetypefilter (" + kundeType[p.companyId] + ")");
         return null;
       }
 
