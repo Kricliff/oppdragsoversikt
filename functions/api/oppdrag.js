@@ -70,6 +70,10 @@ export async function onRequestGet(context) {
     // Må skje FØR responsen bygges (ikke context.waitUntil) - erNytt-flagget skal jo
     // faktisk være med i det som sendes til klienten.
     await merkNyeOppdrag(payload.oppdrag, context.env.NOTAT_KV);
+    // Tidspunktet dette faktisk ble hentet fra Recman. Cachen gjør at svaret kan være
+    // opptil CACHE_SECONDS gammelt, og uten dette er det umulig å se utenfra om dataen
+    // er fersk eller har stått fast - fabrikkvisningen (/fabrikk) varsler på nettopp det.
+    payload.hentet = Date.now();
     const response = new Response(JSON.stringify(payload), {
       headers: {
         "Content-Type": "application/json",

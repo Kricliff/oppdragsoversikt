@@ -8,6 +8,8 @@
 // siste meldingene hit via POST, og denne Function-en cacher/serverer dem
 // videre til tavlen - samme mønster som post-it (notat.js) sitt lagringslager,
 // bare med flere rader.
+import { loggAvvistSkriving } from "../_lib/skrivevern.js";
+
 const KV_KEY = "teamskanal-meldinger";
 const MAKS_MELDINGER = 10;
 
@@ -24,6 +26,7 @@ export async function onRequestPost(context) {
   // om koden så ut til å sjekke en nøkkel). Se _middleware.js for det andre laget.
   const nokkel = context.env.TEAMSKANAL_SKRIVENOKKEL;
   if (!nokkel || context.request.headers.get("x-skrivenokkel") !== nokkel) {
+    context.waitUntil(loggAvvistSkriving(context, "teamskanal"));
     return json({ error: "Mangler eller feil nøkkel" }, 401);
   }
 

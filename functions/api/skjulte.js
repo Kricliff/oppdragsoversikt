@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "skjulte");
 
   let body;
   try {

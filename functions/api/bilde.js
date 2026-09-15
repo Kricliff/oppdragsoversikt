@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "bilde");
 
   let body;
   try {
@@ -43,7 +43,7 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestDelete(context) {
-  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar();
+  if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "bilde");
 
   await context.env.NOTAT_KV.delete(KV_KEY);
   return json({ bilde: null, lagtUt: null });

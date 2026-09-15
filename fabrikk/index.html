@@ -17,7 +17,6 @@
     --text-muted: #6b6b6b;
     --aktiv: #ec9b00;
 
-    /* fabrikkgulvet */
     --gulv: #f4f2ee;
     --gulv-rute: #e8e4dc;
     --sone: #ffffff;
@@ -30,7 +29,11 @@
     --staal-mork: #4a453e;
     --staal-myk: #eceae6;
     --aktiv-myk: #fdf0d6;
-    --alarm: #d92d20;
+
+    --hendelse: #d92d20;   /* noe skjedde - kortvarig */
+    --feil: #b42318;       /* noe er ødelagt - står til det er fikset */
+    --advarsel: #d98100;   /* noe har blitt stille - står til det er ferskt igjen */
+    --ok: #16a34a;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg-0); color: var(--text); font-family: "Poppins", -apple-system, "Segoe UI", sans-serif; }
@@ -44,7 +47,7 @@
   .tilbake:hover { color: var(--text); }
 
   h1 { font-size: 1.6rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: -0.01em; }
-  .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.4rem; max-width: 62ch; }
+  .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.4rem; max-width: 64ch; }
 
   .statuslinje { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
   .pille {
@@ -52,63 +55,97 @@
     border: 1px solid var(--border); background: var(--surface);
     padding: 0.45rem 0.85rem; font-size: 0.78rem; font-weight: 500;
   }
-  .pille .pip { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; animation: pulse 1.8s ease-in-out infinite; }
-  .pille.frakoblet .pip { background: var(--alarm); }
+  .pille .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: pulse 1.8s ease-in-out infinite; }
+  .pille.frakoblet { border-color: var(--feil); color: var(--feil); }
+  .pille.frakoblet .pip { background: var(--feil); }
+  .pille.varsel { border-color: var(--advarsel); color: var(--advarsel); }
   .pille .klokke { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .pille.ny-versjon { border-color: var(--hendelse); color: var(--hendelse); font-weight: 600; }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
 
   .scene { border: 1px solid var(--border); background: var(--surface); padding: 8px; overflow: hidden; }
   svg { display: block; width: 100%; height: auto; }
 
-  .under { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 1.2rem; margin-top: 1.2rem; }
-  @media (max-width: 860px) { .under { grid-template-columns: 1fr; } }
-
+  .under { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.2rem; margin-top: 1.2rem; align-items: start; }
   .kort { background: var(--surface); border: 1px solid var(--border); padding: 1.4rem; }
+  .kort.bred { grid-column: 1 / -1; }
   .kort h2 { font-size: 1rem; font-weight: 600; margin: 0 0 0.4rem; }
-  .kort .hint { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 1rem; }
+  .kort h3 { font-size: 0.82rem; font-weight: 600; margin: 1.2rem 0 0.5rem; }
+  .kort h3:first-of-type { margin-top: 0.4rem; }
+  .kort .hint { font-size: 0.78rem; color: var(--text-muted); margin: 0 0 1rem; line-height: 1.45; }
 
-  .logg { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; }
-  .logg li {
-    display: grid; grid-template-columns: auto 1fr; gap: 0.65rem;
-    padding: 0.6rem 0; border-top: 1px solid var(--border); align-items: start;
-  }
+  .logg { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+  .logg li { display: grid; grid-template-columns: auto 1fr; gap: 0.65rem; padding: 0.6rem 0; border-top: 1px solid var(--border); align-items: start; }
   .logg li:first-child { border-top: none; }
-  .logg .prikk { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.42rem; }
+  .logg .prikk { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.42rem; flex: none; }
   .logg .tid { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
   .logg .tekst { font-size: 0.84rem; line-height: 1.4; }
   .logg li.fersk .tekst { font-weight: 600; }
-  .logg .tom { color: var(--text-muted); font-size: 0.84rem; padding: 0.4rem 0; }
+  .logg .tom { color: var(--text-muted); font-size: 0.84rem; padding: 0.4rem 0; display: block; }
+
+  .helse { list-style: none; margin: 0; padding: 0; }
+  .helse li { display: grid; grid-template-columns: auto 1fr auto; gap: 0.6rem; align-items: center; padding: 0.42rem 0; border-top: 1px solid var(--border); }
+  .helse li:first-child { border-top: none; }
+  .helse .prikk { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .helse li.nede .prikk { background: var(--feil); }
+  .helse li.treg .prikk { background: var(--advarsel); }
+  .helse .navn { font-size: 0.82rem; }
+  .helse .verdi { font-size: 0.74rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .helse li.nede .verdi { color: var(--feil); font-weight: 600; }
+  .helse li.treg .verdi { color: var(--advarsel); font-weight: 600; }
+
+  .maaler { height: 12px; background: var(--border); overflow: hidden; margin: 0.3rem 0 0.6rem; }
+  .maaler span { display: block; height: 100%; background: var(--ok); width: 0; transition: width 0.4s ease; }
+  .maaler.nesten span { background: var(--advarsel); }
+  .maaler.full span { background: var(--feil); }
+  .kvote-sum { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kvote-sum small { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
+  .kvote-rad { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.78rem; padding: 0.32rem 0; border-top: 1px solid var(--border); }
+  .kvote-rad span:last-child { font-variant-numeric: tabular-nums; color: var(--text-muted); }
 
   .forklaring { list-style: none; margin: 0; padding: 0; }
-  .forklaring li { display: grid; grid-template-columns: auto 1fr; gap: 0.65rem; padding: 0.55rem 0; border-top: 1px solid var(--border); }
+  .forklaring li { display: grid; grid-template-columns: auto 1fr; gap: 0.7rem; padding: 0.55rem 0; border-top: 1px solid var(--border); }
   .forklaring li:first-child { border-top: none; }
-  .forklaring .prikk { width: 9px; height: 9px; border-radius: 50%; margin-top: 0.4rem; }
-  .forklaring b { font-size: 0.84rem; font-weight: 600; display: block; }
-  .forklaring span { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+  .forklaring .prikk { width: 10px; height: 10px; border-radius: 50%; margin-top: 0.35rem; flex: none; }
+  .forklaring .rute { width: 22px; height: 10px; margin-top: 0.35rem; flex: none; }
+  .forklaring b { font-size: 0.84rem; font-weight: 600; display: block; margin-bottom: 0.1rem; }
+  .forklaring span.tekst { font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; display: block; }
+  .to-spalter { columns: 2; column-gap: 1.6rem; }
+  @media (max-width: 720px) { .to-spalter { columns: 1; } }
+  .to-spalter li { break-inside: avoid; }
 
-  /* ---------- alarm ---------- */
+  /* ---------- tilstander på gulvet ---------- */
   .glo { opacity: 0; }
-  .sone.alarm .glo,
-  .benk.alarm .glo { animation: alarmGlo 0.85s ease-in-out infinite; }
-  @keyframes alarmGlo {
-    0%, 100% { opacity: 0.15; }
-    50% { opacity: 1; }
-  }
-  .sone.alarm .sonebar { animation: alarmBar 0.85s ease-in-out infinite; }
-  @keyframes alarmBar {
-    0%, 100% { fill: var(--alarm); }
-    50% { fill: #f97066; }
-  }
+
+  /* hendelse: kortvarig, rød puls */
+  .sone.alarm .glo, .benk.alarm .glo { animation: gloPuls 0.85s ease-in-out infinite; stroke: var(--hendelse); }
+  .sone.alarm .sonebar { animation: barPuls 0.85s ease-in-out infinite; }
   .alarmpil { opacity: 0; }
-  .sone.alarm .alarmpil { animation: alarmGlo 0.85s ease-in-out infinite; }
+  .sone.alarm .alarmpil { animation: gloPuls 0.85s ease-in-out infinite; }
+
+  /* stillhet: står til det er ferskt igjen */
+  .sone.treg .glo, .benk.treg .glo { opacity: 1; stroke: var(--advarsel); animation: none; }
+
+  /* feil: vinner over alt annet, står til det er fikset */
+  .sone.feil .glo, .benk.feil .glo { opacity: 1; stroke: var(--feil); animation: gloPuls 1.6s ease-in-out infinite; }
+  .sone.feil .sonebar { fill: var(--feil); animation: none; }
+
+  @keyframes gloPuls { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+  @keyframes barPuls { 0%, 100% { fill: var(--hendelse); } 50% { fill: #f97066; } }
+
+  .statusmerke { opacity: 0; }
+  .sone.feil .statusmerke, .sone.treg .statusmerke,
+  .benk.feil .statusmerke, .benk.treg .statusmerke { opacity: 1; }
+  .sone.treg .merkesirkel, .benk.treg .merkesirkel { fill: var(--advarsel); }
 
   .vei-stripe { animation: kryp 1s linear infinite; }
   @keyframes kryp { to { stroke-dashoffset: -26; } }
 
   @media (prefers-reduced-motion: reduce) {
     .vei-stripe, .pille .pip { animation: none !important; }
-    .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil { animation: none !important; opacity: 1; }
-    .sone.alarm .sonebar { animation: none !important; fill: var(--alarm); }
+    .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil,
+    .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
+    .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
   }
 </style>
 </head>
@@ -122,12 +159,13 @@
     <a class="tilbake" href="../admin/">&larr; Tilbake til admin</a>
   </div>
   <h1>Fabrikken</h1>
-  <p class="ingress">Tavlen sett ovenfra, som et fabrikkgulv. Hver avdeling er en ekte del av systemet, og i det øyeblikket det faktisk skjer noe der - et nytt oppdrag fra Recman, en ny post-it, en melding i Teamskanalen - begynner avdelingen å blinke som en alarm.</p>
+  <p class="ingress">Tavlen sett ovenfra som et fabrikkgulv. Skjer det noe, blinker avdelingen rødt. Er noe ødelagt, lyser den rødt til det er fikset. Har noe blitt stille som ikke skal være stille, lyser den gult. Forklaringen på alt sammen står nederst.</p>
 
   <div class="statuslinje">
     <span class="pille" id="tilkoblingPille"><span class="pip"></span><span id="tilkoblingTekst">Overvåker</span></span>
     <span class="pille"><span class="klokke" id="klokke">--:--:--</span></span>
     <span class="pille" id="sistPille">Venter på første sjekk…</span>
+    <span class="pille" id="versjonPille">Versjon: leser…</span>
   </div>
 
   <div class="scene">
@@ -151,88 +189,137 @@
       <g clip-path="url(#gulvClip)">
         <rect x="0" y="0" width="1200" height="660" fill="url(#fliser)"/>
 
-        <!-- ruten -->
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="30" stroke-linejoin="round"/>
         <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="3" stroke-dasharray="12 14" stroke-linejoin="round" class="vei-stripe"/>
         <path d="M 810 258 V 218 M 810 392 V 432" stroke="var(--vei)" stroke-width="16" stroke-linecap="round"/>
 
         <!-- ============ RECMAN ============ -->
         <g class="sone" id="sone-recman">
-          <rect class="glo" x="34" y="188" width="204" height="266" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="34" y="188" width="204" height="266" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="196" width="188" height="250" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="42" y="196" width="188" height="26" fill="var(--staal)"/>
           <text x="136" y="214" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">RECMAN</text>
           <g fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="2">
             <circle cx="82" cy="266" r="17"/><circle cx="136" cy="266" r="17"/><circle cx="190" cy="266" r="17"/>
           </g>
+          <text x="136" y="310" text-anchor="middle" font-size="9" fill="var(--text-muted)">oppdrag · kandidater</text>
+          <text x="136" y="345" text-anchor="middle" font-size="9" fill="var(--text-muted)">Data hentet</text>
+          <text x="136" y="366" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="recmanHentet">–</text>
           <g fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="2">
-            <rect x="64" y="404" width="48" height="28" rx="2"/><rect x="120" y="404" width="48" height="28" rx="2"/>
+            <rect x="64" y="396" width="48" height="28" rx="2"/><rect x="120" y="396" width="48" height="28" rx="2"/>
           </g>
-          <text x="136" y="444" text-anchor="middle" font-size="9" fill="var(--text-muted)">oppdrag · kandidater</text>
-          <g class="alarmpil"><circle cx="222" cy="209" r="6" fill="#fff"/><circle cx="222" cy="209" r="3.2" fill="var(--alarm)"/></g>
+          <text x="136" y="440" text-anchor="middle" font-size="9" fill="var(--text-muted)"><tspan id="recmanAntall">–</tspan> oppdrag på tavlen</text>
+          <g class="statusmerke"><circle class="merkesirkel" cx="58" cy="209" r="9" fill="var(--feil)"/><text x="58" y="214" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="216" cy="209" r="6" fill="#fff"/><circle cx="216" cy="209" r="3.2" fill="var(--hendelse)"/></g>
+        </g>
+
+        <!-- ============ EKSTERNE KILDER ============ -->
+        <g class="sone" id="sone-eksterne">
+          <rect class="glo" x="34" y="462" width="204" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="42" y="470" width="188" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="42" y="470" width="188" height="26" fill="var(--staal)"/>
+          <text x="136" y="488" text-anchor="middle" font-weight="600" font-size="12" fill="#fff">EKSTERNE KILDER</text>
+          <g class="benk" id="benk-vaer">
+            <rect class="glo" x="52" y="504" width="86" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="58" y="510" width="74" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
+            <text x="95" y="530" text-anchor="middle" font-size="9" fill="var(--text-muted)">vær</text>
+            <g class="statusmerke"><circle class="merkesirkel" cx="132" cy="512" r="7" fill="var(--feil)"/><text x="132" y="516" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+          </g>
+          <g class="benk" id="benk-avganger">
+            <rect class="glo" x="136" y="504" width="88" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="142" y="510" width="76" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
+            <text x="180" y="530" text-anchor="middle" font-size="9" fill="var(--text-muted)">buss</text>
+            <g class="statusmerke"><circle class="merkesirkel" cx="218" cy="512" r="7" fill="var(--feil)"/><text x="218" y="516" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+          </g>
+          <g class="benk" id="benk-nrk">
+            <rect class="glo" x="52" y="552" width="86" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="58" y="558" width="74" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
+            <text x="95" y="578" text-anchor="middle" font-size="9" fill="var(--text-muted)">NRK</text>
+            <g class="statusmerke"><circle class="merkesirkel" cx="132" cy="560" r="7" fill="var(--feil)"/><text x="132" y="564" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+          </g>
+          <g class="benk" id="benk-kundenytt">
+            <rect class="glo" x="136" y="552" width="88" height="42" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="142" y="558" width="76" height="30" rx="2" fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5"/>
+            <text x="180" y="578" text-anchor="middle" font-size="9" fill="var(--text-muted)">kundenytt</text>
+            <g class="statusmerke"><circle class="merkesirkel" cx="218" cy="560" r="7" fill="var(--feil)"/><text x="218" y="564" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">!</text></g>
+          </g>
+          <g class="statusmerke"><circle class="merkesirkel" cx="58" cy="483" r="9" fill="var(--feil)"/><text x="58" y="488" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="216" cy="483" r="6" fill="#fff"/><circle cx="216" cy="483" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ CLOUDFLARE FUNCTIONS ============ -->
         <g class="sone" id="sone-functions">
-          <rect class="glo" x="258" y="68" width="292" height="516" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="258" y="68" width="292" height="516" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="266" y="76" width="276" height="500" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="266" y="76" width="276" height="26" fill="var(--teal)"/>
           <text x="404" y="94" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">CLOUDFLARE FUNCTIONS</text>
 
           <g class="benk" id="benk-notat">
-            <rect class="glo" x="280" y="112" width="122" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
+            <rect class="glo" x="280" y="112" width="122" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="286" y="118" width="110" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
             <text x="341" y="143" text-anchor="middle" font-size="9" fill="var(--teal)">notat.js</text>
           </g>
           <g class="benk" id="benk-bilde">
-            <rect class="glo" x="404" y="112" width="124" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
+            <rect class="glo" x="404" y="112" width="124" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
             <rect x="410" y="118" width="112" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
             <text x="466" y="143" text-anchor="middle" font-size="9" fill="var(--teal)">bilde.js</text>
           </g>
           <g class="benk" id="benk-bursdager">
-            <rect class="glo" x="280" y="164" width="122" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
-            <rect x="286" y="170" width="110" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
-            <text x="341" y="195" text-anchor="middle" font-size="9" fill="var(--teal)">bursdager.js</text>
+            <rect class="glo" x="280" y="168" width="122" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="286" y="174" width="110" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
+            <text x="341" y="199" text-anchor="middle" font-size="9" fill="var(--teal)">bursdager.js</text>
           </g>
           <g class="benk" id="benk-skjulte">
-            <rect class="glo" x="404" y="164" width="124" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
-            <rect x="410" y="170" width="112" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
-            <text x="466" y="195" text-anchor="middle" font-size="9" fill="var(--teal)">skjulte.js</text>
+            <rect class="glo" x="404" y="168" width="124" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="410" y="174" width="112" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
+            <text x="466" y="199" text-anchor="middle" font-size="9" fill="var(--teal)">skjulte.js</text>
           </g>
           <g class="benk" id="benk-innstillinger">
-            <rect class="glo" x="280" y="426" width="122" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
-            <rect x="286" y="432" width="110" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
-            <text x="341" y="457" text-anchor="middle" font-size="9" fill="var(--teal)">innstillinger</text>
+            <rect class="glo" x="280" y="224" width="122" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="286" y="230" width="110" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
+            <text x="341" y="255" text-anchor="middle" font-size="9" fill="var(--teal)">innstillinger</text>
           </g>
           <g class="benk" id="benk-skjermer">
-            <rect class="glo" x="404" y="426" width="124" height="52" rx="3" fill="none" stroke="var(--alarm)" stroke-width="5"/>
-            <rect x="410" y="432" width="112" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
-            <text x="466" y="457" text-anchor="middle" font-size="9" fill="var(--teal)">skjermer.js</text>
+            <rect class="glo" x="404" y="224" width="124" height="52" rx="3" fill="none" stroke="var(--hendelse)" stroke-width="5"/>
+            <rect x="410" y="230" width="112" height="40" rx="2" fill="var(--teal-myk)" stroke="var(--teal)" stroke-width="1.5"/>
+            <text x="466" y="255" text-anchor="middle" font-size="9" fill="var(--teal)">skjermer.js</text>
           </g>
 
-          <text x="404" y="502" text-anchor="middle" font-weight="600" font-size="10" fill="var(--text-muted)">KV-LAGER</text>
+          <text x="404" y="306" text-anchor="middle" font-weight="600" font-size="10" fill="var(--text-muted)">KV-LAGER</text>
           <g fill="var(--teal)" opacity=".22">
-            <rect x="290" y="512" width="106" height="12" rx="2"/><rect x="290" y="530" width="106" height="12" rx="2"/><rect x="290" y="548" width="106" height="12" rx="2"/>
-            <rect x="412" y="512" width="106" height="12" rx="2"/><rect x="412" y="530" width="106" height="12" rx="2"/><rect x="412" y="548" width="106" height="12" rx="2"/>
+            <rect x="290" y="316" width="106" height="12" rx="2"/><rect x="290" y="334" width="106" height="12" rx="2"/><rect x="290" y="352" width="106" height="12" rx="2"/>
+            <rect x="412" y="316" width="106" height="12" rx="2"/><rect x="412" y="334" width="106" height="12" rx="2"/><rect x="412" y="352" width="106" height="12" rx="2"/>
           </g>
-          <g class="alarmpil"><circle cx="530" cy="89" r="6" fill="#fff"/><circle cx="530" cy="89" r="3.2" fill="var(--alarm)"/></g>
+
+          <text x="404" y="406" text-anchor="middle" font-weight="600" font-size="10" fill="var(--text-muted)">SKRIVEKVOTE I DAG (ANSLAG)</text>
+          <rect x="290" y="416" width="228" height="16" rx="2" fill="var(--border)"/>
+          <rect x="290" y="416" width="0" height="16" rx="2" fill="var(--ok)" id="kvoteBar"/>
+          <text x="404" y="450" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)" id="kvoteTekst">–</text>
+          <text x="404" y="502" text-anchor="middle" font-size="9" fill="var(--text-muted)">Skrivinger er den knappe ressursen</text>
+          <text x="404" y="518" text-anchor="middle" font-size="9" fill="var(--text-muted)">- går den tom, slutter tavlen å lagre</text>
+
+          <g class="statusmerke"><circle class="merkesirkel" cx="282" cy="89" r="9" fill="var(--feil)"/><text x="282" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="528" cy="89" r="6" fill="#fff"/><circle cx="528" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ SLUSEN ============ -->
         <g class="sone" id="sone-sluse">
-          <rect class="glo" x="566" y="218" width="122" height="214" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="566" y="218" width="122" height="214" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="574" y="226" width="106" height="198" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="574" y="226" width="106" height="26" fill="var(--staal-mork)"/>
           <text x="627" y="244" text-anchor="middle" font-weight="600" font-size="11" fill="#fff">SLUSE</text>
-          <g fill="var(--staal-mork)"><rect x="586" y="300" width="12" height="50" rx="2"/><rect x="656" y="300" width="12" height="50" rx="2"/></g>
-          <circle cx="627" cy="278" r="5" fill="var(--aktiv)"/>
-          <text x="627" y="404" text-anchor="middle" font-size="9" fill="var(--text-muted)">adminnøkkel</text>
-          <g class="alarmpil"><circle cx="672" cy="239" r="6" fill="#fff"/><circle cx="672" cy="239" r="3.2" fill="var(--alarm)"/></g>
+          <g fill="var(--staal-mork)"><rect x="586" y="286" width="12" height="50" rx="2"/><rect x="656" y="286" width="12" height="50" rx="2"/></g>
+          <circle cx="627" cy="268" r="5" fill="var(--aktiv)"/>
+          <text x="627" y="362" text-anchor="middle" font-size="9" fill="var(--text-muted)">adminnøkkel</text>
+          <text x="627" y="388" text-anchor="middle" font-size="9" fill="var(--text-muted)">Avvist</text>
+          <text x="627" y="408" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="avvisteAntall">0</text>
+          <g class="statusmerke"><circle class="merkesirkel" cx="590" cy="239" r="9" fill="var(--feil)"/><text x="590" y="244" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="666" cy="239" r="6" fill="#fff"/><circle cx="666" cy="239" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ ADMIN ============ -->
         <g class="sone" id="sone-admin">
-          <rect class="glo" x="698" y="68" width="224" height="166" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="698" y="68" width="224" height="166" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="76" width="208" height="150" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="706" y="76" width="208" height="26" fill="var(--aktiv)"/>
           <text x="810" y="94" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">/ADMIN</text>
@@ -247,29 +334,29 @@
             <rect x="808" y="153" width="26" height="13" rx="6.5" fill="var(--aktiv)"/><circle cx="827" cy="159.5" r="4.6" fill="#fff"/>
           </g>
           <text x="810" y="202" text-anchor="middle" font-size="9" fill="var(--text-muted)">brytere for tavlen</text>
-          <g class="alarmpil"><circle cx="906" cy="89" r="6" fill="#fff"/><circle cx="906" cy="89" r="3.2" fill="var(--alarm)"/></g>
+          <g class="statusmerke"><circle class="merkesirkel" cx="722" cy="89" r="9" fill="var(--feil)"/><text x="722" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="898" cy="89" r="6" fill="#fff"/><circle cx="898" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ TEAMSKANAL ============ -->
         <g class="sone" id="sone-teamskanal">
-          <rect class="glo" x="698" y="416" width="224" height="168" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="698" y="416" width="224" height="168" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="424" width="208" height="152" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="706" y="424" width="208" height="26" fill="var(--staal)"/>
           <text x="810" y="442" text-anchor="middle" font-weight="600" font-size="12" fill="#fff">TEAMSKANAL</text>
           <g fill="var(--staal-myk)" stroke="var(--staal)" stroke-width="1.5">
-            <rect x="726" y="466" width="52" height="30" rx="2"/><rect x="786" y="466" width="52" height="30" rx="2"/><rect x="846" y="466" width="52" height="30" rx="2"/>
+            <rect x="726" y="462" width="52" height="28" rx="2"/><rect x="786" y="462" width="52" height="28" rx="2"/><rect x="846" y="462" width="52" height="28" rx="2"/>
           </g>
-          <g fill="#fff" stroke="var(--staal)" stroke-width="1.2">
-            <rect x="740" y="512" width="26" height="18" rx="1"/><path d="M740,512 L753,522 L766,512"/>
-            <rect x="784" y="512" width="26" height="18" rx="1"/><path d="M784,512 L797,522 L810,512"/>
-          </g>
-          <text x="810" y="554" text-anchor="middle" font-size="9" fill="var(--text-muted)">meldinger fra Teams</text>
-          <g class="alarmpil"><circle cx="906" cy="437" r="6" fill="#fff"/><circle cx="906" cy="437" r="3.2" fill="var(--alarm)"/></g>
+          <text x="810" y="516" text-anchor="middle" font-size="9" fill="var(--text-muted)">Sist hentet fra Teams</text>
+          <text x="810" y="538" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="teamsSist">–</text>
+          <text x="810" y="560" text-anchor="middle" font-size="9" fill="var(--text-muted)">hvert 15. min, hverdag 07-19</text>
+          <g class="statusmerke"><circle class="merkesirkel" cx="722" cy="437" r="9" fill="var(--feil)"/><text x="722" y="442" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="898" cy="437" r="6" fill="#fff"/><circle cx="898" cy="437" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ TAVLA ============ -->
         <g class="sone" id="sone-tavle">
-          <rect class="glo" x="932" y="68" width="236" height="516" rx="4" fill="none" stroke="var(--alarm)" stroke-width="7"/>
+          <rect class="glo" x="932" y="68" width="236" height="516" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="940" y="76" width="220" height="500" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="940" y="76" width="220" height="26" fill="var(--text)"/>
           <text x="1050" y="94" text-anchor="middle" font-weight="600" font-size="13" fill="#fff">TAVLA</text>
@@ -286,57 +373,58 @@
           <g fill="var(--gulv)">
             <rect x="978" y="168" width="144" height="12" rx="2"/><rect x="978" y="185" width="144" height="12" rx="2"/><rect x="978" y="202" width="96" height="6" rx="2"/>
           </g>
+          <text x="1050" y="248" text-anchor="middle" font-size="9" fill="var(--text-muted)">skjermen på veggen</text>
+          <g id="skjermListe"></g>
           <rect x="962" y="470" width="176" height="80" rx="2" fill="var(--text)" opacity=".9"/>
           <rect x="970" y="477" width="160" height="66" rx="1" fill="#fff"/>
           <text x="1050" y="506" text-anchor="middle" font-weight="600" font-size="11" fill="var(--text-muted)">GJESTEVISNING</text>
           <text x="1050" y="522" text-anchor="middle" font-size="8" fill="var(--text-muted)">skrus på manuelt</text>
-          <text x="1050" y="250" text-anchor="middle" font-size="9" fill="var(--text-muted)">skjermen på veggen</text>
-          <g class="alarmpil"><circle cx="1152" cy="89" r="6" fill="#fff"/><circle cx="1152" cy="89" r="3.2" fill="var(--alarm)"/></g>
+          <g class="statusmerke"><circle class="merkesirkel" cx="956" cy="89" r="9" fill="var(--feil)"/><text x="956" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">!</text></g>
+          <g class="alarmpil"><circle cx="1144" cy="89" r="6" fill="#fff"/><circle cx="1144" cy="89" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- ============ DATALASTER ============ -->
         <g>
           <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--aktiv)"/>
-            <rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
+            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--aktiv)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
             <animateMotion dur="14s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
           </g>
           <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--teal)"/>
-            <rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
+            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--teal)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
             <animateMotion dur="14s" begin="-4.6s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
           </g>
           <g>
-            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--staal)"/>
-            <rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
+            <rect x="-9" y="-9" width="18" height="18" rx="2" fill="var(--staal)"/><rect x="-9" y="-2" width="18" height="4" fill="#fff" opacity=".45"/>
             <animateMotion dur="14s" begin="-9.3s" repeatCount="indefinite" rotate="auto" path="M 135 258 L 1052 258 L 1052 392 L 135 392 Z"/>
           </g>
         </g>
 
         <!-- ============ ROBOTENE ============ -->
         <g style="color: var(--staal)"><use href="#robot"/>
-          <animateMotion dur="11s" repeatCount="indefinite" rotate="auto" path="M 78 300 L 194 300 L 194 424 L 78 424 Z"/></g>
+          <animateMotion dur="11s" repeatCount="indefinite" rotate="auto" path="M 78 246 L 194 246 L 194 426 L 78 426 Z"/></g>
+        <g style="color: var(--staal)"><use href="#robot"/>
+          <animateMotion dur="10s" begin="-4s" repeatCount="indefinite" rotate="auto" path="M 66 504 L 210 504 L 210 592 L 66 592 Z"/></g>
 
         <g style="color: var(--teal)"><use href="#robot"/>
           <animateMotion dur="9s" repeatCount="indefinite" rotate="auto" path="M 300 112 L 508 112 L 508 216 L 300 216 Z"/></g>
         <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="10.5s" begin="-3s" repeatCount="indefinite" rotate="auto" path="M 300 240 L 508 240 L 508 330 L 300 330 Z"/></g>
+          <animateMotion dur="10.5s" begin="-3s" repeatCount="indefinite" rotate="auto" path="M 300 232 L 508 232 L 508 290 L 300 290 Z"/></g>
         <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="12s" begin="-6s" repeatCount="indefinite" rotate="auto" path="M 300 352 L 508 352 L 508 418 L 300 418 Z"/></g>
+          <animateMotion dur="12s" begin="-6s" repeatCount="indefinite" rotate="auto" path="M 300 380 L 508 380 L 508 470 L 300 470 Z"/></g>
         <g style="color: var(--teal)"><use href="#robot"/>
-          <animateMotion dur="8s" begin="-2s" repeatCount="indefinite" rotate="auto" path="M 302 500 L 506 500 L 506 560 L 302 560 Z"/></g>
+          <animateMotion dur="8s" begin="-2s" repeatCount="indefinite" rotate="auto" path="M 302 528 L 506 528 L 506 560 L 302 560 Z"/></g>
 
         <g style="color: var(--staal-mork)"><use href="#robot"/>
-          <animateMotion dur="7s" repeatCount="indefinite" rotate="auto" path="M 600 268 L 654 268 L 654 380 L 600 380 Z"/></g>
+          <animateMotion dur="7s" repeatCount="indefinite" rotate="auto" path="M 600 262 L 654 262 L 654 344 L 600 344 Z"/></g>
 
         <g style="color: var(--aktiv)"><use href="#robot"/>
           <animateMotion dur="8.5s" repeatCount="indefinite" rotate="auto" path="M 730 190 L 890 190 L 890 212 L 730 212 Z"/></g>
 
         <g style="color: var(--staal)"><use href="#robot"/>
-          <animateMotion dur="9.5s" begin="-2.5s" repeatCount="indefinite" rotate="auto" path="M 730 462 L 890 462 L 890 540 L 730 540 Z"/></g>
+          <animateMotion dur="9.5s" begin="-2.5s" repeatCount="indefinite" rotate="auto" path="M 730 458 L 890 458 L 890 496 L 730 496 Z"/></g>
 
         <g style="color: var(--aktiv)"><use href="#robot"/>
-          <animateMotion dur="13s" repeatCount="indefinite" rotate="auto" path="M 962 240 L 1138 240 L 1138 452 L 962 452 Z"/></g>
+          <animateMotion dur="13s" repeatCount="indefinite" rotate="auto" path="M 962 268 L 1138 268 L 1138 452 L 962 452 Z"/></g>
         <g style="color: var(--text)"><use href="#robot"/>
           <animateMotion dur="16s" begin="-8s" repeatCount="indefinite" rotate="auto" path="M 956 108 L 1144 108 L 1144 560 L 956 560 Z"/></g>
       </g>
@@ -344,50 +432,93 @@
   </div>
 
   <div class="under">
+
     <div class="kort">
       <h2>Hendelser</h2>
-      <p class="hint">Alt som faktisk har skjedd mens denne siden har vært åpen. Avdelingen det gjelder blinker samtidig i kartet over.</p>
-      <ul class="logg" id="logg"><li class="tom">Ingenting har skjedd ennå.</li></ul>
+      <p class="hint">Alt som har skjedd, nyeste først. Loggen overlever at du laster siden på nytt, og lagres kun i denne nettleseren.</p>
+      <ul class="logg" id="logg"><li><span class="tom">Ingenting registrert ennå.</span></li></ul>
     </div>
 
     <div class="kort">
-      <h2>Avdelingene</h2>
-      <p class="hint">Hva hver sone på gulvet faktisk er.</p>
-      <ul class="forklaring">
-        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Recman</b><span>Nye oppdrag, oppdrag som forsvinner og statusendringer - hentet fra endringsloggen tavlen bygger opp.</span></div></li>
-        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span>Én arbeidsbenk per funksjon. Benken lyser når akkurat den funksjonen har skrevet noe nytt.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span>Adminnøkkelen. Ingen skriving slipper forbi uten gyldig nøkkel - stengt som standard.</span></div></li>
-        <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span>Kontrollrommet. Lyser når noen endrer en bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
-        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Teamskanal</b><span>Postrommet. Lyser når det kommer nye meldinger fra Teams.</span></div></li>
-        <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span>Skjermene på veggen. Lyser når en skjerm kommer på nett, faller av, eller gjestevisningen skrus av eller på.</span></div></li>
+      <h2>Helse</h2>
+      <p class="hint">Alle datakildene tavlen er avhengig av. Grønn betyr at kilden svarer, rød at den er nede, gul at den har blitt stille.</p>
+      <ul class="helse" id="helseListe"></ul>
+    </div>
+
+    <div class="kort">
+      <h2>Skrivekvote</h2>
+      <p class="hint">Cloudflare-lageret tåler 1000 skrivinger i døgnet på gratisnivået. Går den tom, slutter tavlen å lagre - uten feilmelding. Dette er et anslag regnet ut fra kjente skrivemønstre, ikke en avlest fasit.</p>
+      <div class="kvote-sum" id="kvoteSum">– <small>av 1000</small></div>
+      <div class="maaler" id="kvoteMaaler"><span></span></div>
+      <div id="kvoteRader"></div>
+    </div>
+
+    <div class="kort bred">
+      <h2>Slik leser du kartet</h2>
+      <p class="hint">Alt på gulvet betyr noe bestemt. Her er hele oversikten.</p>
+
+      <h3>De tre lysene</h3>
+      <ul class="forklaring to-spalter">
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Rød puls - det skjedde noe nå</b><span class="tekst">Varer 25 sekunder. Skjer det noe nytt i samme avdeling imens, forlenges den. Dette er en normal hendelse, ikke et problem.</span></div></li>
+        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Rødt med utropstegn - noe er ødelagt</b><span class="tekst">En datakilde svarer ikke. Slukker ikke av seg selv, men først når kilden svarer igjen. Dette er det som faktisk krever at noen gjør noe.</span></div></li>
+        <li><span class="prikk" style="background: var(--advarsel)"></span><div><b>Gult med utropstegn - noe har blitt stille</b><span class="tekst">Kilden svarer, men har ikke levert noe nytt på lenge. Den farligste feiltypen, fordi ingenting krasjer - det bare stopper.</span></div></li>
+      </ul>
+
+      <h3>Avdelingene</h3>
+      <ul class="forklaring to-spalter">
+        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, boksene er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver boks lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
+        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinhallen. De seks benkene er de seks funksjonene som lagrer noe. Hele hallen lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span class="tekst">Adminnøkkelen. Stolpene er porten. Teller hvor mange skriveforsøk som er blitt avvist fordi de manglet gyldig nøkkel, og blinker når det skjer. Er det tallet større enn null uten at du selv har rotet med nøkkelen, har noen forsøkt seg.</span></div></li>
+        <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
+        <li><span class="prikk" style="background: var(--staal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
+        <li><span class="prikk" style="background: var(--text)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
+      </ul>
+
+      <h3>Det som beveger seg</h3>
+      <ul class="forklaring to-spalter">
+        <li><span class="rute" style="background: var(--vei)"></span><div><b>Veien og kassene</b><span class="tekst">Pynt. Den viser at det er drift i fabrikken, men den er ikke koblet til ekte trafikk - les ingenting ut av hvor kassene står.</span></div></li>
+        <li><span class="prikk" style="background: var(--teal)"></span><div><b>Robotene</b><span class="tekst">Også pynt. Én per arbeidsområde, så hallen ser bemannet ut. Hvor de står betyr ingenting - det er lysene du skal se etter.</span></div></li>
+      </ul>
+
+      <h3>Øverste linje</h3>
+      <ul class="forklaring to-spalter">
+        <li><span class="prikk" style="background: var(--ok)"></span><div><b>Overvåker</b><span class="tekst">Siden henter hendelser hvert 15. sekund og sjekker helsen hvert minutt. Blir rød hvis alt svikter. Pauser mens fanen er skjult, så den ikke bruker opp kvoten i bakgrunnen.</span></div></li>
+        <li><span class="prikk" style="background: var(--text-muted)"></span><div><b>Klokke og sist sjekket</b><span class="tekst">Ekte Oslo-tid, og når siste runde faktisk gikk igjennom. Står "sist sjekket" stille mens klokken går, har noe hengt seg.</span></div></li>
+        <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Versjon</b><span class="tekst">Merker når det er rullet ut ny kode. Nyttig når noe slutter å virke - da ser du om det skjedde rett etter en utrulling.</span></div></li>
       </ul>
     </div>
-  </div>
 
+  </div>
 </div>
 
 <script>
   // Fabrikkvisningen er ren overvåkning - den LESER de samme åpne endepunktene som
   // tavlen selv bruker, og skriver aldri noe. Derfor trengs ingen adminnøkkel her.
   //
-  // "Skjer det noe?" avgjøres ved å sammenligne en liten nøkkel utledet av hvert svar
-  // med forrige runde. Nøkkelen må bevisst utelate felt som endrer seg hele tiden av
-  // seg selv (særlig sistSett i skjermregisteret, som bumpes ved hver heartbeat) -
-  // ellers ville alarmen stått og blinket konstant og dermed vært verdiløs.
-  const POLL_MS = 15000;
-  const ALARM_MS = 25000;
-  const MAKS_LOGG = 40;
+  // Tre uavhengige takter, fordi de koster ulikt:
+  //   hendelser  - hvert 15. sek, GET, små svar
+  //   helse      - hvert min, HEAD (null innhold), kun statuskoden er interessant
+  //   tungt      - hvert 5. min, GET av /api/oppdrag (65 kB) for "sist hentet"-tidspunktet
+  const POLL_HENDELSER_MS = 15 * 1000;
+  const POLL_HELSE_MS = 60 * 1000;
+  const POLL_TUNG_MS = 5 * 60 * 1000;
 
+  const ALARM_MS = 25 * 1000;
+  const MAKS_LOGG = 100;
+  const LAGER_NOKKEL = "fabrikk-hendelser";
+
+  // Grenser for "dette har blitt for stille". Satt romslig med vilje: heller én sen
+  // varsling enn et gult felt som ulver hver gang en jobb er litt forsinket.
+  const RECMAN_STILLE_MS = 45 * 60 * 1000;   // cachen er 20 min, så 45 betyr låst
+  const TEAMS_STILLE_MS = 45 * 60 * 1000;    // jobben kjører hvert 15. min = 3 tapte kjøringer
+
+  // ---------- hendelseskilder (GET) ----------
   const KILDER = [
     {
-      id: "endringslogg",
-      url: "/api/endringslogg",
-      soner: ["recman", "functions"],
-      farge: "var(--staal)",
-      nokkel: (d) => {
-        const h = d.hendelser ?? [];
-        return h.length + ":" + (h[0]?.tidspunkt ?? 0);
-      },
+      id: "endringslogg", url: "/api/endringslogg", navn: "Endringslogg",
+      soner: ["recman", "functions"], farge: "var(--staal)",
+      nokkel: (d) => { const h = d.hendelser ?? []; return h.length + ":" + (h[0]?.tidspunkt ?? 0); },
       beskriv: (d) => {
         const h = (d.hendelser ?? [])[0];
         if (!h) return "Endring i oppdragene fra Recman";
@@ -398,20 +529,14 @@
       }
     },
     {
-      id: "notat",
-      url: "/api/notat",
-      soner: ["admin", "functions"],
-      benker: ["notat"],
-      farge: "var(--aktiv)",
+      id: "notat", url: "/api/notat", navn: "Post-it",
+      soner: ["admin", "functions"], benker: ["notat"], farge: "var(--aktiv)",
       nokkel: (d) => String(d.tekst ?? ""),
       beskriv: (d) => (d.tekst ? "Ny post-it-lapp på tavlen" : "Post-it-lappen ble tømt")
     },
     {
-      id: "innstillinger",
-      url: "/api/innstillinger",
-      soner: ["admin", "functions"],
-      benker: ["innstillinger"],
-      farge: "var(--aktiv)",
+      id: "innstillinger", url: "/api/innstillinger", navn: "Innstillinger",
+      soner: ["admin", "functions"], benker: ["innstillinger"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d),
       beskriv: (ny, gammel) => {
         const endret = Object.keys(ny).filter((k) => gammel && ny[k] !== gammel[k]);
@@ -420,62 +545,49 @@
       }
     },
     {
-      id: "skjulte",
-      url: "/api/skjulte",
-      soner: ["admin", "functions"],
-      benker: ["skjulte"],
-      farge: "var(--aktiv)",
+      id: "skjulte", url: "/api/skjulte", navn: "Parkerte oppdrag",
+      soner: ["admin", "functions"], benker: ["skjulte"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d.skjulte ?? []),
       beskriv: (ny, gammel) => {
-        const f = (gammel?.skjulte ?? []).length;
-        const n = (ny.skjulte ?? []).length;
+        const f = (gammel?.skjulte ?? []).length, n = (ny.skjulte ?? []).length;
         if (n > f) return "Et oppdrag ble parkert (" + n + " parkert nå)";
         if (n < f) return "Et parkert oppdrag ble hentet tilbake (" + n + " parkert nå)";
         return "Parkerte oppdrag ble endret";
       }
     },
     {
-      id: "bursdager",
-      url: "/api/bursdager",
-      soner: ["admin", "functions"],
-      benker: ["bursdager"],
-      farge: "var(--aktiv)",
+      id: "bursdager", url: "/api/bursdager", navn: "Bursdager",
+      soner: ["admin", "functions"], benker: ["bursdager"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d.bursdager ?? []),
       beskriv: () => "Bursdagslisten ble endret"
     },
     {
-      id: "bilde",
-      url: "/api/bilde?status",
-      soner: ["admin", "functions"],
-      benker: ["bilde"],
-      farge: "var(--aktiv)",
+      id: "bilde", url: "/api/bilde?status", navn: "Bilde-oppslag",
+      soner: ["admin", "functions"], benker: ["bilde"], farge: "var(--aktiv)",
       nokkel: (d) => String(d.harBilde) + ":" + String(d.lagtUt ?? ""),
       beskriv: (d) => (d.harBilde ? "Nytt bilde-oppslag lagt ut på tavlen" : "Bilde-oppslaget ble fjernet")
     },
     {
-      id: "teamskanal",
-      url: "/api/teamskanal",
-      soner: ["teamskanal", "functions"],
-      farge: "var(--staal)",
-      nokkel: (d) => String(d.sistOppdatert ?? "") + ":" + (d.meldinger ?? []).length,
-      beskriv: (d) => {
-        const m = (d.meldinger ?? [])[0];
-        return m ? "Ny melding i Teamskanalen fra " + m.fra : "Teamskanalen ble oppdatert";
+      id: "teamskanal", url: "/api/teamskanal", navn: "Teamskanal",
+      soner: ["teamskanal", "functions"], farge: "var(--staal)",
+      // sistOppdatert er BEVISST utelatt: jobben poster hvert 15. minutt uansett om det
+      // finnes nye meldinger eller ei, så en nøkkel basert på den ville slått alarm fire
+      // ganger i timen uten at noe faktisk hadde skjedd. Kun innholdet teller som hendelse -
+      // sistOppdatert brukes i stedet til stillhetsvakten lenger ned.
+      nokkel: (d) => (d.meldinger ?? []).map((m) => m.fra + "|" + m.tidspunkt).join(";"),
+      beskriv: (ny, gammel) => {
+        const gamle = new Set((gammel?.meldinger ?? []).map((m) => m.fra + "|" + m.tidspunkt));
+        const fersk = (ny.meldinger ?? []).find((m) => !gamle.has(m.fra + "|" + m.tidspunkt));
+        if (fersk) return "Ny melding i Teamskanalen fra " + fersk.fra;
+        return "Teamskanalen ble endret";
       }
     },
     {
-      id: "skjermer",
-      url: "/api/skjermer",
-      soner: ["tavle", "functions"],
-      benker: ["skjermer"],
-      farge: "var(--text)",
-      // sistSett utelates bevisst - den endrer seg ved hver heartbeat og ville fått
-      // alarmen til å blinke konstant uten at det faktisk har skjedd noe.
-      nokkel: (d) =>
-        (d.skjermer ?? [])
-          .map((s) => [s.id, s.navn, s.aktiv, s.gjestevisning].join("|"))
-          .sort()
-          .join(";"),
+      id: "skjermer", url: "/api/skjermer", navn: "Skjermer",
+      soner: ["tavle", "functions"], benker: ["skjermer"], farge: "var(--text)",
+      // sistSett utelates - den bumpes ved hver heartbeat og ville fått alarmen til å
+      // blinke konstant uten at det faktisk har skjedd noe.
+      nokkel: (d) => (d.skjermer ?? []).map((s) => [s.id, s.navn, s.aktiv, s.gjestevisning].join("|")).sort().join(";"),
       beskriv: (ny, gammel) => {
         const f = new Map((gammel?.skjermer ?? []).map((s) => [s.id, s]));
         for (const s of ny.skjermer ?? []) {
@@ -486,94 +598,250 @@
         }
         return "Skjermregisteret ble endret";
       }
+    },
+    {
+      id: "avviste", url: "/api/avviste", navn: "Avviste skrivinger",
+      soner: ["sluse"], farge: "var(--feil)", niva: "feil",
+      nokkel: (d) => String(d.antall ?? 0),
+      beskriv: (d) => {
+        const f = (d.forsok ?? [])[0];
+        return "Avvist skriveforsøk uten gyldig nøkkel" + (f?.rute ? " mot " + f.rute : "");
+      }
     }
   ];
+
+  // ---------- helsesjekker (HEAD - kun statuskoden) ----------
+  const HELSESJEKKER = [
+    { id: "oppdrag", url: "/api/oppdrag", navn: "Recman - oppdrag", soner: ["recman"] },
+    { id: "telling", url: "/api/telling", navn: "Recman - telling", soner: ["recman"] },
+    { id: "tilbud", url: "/api/tilbud", navn: "Recman - tilbud", soner: ["recman"] },
+    { id: "avsluttet", url: "/api/avsluttet", navn: "Recman - avsluttet", soner: ["recman"] },
+    { id: "vaer", url: "/api/vaer", navn: "Vær", soner: ["eksterne"], benker: ["vaer"] },
+    { id: "avganger", url: "/api/avganger", navn: "Busstider", soner: ["eksterne"], benker: ["avganger"] },
+    { id: "nrk", url: "/api/nrk", navn: "NRK", soner: ["eksterne"], benker: ["nrk"] },
+    { id: "kundenytt", url: "/api/kundenytt", navn: "Kundenytt", soner: ["eksterne"], benker: ["kundenytt"] }
+  ];
+
+  const DEPLOY_FILER = ["/app.js", "/index.html", "/style.css"];
 
   const forrigeNokkel = new Map();
   const forrigeData = new Map();
   const alarmTimere = new Map();
+  const feilende = new Map();   // sjekk-id -> { navn, soner, benker, grunn }
+  const stille = new Map();     // vakt-id  -> { navn, soner, benker, grunn }
+  let deployMerke = null;
   let bootstrap = true;
 
-  const loggEl = document.getElementById("logg");
-  const klokkeEl = document.getElementById("klokke");
-  const sistPilleEl = document.getElementById("sistPille");
-  const tilkoblingPilleEl = document.getElementById("tilkoblingPille");
-  const tilkoblingTekstEl = document.getElementById("tilkoblingTekst");
-  const tavleDognEl = document.getElementById("tavleDogn");
-  const tavleSkjermerEl = document.getElementById("tavleSkjermer");
+  const el = (id) => document.getElementById(id);
+  const loggEl = el("logg");
+  const helseListeEl = el("helseListe");
 
-  function tikk() {
-    klokkeEl.textContent = new Intl.DateTimeFormat("nb-NO", {
-      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Oslo"
-    }).format(new Date());
-  }
+  const tidFmt = new Intl.DateTimeFormat("nb-NO", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Oslo" });
+  const datoTidFmt = new Intl.DateTimeFormat("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Oslo" });
+
+  function tikk() { el("klokke").textContent = tidFmt.format(new Date()); }
   tikk();
   setInterval(tikk, 1000);
 
-  // Alarmen står på i ALARM_MS etter hendelsen. Skjer det noe nytt i samme sone før
-  // det, forlenges den i stedet for å slukke midt i - derfor nullstilles timeren.
-  function slaAlarm(velger) {
-    const el = document.getElementById(velger);
-    if (!el) return;
-    el.classList.add("alarm");
-    clearTimeout(alarmTimere.get(velger));
-    alarmTimere.set(velger, setTimeout(() => el.classList.remove("alarm"), ALARM_MS));
+  function siden(tid) {
+    if (!tid) return "ukjent";
+    const min = Math.round((Date.now() - tid) / 60000);
+    if (min < 1) return "nå nettopp";
+    if (min < 60) return min + " min siden";
+    const t = Math.floor(min / 60);
+    if (t < 24) return t + " t siden";
+    return Math.floor(t / 24) + " d siden";
+  }
+
+  // Teamskanal-jobben kjører kun hverdager 07-19. Utenfor det vinduet er stillhet
+  // helt normalt, og en gul advarsel ville bare vært støy hver eneste kveld og helg.
+  function osloTid() {
+    const deler = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Oslo", weekday: "short", hour: "2-digit", hour12: false })
+      .formatToParts(new Date());
+    return {
+      ukedag: deler.find((d) => d.type === "weekday")?.value ?? "",
+      time: parseInt(deler.find((d) => d.type === "hour")?.value ?? "0", 10)
+    };
+  }
+  function erHverdag() {
+    return ["Mon", "Tue", "Wed", "Thu", "Fri"].includes(osloTid().ukedag);
+  }
+  function erArbeidstid() {
+    const { time } = osloTid();
+    return erHverdag() && time >= 7 && time < 19;
+  }
+
+  // ---------- logg ----------
+  function lesLagretLogg() {
+    try { return JSON.parse(localStorage.getItem(LAGER_NOKKEL) ?? "[]"); } catch { return []; }
+  }
+  function skrivLagretLogg(rader) {
+    try { localStorage.setItem(LAGER_NOKKEL, JSON.stringify(rader.slice(0, MAKS_LOGG))); } catch { /* full eller blokkert - loggen er uansett ikke kritisk */ }
+  }
+  let loggRader = lesLagretLogg();
+
+  function tegnLogg() {
+    loggEl.innerHTML = "";
+    if (!loggRader.length) {
+      const li = document.createElement("li");
+      const tom = document.createElement("span");
+      tom.className = "tom";
+      tom.textContent = "Ingenting registrert ennå.";
+      li.append(tom);
+      loggEl.append(li);
+      return;
+    }
+    const iDag = new Date().toDateString();
+    for (const rad of loggRader) {
+      const li = document.createElement("li");
+      if (Date.now() - rad.tid < ALARM_MS) li.className = "fersk";
+      const prikk = document.createElement("span");
+      prikk.className = "prikk";
+      prikk.style.background = rad.farge;
+      const innhold = document.createElement("div");
+      const tid = document.createElement("div");
+      tid.className = "tid";
+      const d = new Date(rad.tid);
+      tid.textContent = d.toDateString() === iDag ? tidFmt.format(d) : datoTidFmt.format(d);
+      const tekst = document.createElement("div");
+      tekst.className = "tekst";
+      tekst.textContent = rad.tekst;
+      innhold.append(tid, tekst);
+      li.append(prikk, innhold);
+      loggEl.append(li);
+    }
   }
 
   function leggILogg(tekst, farge) {
-    const tom = loggEl.querySelector(".tom");
-    if (tom) tom.remove();
+    loggRader = [{ tid: Date.now(), tekst, farge }, ...loggRader].slice(0, MAKS_LOGG);
+    skrivLagretLogg(loggRader);
+    tegnLogg();
+  }
+  tegnLogg();
 
-    const li = document.createElement("li");
-    li.className = "fersk";
-    const prikk = document.createElement("span");
-    prikk.className = "prikk";
-    prikk.style.background = farge;
-    const innhold = document.createElement("div");
-    const tid = document.createElement("div");
-    tid.className = "tid";
-    tid.textContent = new Intl.DateTimeFormat("nb-NO", {
-      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Oslo"
-    }).format(new Date());
-    const t = document.createElement("div");
-    t.className = "tekst";
-    t.textContent = tekst;
-    innhold.append(tid, t);
-    li.append(prikk, innhold);
-    loggEl.prepend(li);
-
-    setTimeout(() => li.classList.remove("fersk"), ALARM_MS);
-    while (loggEl.children.length > MAKS_LOGG) loggEl.lastElementChild.remove();
+  // ---------- tilstander på gulvet ----------
+  function slaAlarm(velger) {
+    const node = document.getElementById(velger);
+    if (!node) return;
+    node.classList.add("alarm");
+    clearTimeout(alarmTimere.get(velger));
+    alarmTimere.set(velger, setTimeout(() => node.classList.remove("alarm"), ALARM_MS));
   }
 
-  async function sjekk() {
-    const svar = await Promise.all(
-      KILDER.map(async (k) => {
-        try {
-          const r = await fetch(k.url, { cache: "no-store" });
-          if (!r.ok) throw new Error(String(r.status));
-          return { k, data: await r.json() };
-        } catch {
-          return { k, feil: true };
-        }
-      })
-    );
+  // Feil og stillhet er vedvarende tilstander, ikke blaff - de regnes derfor ut på nytt
+  // fra grunnen hver runde, slik at et felt slukker av seg selv i det kilden blir frisk.
+  function tegnVedvarende() {
+    const medFeil = new Set(), medStille = new Set();
+    for (const f of feilende.values()) {
+      (f.soner ?? []).forEach((s) => medFeil.add("sone-" + s));
+      (f.benker ?? []).forEach((b) => medFeil.add("benk-" + b));
+    }
+    for (const s of stille.values()) {
+      (s.soner ?? []).forEach((x) => medStille.add("sone-" + x));
+      (s.benker ?? []).forEach((b) => medStille.add("benk-" + b));
+    }
+    document.querySelectorAll(".sone, .benk").forEach((node) => {
+      node.classList.toggle("feil", medFeil.has(node.id));
+      node.classList.toggle("treg", !medFeil.has(node.id) && medStille.has(node.id));
+    });
+  }
 
-    const feilet = svar.filter((s) => s.feil).length;
-    tilkoblingPilleEl.classList.toggle("frakoblet", feilet === svar.length);
-    tilkoblingTekstEl.textContent = feilet === svar.length ? "Frakoblet" : feilet ? "Overvåker (" + feilet + " utilgjengelig)" : "Overvåker";
+  function tegnHelse() {
+    helseListeEl.innerHTML = "";
+    const rader = [
+      ...HELSESJEKKER.map((h) => ({
+        navn: h.navn,
+        nede: feilende.has(h.id),
+        treg: stille.has(h.id),
+        verdi: feilende.has(h.id) ? feilende.get(h.id).grunn : (stille.get(h.id)?.grunn ?? "svarer")
+      })),
+      {
+        navn: "Teamskanal-jobben",
+        nede: false,
+        treg: stille.has("teamskanal-stille"),
+        verdi: stille.get("teamskanal-stille")?.grunn ?? (erArbeidstid() ? "i rute" : "utenfor arbeidstid")
+      }
+    ];
+    for (const r of rader) {
+      const li = document.createElement("li");
+      li.className = r.nede ? "nede" : r.treg ? "treg" : "";
+      const prikk = document.createElement("span");
+      prikk.className = "prikk";
+      const navn = document.createElement("span");
+      navn.className = "navn";
+      navn.textContent = r.navn;
+      const verdi = document.createElement("span");
+      verdi.className = "verdi";
+      verdi.textContent = r.verdi;
+      li.append(prikk, navn, verdi);
+      helseListeEl.append(li);
+    }
+  }
+
+  // ---------- skrivekvote ----------
+  // Cloudflare KV har ingen måte å lese av faktisk forbruk fra nettleseren, så dette er
+  // et anslag regnet ut fra kjente skrivemønstre i koden. Det er godt nok til å se at
+  // man nærmer seg taket - som med to skjermer i drift faktisk er innenfor rekkevidde.
+  const KVOTE_TAK = 1000;
+  function tegnKvote() {
+    const skjermer = (forrigeData.get("skjermer")?.skjermer ?? []).filter((s) => s.aktiv).length;
+    const skjermSkriv = skjermer * Math.round((24 * 60) / 5);        // heartbeat maks hvert 5. min
+    const teamsSkriv = erHverdag() ? 4 * 12 : 0;                     // 4 kjøringer i timen, 07-19
+    const oppdragSkriv = Math.round((24 * 60) / 20);                 // endringsloggen ved hvert cache-bom
+    const adminSkriv = loggRader.filter((r) => Date.now() - r.tid < 24 * 60 * 60 * 1000).length;
+    const sum = skjermSkriv + teamsSkriv + oppdragSkriv + adminSkriv;
+
+    el("kvoteSum").innerHTML = "~" + sum + ' <small>av ' + KVOTE_TAK + "</small>";
+    const andel = Math.min(100, Math.round((sum / KVOTE_TAK) * 100));
+    const maaler = el("kvoteMaaler");
+    maaler.querySelector("span").style.width = andel + "%";
+    maaler.classList.toggle("nesten", andel >= 70 && andel < 90);
+    maaler.classList.toggle("full", andel >= 90);
+
+    el("kvoteBar").setAttribute("width", Math.round((andel / 100) * 228));
+    el("kvoteBar").setAttribute("fill", andel >= 90 ? "var(--feil)" : andel >= 70 ? "var(--advarsel)" : "var(--ok)");
+    el("kvoteTekst").textContent = "~" + sum + " av " + KVOTE_TAK;
+
+    const rader = [
+      ["Skjermer (" + skjermer + " aktive, hvert 5. min)", skjermSkriv],
+      ["Teamskanal-jobben", teamsSkriv],
+      ["Oppdragsloggen (hvert 20. min)", oppdragSkriv],
+      ["Observerte endringer siste døgn", adminSkriv]
+    ];
+    el("kvoteRader").innerHTML = "";
+    for (const [navn, tall] of rader) {
+      const rad = document.createElement("div");
+      rad.className = "kvote-rad";
+      const a = document.createElement("span"); a.textContent = navn;
+      const b = document.createElement("span"); b.textContent = "~" + tall;
+      rad.append(a, b);
+      el("kvoteRader").append(rad);
+    }
+  }
+
+  // ---------- runde 1: hendelser ----------
+  async function sjekkHendelser() {
+    const svar = await Promise.all(KILDER.map(async (k) => {
+      try {
+        const r = await fetch(k.url, { cache: "no-store" });
+        if (!r.ok) throw new Error(String(r.status));
+        return { k, data: await r.json() };
+      } catch { return { k, feil: true }; }
+    }));
+
+    const nede = svar.filter((s) => s.feil).length;
+    const pille = el("tilkoblingPille");
+    pille.classList.toggle("frakoblet", nede === svar.length);
+    el("tilkoblingTekst").textContent = nede === svar.length ? "Frakoblet" : nede ? "Overvåker (" + nede + " utilgjengelig)" : "Overvåker";
 
     for (const { k, data, feil } of svar) {
       if (feil) continue;
-
       const nokkel = k.nokkel(data);
       const gammelNokkel = forrigeNokkel.get(k.id);
       const gammelData = forrigeData.get(k.id);
       forrigeNokkel.set(k.id, nokkel);
       forrigeData.set(k.id, data);
 
-      // Aller første runde skal bare lese inn utgangspunktet - ellers ville alt
-      // som ligger der fra før blitt meldt som en fersk hendelse.
       if (bootstrap || gammelNokkel === undefined || nokkel === gammelNokkel) continue;
 
       (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s));
@@ -581,30 +849,134 @@
       leggILogg(k.beskriv(data, gammelData), k.farge);
     }
 
-    // Små, ekte tall i skjermen inne på tavla
-    const skjermer = forrigeData.get("skjermer")?.skjermer ?? [];
-    tavleSkjermerEl.textContent = skjermer.filter((s) => s.aktiv).length;
-    const hendelser = forrigeData.get("endringslogg")?.hendelser ?? [];
-    const etDognSiden = Date.now() - 24 * 60 * 60 * 1000;
-    tavleDognEl.textContent = hendelser.filter((h) => h.tidspunkt > etDognSiden).length;
+    oppdaterTall();
+    sjekkStillhet();
+    tegnVedvarende();
+    tegnHelse();
+    tegnKvote();
 
     bootstrap = false;
-    sistPilleEl.textContent = "Sist sjekket " + new Intl.DateTimeFormat("nb-NO", {
-      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Oslo"
-    }).format(new Date());
+    el("sistPille").textContent = "Sist sjekket " + tidFmt.format(new Date());
   }
 
-  // Pauser mens fanen er skjult - ellers står siden og tygger på KV-kvoten hele
-  // døgnet på en skjerm ingen ser på. Sjekker med en gang den vises igjen.
-  let timer = null;
+  function oppdaterTall() {
+    const skjermer = forrigeData.get("skjermer")?.skjermer ?? [];
+    el("tavleSkjermer").textContent = skjermer.filter((s) => s.aktiv).length;
+
+    const hendelser = forrigeData.get("endringslogg")?.hendelser ?? [];
+    const etDognSiden = Date.now() - 24 * 60 * 60 * 1000;
+    el("tavleDogn").textContent = hendelser.filter((h) => h.tidspunkt > etDognSiden).length;
+
+    const avviste = forrigeData.get("avviste");
+    el("avvisteAntall").textContent = avviste?.antall ? "≥" + avviste.antall : "0";
+
+    const teams = forrigeData.get("teamskanal");
+    el("teamsSist").textContent = teams?.sistOppdatert ? siden(teams.sistOppdatert) : "–";
+  }
+
+  // ---------- stillhetsvakt ----------
+  function sjekkStillhet() {
+    const forrige = new Map(stille);
+    stille.clear();
+
+    const teams = forrigeData.get("teamskanal");
+    if (erArbeidstid() && teams?.sistOppdatert && Date.now() - teams.sistOppdatert > TEAMS_STILLE_MS) {
+      stille.set("teamskanal-stille", { navn: "Teamskanal-jobben", soner: ["teamskanal"], grunn: "stille i " + siden(teams.sistOppdatert) });
+    }
+
+    const oppdrag = forrigeData.get("oppdrag-tung");
+    if (oppdrag?.hentet && Date.now() - oppdrag.hentet > RECMAN_STILLE_MS) {
+      stille.set("oppdrag", { navn: "Recman - oppdrag", soner: ["recman"], grunn: "data fra " + siden(oppdrag.hentet) });
+    }
+
+    for (const s of forrigeData.get("skjermer")?.skjermer ?? []) {
+      if (!s.aktiv) stille.set("skjerm-" + s.id, { navn: "Skjerm: " + s.navn, soner: ["tavle"], grunn: "sist sett " + siden(s.sistSett) });
+    }
+
+    if (bootstrap) return;
+    for (const [id, v] of stille) {
+      if (!forrige.has(id)) leggILogg("Blitt stille: " + v.navn + " (" + v.grunn + ")", "var(--advarsel)");
+    }
+    for (const [id, v] of forrige) {
+      if (!stille.has(id)) leggILogg("Friskmeldt: " + v.navn + " leverer igjen", "var(--ok)");
+    }
+  }
+
+  // ---------- runde 2: helse ----------
+  async function sjekkHelse() {
+    await Promise.all(HELSESJEKKER.map(async (h) => {
+      const varNede = feilende.has(h.id);
+      try {
+        const r = await fetch(h.url, { method: "HEAD", cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        if (varNede) {
+          feilende.delete(h.id);
+          leggILogg("Friskmeldt: " + h.navn + " svarer igjen", "var(--ok)");
+        }
+      } catch (err) {
+        if (!varNede) {
+          feilende.set(h.id, { navn: h.navn, soner: h.soner, benker: h.benker, grunn: String(err.message ?? err) });
+          leggILogg("FEIL: " + h.navn + " svarer ikke (" + String(err.message ?? err) + ")", "var(--feil)");
+        }
+      }
+    }));
+    tegnVedvarende();
+    tegnHelse();
+    await sjekkDeploy();
+  }
+
+  // ---------- deploy ----------
+  async function sjekkDeploy() {
+    try {
+      const merker = await Promise.all(DEPLOY_FILER.map(async (f) => {
+        const r = await fetch(f, { method: "HEAD", cache: "no-store" });
+        return r.headers.get("etag") ?? "";
+      }));
+      const samlet = merker.join("|");
+      if (deployMerke === null) {
+        deployMerke = samlet;
+        el("versjonPille").textContent = "Versjon: uendret";
+        return;
+      }
+      if (samlet !== deployMerke) {
+        deployMerke = samlet;
+        el("versjonPille").textContent = "Ny versjon " + tidFmt.format(new Date());
+        el("versjonPille").classList.add("ny-versjon");
+        slaAlarm("sone-functions");
+        leggILogg("Ny kode rullet ut - tavlen laster seg selv på nytt", "var(--hendelse)");
+      }
+    } catch {
+      el("versjonPille").textContent = "Versjon: ukjent";
+    }
+  }
+
+  // ---------- runde 3: tungt ----------
+  async function sjekkTungt() {
+    try {
+      const r = await fetch("/api/oppdrag", { cache: "no-store" });
+      if (!r.ok) return;
+      const d = await r.json();
+      forrigeData.set("oppdrag-tung", d);
+      el("recmanAntall").textContent = (d.oppdrag ?? []).length;
+      el("recmanHentet").textContent = d.hentet ? siden(d.hentet) : "ukjent";
+    } catch { /* helsesjekken fanger opp at den er nede */ }
+  }
+
+  // Pauser mens fanen er skjult - ellers står siden og tygger på kvoten hele døgnet
+  // på en skjerm ingen ser på. Alle tre rundene kjøres straks den vises igjen.
+  let timere = [];
   function start() {
     stopp();
-    sjekk();
-    timer = setInterval(sjekk, POLL_MS);
+    sjekkHendelser(); sjekkHelse(); sjekkTungt();
+    timere = [
+      setInterval(sjekkHendelser, POLL_HENDELSER_MS),
+      setInterval(sjekkHelse, POLL_HELSE_MS),
+      setInterval(sjekkTungt, POLL_TUNG_MS)
+    ];
   }
   function stopp() {
-    if (timer) clearInterval(timer);
-    timer = null;
+    timere.forEach(clearInterval);
+    timere = [];
   }
   document.addEventListener("visibilitychange", () => (document.hidden ? stopp() : start()));
   start();
