@@ -327,6 +327,22 @@
   .last .merkelapp { fill: var(--text-muted); }
   .last.jobber .merkelapp { fill: var(--text); font-weight: 700; }
 
+  /* Svak idle-svaiing for Trakteren (etter tilbakemelding "gjerne litt bevegelse i
+     agenten også") - rent kosmetisk stillstands-liv, ikke et signal om noe som helst
+     (i motsetning til jobbring/alarm, som alltid betyr en ekte hendelse). Animerer en
+     INDRE gruppe uten egen transform, ikke selve .robot - samme grunn som talebobler
+     kun animerer opacity: en CSS-transform på et element som allerede har et
+     SVG-transform-attributt (translate+scale for plassering) ville erstattet det
+     attributtet i stedet for å legge seg oppå det. */
+  .robot-kropp-idle { transform-origin: 0 6px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .robot-svever .robot-kropp-idle { animation: sveveIdle 3.6s ease-in-out infinite; }
+  }
+  @keyframes sveveIdle {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-2.5px) rotate(-3deg); }
+  }
+
   /* Banene fra kontrollrommet: rene, dempede ledninger i gulvet - tegnet BAK avdelingene
      (se DOM-rekkefølgen i SVG-en) slik at de forsvinner inn under boksene i stedet for å
      krysse oppå innholdet deres. De skifter aldri farge lenger; selve "det skjer noe her"-
@@ -530,21 +546,30 @@
         <g id="baneNett"></g>
 
         <!-- ============ KANDIDATTRAKTEN ============ -->
-        <!-- Gjenbruker NØYAKTIG de samme yttermålene (34,18,204,150) som det tidligere
-             fjernede Observasjonsdekket sto på - garantert ledig og ikke-overlappende,
-             i stedet for å gjette på nye koordinater. Traktall fra Recman sin
-             jobApplication-scope, se functions/api/kandidater.js - FELTNAVNENE DER ER
-             IKKE bekreftet mot et ekte svar ennå (se advarselen i den fila), så denne
-             sonen kan vise "–" en stund til det er verifisert på ekte data. -->
+        <!-- Sto opprinnelig på nøyaktig de samme yttermålene (34,18,204,150) som det
+             tidligere fjernede Observasjonsdekket - garantert ledig og ikke-
+             overlappende, i stedet for å gjette på nye koordinater. Rettet etter
+             tilbakemelding "agenten/boksen er litt liten": vokst noe nedover (150->164)
+             inn i det som var en unødvendig stor luft-gap til Recman rett under (nå 6px,
+             var 20px) - se kandidatdata-lasten i LASTER, som er flyttet tilsvarende.
+             Traktall fra Recman sin jobApplication-scope, se functions/api/kandidater.js
+             (paginert, verifisert mot ekte data 2026-09-16). -->
         <g class="sone" id="sone-kandidater">
-          <rect class="glo" x="34" y="18" width="204" height="150" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
-          <rect x="42" y="26" width="188" height="134" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="glo" x="34" y="18" width="204" height="164" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="42" y="26" width="188" height="148" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="42" y="26" width="188" height="24" fill="var(--kandidat)"/>
           <text x="136" y="42" text-anchor="middle" font-weight="600" font-size="10" fill="#fff">KANDIDATTRAKTEN</text>
 
-          <g class="robot" id="trakterenAgent" data-nr="14" style="color: var(--kandidat)" transform="translate(64 108) scale(0.62)">
-            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
-            <use href="#robot"/>
+          <!-- Skalert opp til 1 (var 0.62) for å matche de andre agentene - jobbring +
+               use#robot flyttet inn i en egen indre gruppe uten sin egen transform, slik
+               at CSS kan gi den en svak idle-svaiing (sveveIdle) uten å kollidere med
+               plasseringen sin egen translate/scale (samme unngåtte konflikt som ble
+               dokumentert for talebobler tidligere). -->
+          <g class="robot robot-svever" id="trakterenAgent" data-nr="14" style="color: var(--kandidat)" transform="translate(64 118) scale(1)">
+            <g class="robot-kropp-idle">
+              <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+              <use href="#robot"/>
+            </g>
           </g>
 
           <text x="152" y="76" text-anchor="middle" font-size="18" font-weight="700" fill="var(--text)" id="kandidatTotalt">–</text>
@@ -1293,7 +1318,7 @@
     // mellom de to rommene - en ekte kobling, ikke en fabrikert en. Egen (kortere)
     // bane, derfor egen `bane`/`storrelse`/`skjulNavn` i stedet for delt BANE_TRACK.
     { navn: "kandidatdata", farge: "var(--kandidat)", varighet: 5, start: 0, utloser: ["sone-kandidater"],
-      bane: "M 131 150 L 141 150 L 141 197 L 131 197 Z", storrelse: 10, skjulNavn: true,
+      bane: "M 131 172 L 141 172 L 141 197 L 131 197 Z", storrelse: 10, skjulNavn: true,
       hva: "Traktallene i Kandidattrakten er talt opp av nøyaktig samme Recman-liste som ligger rett under - denne korte streken markerer at de to rommene faktisk deler kilde." }
   ];
 
