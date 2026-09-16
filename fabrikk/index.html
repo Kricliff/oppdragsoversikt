@@ -545,6 +545,7 @@
     <span class="pille" id="sistPille">Venter på første sjekk…</span>
     <span class="pille" id="versjonPille">Versjon: leser…</span>
     <button type="button" class="pille" id="kvitterKnapp" disabled>Ingen alarmer</button>
+    <span class="pille" id="blokkertPille" hidden></span>
   </div>
 
   <div class="scene">
@@ -1036,7 +1037,7 @@
       <h3>Øverste linje</h3>
       <ul class="forklaring to-spalter">
         <li><span class="prikk" style="background: var(--ok)"></span><div><b>Overvåker</b><span class="tekst">Siden henter hendelser hvert 15. sekund og sjekker helsen hvert minutt. Blir rød hvis alt svikter. Pauser mens fanen er skjult, så den ikke bruker opp kvoten i bakgrunnen.</span></div></li>
-        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Kvitter alarm</b><span class="tekst">Vises kun når det finnes minst én rød alarm. Fjerner alle alarmer som er rettet - en som fortsatt er aktiv nå, lar knappen stå igjen.</span></div></li>
+        <li><span class="prikk" style="background: var(--feil)"></span><div><b>Kvitter alarm</b><span class="tekst">Fjerner alle alarmer som er rettet. En kilde som fortsatt feiler akkurat nå kan ikke kvitteres bort - da ville knappen kunne skjule et reelt problem. Knappen viser hvor mange som faktisk kan kvitteres ("Kvitter 1 av 2"), og er deaktivert med navnet på kilden som blokkerer når ingen kan kvitteres. For en planlagt jobb betyr "feiler fortsatt" at siste rapporterte kjøring feilet - den løsner først når jobben kjører vellykket igjen.</span></div></li>
         <li><span class="prikk" style="background: var(--text-muted)"></span><div><b>Klokke og sist sjekket</b><span class="tekst">Ekte Oslo-tid, og når siste runde faktisk gikk igjennom. Står "sist sjekket" stille mens klokken går, har noe hengt seg.</span></div></li>
         <li><span class="prikk" style="background: var(--hendelse)"></span><div><b>Versjon</b><span class="tekst">Merker når det er rullet ut ny kode. Nyttig når noe slutter å virke - da ser du om det skjedde rett etter en utrulling.</span></div></li>
       </ul>
@@ -1818,18 +1819,40 @@
     tegnKommandosenter();
   }
 
+  // Rettet etter tilbakemelding "jeg får ikke kvittert ut alarmen": knappen var AKTIV så
+  // lenge det fantes minst én alarm, men kvitterAlarmer() fjerner kun de som er rettet.
+  // Feilet en planlagt jobb (der "feiler nå" betyr "siste rapporterte kjøring feilet", en
+  // tilstand som kan stå i timer), var knappen trykkbar og gjorde bokstavelig talt
+  // ingenting, uten noen forklaring. Nå skiller den mellom hvor mange som KAN kvitteres og
+  // hvor mange som fortsatt feiler, og sier hvilken kilde som blokkerer.
   function tegnKvitterKnapp() {
     const knapp = el("kvitterKnapp");
+    const blokkert = el("blokkertPille");
     const antall = varslet.size;
+    const fortsattNede = [...varslet.keys()].filter((id) => feilende.has(id));
+    const kanKvitteres = antall - fortsattNede.length;
+
     if (antall === 0) {
       knapp.disabled = true;
       knapp.classList.remove("har-alarm");
       knapp.textContent = "Ingen alarmer";
+      blokkert.hidden = true;
       return;
     }
-    knapp.disabled = false;
+
     knapp.classList.add("har-alarm");
-    knapp.textContent = antall === 1 ? "Kvitter 1 alarm" : "Kvitter " + antall + " alarmer";
+    knapp.disabled = kanKvitteres === 0;
+    if (kanKvitteres === 0) knapp.textContent = antall === 1 ? "1 alarm feiler ennå" : antall + " alarmer feiler ennå";
+    else if (kanKvitteres === antall) knapp.textContent = antall === 1 ? "Kvitter 1 alarm" : "Kvitter " + antall + " alarmer";
+    else knapp.textContent = "Kvitter " + kanKvitteres + " av " + antall;
+
+    if (fortsattNede.length) {
+      const navn = fortsattNede.map((id) => varslet.get(id).navn);
+      blokkert.textContent = "Kan ikke kvitteres før disse svarer igjen: " + navn.join(", ");
+      blokkert.hidden = false;
+    } else {
+      blokkert.hidden = true;
+    }
   }
 
   // Fjerner kun alarmer som faktisk er rettet - en kilde som fortsatt feiler AKKURAT NÅ
