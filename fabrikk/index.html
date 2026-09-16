@@ -1384,14 +1384,33 @@
     elm.addEventListener("mousemove", () => visAgentTooltip(elm, r));
     elm.addEventListener("mouseleave", skjulAgentTooltip);
   }
+  // Rettet etter tilbakemelding: infovinduet ble plassert med senter rett over agenten
+  // uten noen grense-sjekk, så .scene sin egen overflow:hidden klippet det bort for
+  // agenter nær kanten (venstre/høyre/øverst). Klemmer nå senter-X innenfor scenen, og
+  // bytter til å vise UNDER agenten i stedet for over når det ikke er nok plass over.
+  const TOOLTIP_MARGIN = 6;
   function visAgentTooltip(elm, r) {
     const tip = agentTooltipEl();
     tip.innerHTML = "<b>Nr. " + r.nr + " - " + r.navn + "</b><span class=\"kort\">" + r.kort + "</span>";
     tip.hidden = false;
     const sceneRekt = elm.closest(".scene").getBoundingClientRect();
     const robotRekt = elm.getBoundingClientRect();
-    tip.style.left = (robotRekt.left + robotRekt.width / 2 - sceneRekt.left) + "px";
-    tip.style.top = (robotRekt.top - sceneRekt.top - 6) + "px";
+    const tipRekt = tip.getBoundingClientRect();
+
+    let sentrumX = robotRekt.left + robotRekt.width / 2 - sceneRekt.left;
+    const halvBredde = tipRekt.width / 2;
+    sentrumX = Math.min(Math.max(sentrumX, halvBredde + TOOLTIP_MARGIN), sceneRekt.width - halvBredde - TOOLTIP_MARGIN);
+
+    // transform: translate(-50%,-100%) gjør at "top" alltid er BUNNKANTEN av boksen,
+    // uansett om den til slutt havner over eller under agenten - så det holder å endre
+    // hvilken bunnkant-verdi vi regner ut, ikke selve transformen.
+    let bunnY = robotRekt.top - sceneRekt.top - 6;
+    if (bunnY - tipRekt.height < TOOLTIP_MARGIN) {
+      bunnY = robotRekt.bottom - sceneRekt.top + tipRekt.height + 10;
+    }
+
+    tip.style.left = sentrumX + "px";
+    tip.style.top = bunnY + "px";
   }
   function skjulAgentTooltip() { agentTooltipEl().hidden = true; }
 
