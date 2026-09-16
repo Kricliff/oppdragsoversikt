@@ -50,6 +50,8 @@
        headerlinjen på TAVLA-modulen bruker bevisst --staal-mork (som Sluse/Claude), ikke
        denne - hvit bar med hvit tittel var uleselig. */
     --tavle: #8fd9ff;
+    --kandidat: #e8917a;
+    --kandidat-myk: #3a231c;
 
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
@@ -270,11 +272,23 @@
   .sone.henter .glo { animation: hentPuls 1.1s ease-out; stroke: var(--hendelse); }
   @keyframes hentPuls { 0% { opacity: 0.5; } 100% { opacity: 0; } }
 
-  /* trafikk: kortvarig, grønn puls */
+  /* trafikk: kortvarig, grønn puls - FULL styrke. Brukes på benken som faktisk endret
+     seg, og på et helt rom KUN når rommet ikke har noen egen benk å peke på (Recman,
+     Teamskanal, Slusen, Kandidattrakten). */
   .sone.alarm .glo, .benk.alarm .glo { animation: gloPuls 0.85s ease-in-out infinite; stroke: var(--hendelse); }
   .sone.alarm .sonebar { animation: barPuls 0.85s ease-in-out infinite; }
   .alarmpil { opacity: 0; }
   .sone.alarm .alarmpil { animation: gloPuls 0.85s ease-in-out infinite; }
+
+  /* romblink: DEMPET signal om at "noe skjedde her inne" - brukes på hjemme-rommet til
+     en kilde som OGSÅ har en egen benk (f.eks. Functions når notat.js endres). Rettet
+     etter tilbakemelding: rommets FULLE alarm (tykk kant + blafrende tittelfelt +
+     alarmpil, samme styrke som selve benken) gjorde at hele det store Functions-rommet
+     så ut som om "alle boksene blinket", når det egentlig bare var én. Denne bruker kun
+     en svak, ett-gangs kant-glød på selve rommet, uendret sonebar/alarmpil - benken
+     inni er fortsatt det eneste som får den fulle, gjentagende pulsen. */
+  .sone.romblink .glo { animation: romBlink 1.4s ease-out; stroke: var(--hendelse); }
+  @keyframes romBlink { 0% { opacity: 0.55; } 100% { opacity: 0; } }
 
   /* stillhet: står til det er ferskt igjen */
   .sone.treg .glo, .benk.treg .glo { opacity: 1; stroke: var(--advarsel); animation: none; }
@@ -364,6 +378,7 @@
     .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil,
     .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
     .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
+    .sone.romblink .glo { animation: none !important; opacity: 0.4; }
     .taleboble { animation: none !important; opacity: 1; }
   }
   /* ---------- romstasjon-kulisser: jorden og droner utenfor skroget ---------- */
@@ -510,6 +525,32 @@
              stedet for å ligge oppå innholdet deres - det var det som så rotete ut. Alltid
              synlige, men dempet; se #kommandoStrom lenger ned for selve trafikken. -->
         <g id="baneNett"></g>
+
+        <!-- ============ KANDIDATTRAKTEN ============ -->
+        <!-- Gjenbruker NØYAKTIG de samme yttermålene (34,18,204,150) som det tidligere
+             fjernede Observasjonsdekket sto på - garantert ledig og ikke-overlappende,
+             i stedet for å gjette på nye koordinater. Traktall fra Recman sin
+             jobApplication-scope, se functions/api/kandidater.js - FELTNAVNENE DER ER
+             IKKE bekreftet mot et ekte svar ennå (se advarselen i den fila), så denne
+             sonen kan vise "–" en stund til det er verifisert på ekte data. -->
+        <g class="sone" id="sone-kandidater">
+          <rect class="glo" x="34" y="18" width="204" height="150" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="42" y="26" width="188" height="134" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="42" y="26" width="188" height="24" fill="var(--kandidat)"/>
+          <text x="136" y="42" text-anchor="middle" font-weight="600" font-size="10" fill="#fff">KANDIDATTRAKTEN</text>
+
+          <g class="robot" id="trakterenAgent" data-nr="14" style="color: var(--kandidat)" transform="translate(64 108) scale(0.62)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+
+          <text x="152" y="76" text-anchor="middle" font-size="18" font-weight="700" fill="var(--text)" id="kandidatTotalt">–</text>
+          <text x="152" y="89" text-anchor="middle" font-size="8" fill="var(--text-muted)">søknader totalt</text>
+          <g id="kandidatRader" font-size="8" fill="var(--text-muted)"></g>
+
+          <circle class="statusdot" cx="58" cy="37" r="5"/>
+          <g class="alarmpil"><circle cx="214" cy="37" r="6" fill="#fff"/><circle cx="214" cy="37" r="3.2" fill="var(--hendelse)"/></g>
+        </g>
 
         <!-- ============ RECMAN ============ -->
         <g class="sone" id="sone-recman">
@@ -802,7 +843,7 @@
   <div class="to-kolonner">
     <div class="kort">
       <h2>🤖 Agentroster</h2>
-      <p class="hint">13 agenter. Grønn puls = jobber akkurat nå. Nivået er en varig sum av faktiske hendelser, lagret på tvers av dager og skjermer - ikke pynt. Teksten under viser i tillegg hva som har skjedd i dag.</p>
+      <p class="hint">14 agenter. Grønn puls = jobber akkurat nå. Nivået er en varig sum av faktiske hendelser, lagret på tvers av dager og skjermer - ikke pynt. Teksten under viser i tillegg hva som har skjedd i dag.</p>
       <div class="roster" id="agentRoster"></div>
 
       <div class="badgerad" id="badgeRad"></div>
@@ -883,11 +924,12 @@
         <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver modul lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
         <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinrommet. De seks benkene er de seks funksjonene som lagrer noe. Hele rommet lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Slusen</b><span class="tekst">Adminnøkkelen. Stolpene er porten. Teller hvor mange skriveforsøk som er blitt avvist fordi de manglet gyldig nøkkel, og blinker når det skjer. Er det tallet større enn null uten at du selv har rotet med nøkkelen, har noen forsøkt seg.</span></div></li>
-        <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollrommet. De sju bryterne speiler bryterne på admin-siden. Lyser når noen endrer noe derfra: bryter, post-it, bilde, bursdag eller parkering.</span></div></li>
+        <li><span class="prikk" style="background: var(--aktiv)"></span><div><b>/admin</b><span class="tekst">Kontrollpulten. De sju bryterne speiler bryterne på admin-siden. Lyser (dempet) kun når selve en BRYTER faktisk endres - post-it, bilde, bursdag og parkering endres i Functions, ikke her, siden det er innhold, ikke en bryter.</span></div></li>
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
+        <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Nyest: søknadstall fra Recman, gruppert på status (Trakteren). Sjekkes hver time, ikke sanntid som resten av kartet. Feltnavnene fra Recman er ikke bekreftet på ekte data ennå - viser "–" i stedet for å gjette hvis noe ikke stemmer.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
@@ -978,7 +1020,12 @@
     },
     {
       id: "innstillinger", url: "/api/innstillinger", navn: "Innstillinger",
-      soner: ["functions"], benker: ["innstillinger"], farge: "var(--aktiv)",
+      // Eneste kilden som med vilje IKKE peker til Functions: brytertavlen i /admin (de
+      // sju bryterne, se legenden) ER selve stedet en innstilling ble endret, ikke bare
+      // der verdien lagres - derfor er Admin hjemme-rommet her, ikke Functions. Benken
+      // "innstillinger" ligger fortsatt fysisk i Functions-rommet, og lyser fortsatt
+      // fullt opp den også - det er nettopp KV-lagringen av den samme endringen.
+      soner: ["admin"], benker: ["innstillinger"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d),
       beskriv: (ny, gammel) => {
         const endret = Object.keys(ny).filter((k) => gammel && ny[k] !== gammel[k]);
@@ -1063,7 +1110,8 @@
     { id: "vaer", url: "/api/vaer", navn: "Vær", soner: ["eksterne"], benker: ["vaer"] },
     { id: "avganger", url: "/api/avganger", navn: "Busstider", soner: ["eksterne"], benker: ["avganger"] },
     { id: "nrk", url: "/api/nrk", navn: "NRK", soner: ["eksterne"], benker: ["nrk"] },
-    { id: "kundenytt", url: "/api/kundenytt", navn: "Kundenytt", soner: ["eksterne"], benker: ["kundenytt"] }
+    { id: "kundenytt", url: "/api/kundenytt", navn: "Kundenytt", soner: ["eksterne"], benker: ["kundenytt"] },
+    { id: "kandidater", url: "/api/kandidater", navn: "Kandidattrakten", soner: ["kandidater"] }
   ];
 
   // Kontrollrommet ligger midt på gulvet, og har en fast bane ut til hver avdeling.
@@ -1196,7 +1244,14 @@
     { nr: 13, navn: "Arkivaren", sone: "Obsidian-hvelvet", farge: "var(--obsidian)", stasjonaer: true, domId: "arkivarAgent",
       utloser: ["sone-obsidian"],
       kort: "Skriver dagens hendelser til Obsidian-hvelvet.",
-      jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." }
+      jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." },
+    // Nyest (2026-09-16): sitter i ro ved traktene, samme mønster som Claude/Arkivaren -
+    // ingen bane, bare et fast punkt i sonen sin. /api/kandidater cachet en time, sjekkes
+    // hvert 5. min fra sjekkTungt() - IKKE på det vanlige 15-sekunders hendelsesløpet.
+    { nr: 14, navn: "Trakteren", sone: "Kandidattrakten", farge: "var(--kandidat)", stasjonaer: true, domId: "trakterenAgent",
+      utloser: ["sone-kandidater"],
+      kort: "Teller søknader gjennom traktene fra Recman.",
+      jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste. Hentet én gang i timen, ikke sanntid." }
   ];
 
   // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
@@ -1378,6 +1433,9 @@
     // sin egen stasjon, som kun tennes når obsidian-fabrikk-logg faktisk har rapportert
     // en fersk kjøring (se sjekkAgentStatus).
     document.getElementById("arkivarAgent").classList.toggle("jobber", document.getElementById("sone-obsidian").classList.contains("alarm"));
+    // Agent 14 (Trakteren) er også stasjonær - Kandidattrakten har ingen egen benk, så
+    // rommet selv får den fulle alarmen når traktallene endrer seg (se sjekkKandidater).
+    document.getElementById("trakterenAgent").classList.toggle("jobber", document.getElementById("sone-kandidater").classList.contains("alarm"));
     requestAnimationFrame(steg);
   }
 
@@ -1525,6 +1583,23 @@
     node.classList.add("alarm");
     clearTimeout(alarmTimere.get(velger));
     alarmTimere.set(velger, setTimeout(() => node.classList.remove("alarm"), ALARM_MS));
+  }
+
+  // Dempet rom-signal, se .romblink i CSS - brukes for hjemme-rommet til en kilde som
+  // OGSÅ har en egen benk, slik at rommet ikke konkurrerer visuelt med (eller ser ut som
+  // en samling av) den ene benken som faktisk endret seg. Agenten(e) knyttet til selve
+  // rommet skal likevel bli fortere/få XP som normalt - kun det VISUELLE er dempet.
+  const ROMBLINK_MS = 1400;
+  const romblinkTimere = new Map();
+  function pulsRom(sone, intensitet = 1) {
+    aktiverAktorer("sone-" + sone, intensitet);
+    const node = document.getElementById("sone-" + sone);
+    if (!node) return;
+    node.classList.remove("romblink");
+    void node.offsetWidth; // tving reflow slik at klassen faktisk trigges på nytt
+    node.classList.add("romblink");
+    clearTimeout(romblinkTimere.get(sone));
+    romblinkTimere.set(sone, setTimeout(() => node.classList.remove("romblink"), ROMBLINK_MS));
   }
 
   // Talebobler - gjenbruker EKSAKT samme tekst som allerede regnes ut til loggen
@@ -2026,8 +2101,16 @@
       if (bootstrap || gammelNokkel === undefined || nokkel === gammelNokkel) continue;
 
       const intensitet = k.intensitet ? k.intensitet(data, gammelData) : 1;
-      (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s, intensitet));
-      (k.benker ?? []).forEach((b) => slaAlarm("benk-" + b, intensitet));
+      // Har kilden en egen benk, får ROMMET kun det dempede signalet (pulsRom) og
+      // BENKEN den fulle alarmen - ellers (Recman/Teamskanal/Slusen/Kandidattrakten,
+      // som ikke har noen finere boks å peke på) er rommet selv "boksen som endret seg"
+      // og får den fulle alarmen. Se KOMMENTAR ved .romblink i CSS.
+      if ((k.benker ?? []).length) {
+        (k.soner ?? []).forEach((s) => pulsRom(s, intensitet));
+        k.benker.forEach((b) => slaAlarm("benk-" + b, intensitet));
+      } else {
+        (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s, intensitet));
+      }
       const tekst = k.beskriv(data, gammelData);
       leggILogg(tekst, k.farge, treffIder(k.soner, k.benker));
       visTalebobleForTreff(treffIder(k.soner, k.benker), tekst);
@@ -2269,7 +2352,12 @@
   }
 
   // Kandidattrakten - se functions/api/kandidater.js for forbeholdet om feltnavn.
-  // Viser bare "–" og feilteksten om noe ikke stemmer, i stedet for å gjette.
+  // Viser bare "–" og feilteksten om noe ikke stemmer, i stedet for å gjette. Fyller
+  // BÅDE panelet under kartet (uendret) OG selve sonen på kartet (kandidatTotalt/
+  // kandidatRader, se SVG-en) - rommet har ingen egen benk, så EN endring gir rommet
+  // selv den fulle alarmen (samme mønster som Recman/Teamskanal/Slusen), ikke den
+  // dempede pulsRom()-varianten som Functions/Admin bruker for kilder med en benk.
+  let sisteKandidatNokkel;
   async function sjekkKandidater() {
     try {
       const r = await fetch("/api/kandidater", { cache: "no-store" });
@@ -2277,12 +2365,15 @@
       if (!d.tilgjengelig) {
         el("kandidaterSum").innerHTML = "– <small>" + (d.grunn ?? "utilgjengelig") + "</small>";
         el("kandidaterRader").innerHTML = "";
+        el("kandidatTotalt").textContent = "–";
+        el("kandidatRader").innerHTML = "";
         return;
       }
       el("kandidaterSum").innerHTML = d.totalt + " <small>søknader totalt</small>";
       const rader = el("kandidaterRader");
       rader.innerHTML = "";
-      for (const [status, antall] of Object.entries(d.traktall ?? {}).sort((a, b) => b[1] - a[1])) {
+      const sortert = Object.entries(d.traktall ?? {}).sort((a, b) => b[1] - a[1]);
+      for (const [status, antall] of sortert) {
         const rad = document.createElement("div");
         rad.className = "kvote-rad";
         const navn = document.createElement("span");
@@ -2292,8 +2383,30 @@
         rad.append(navn, verdi);
         rader.append(rad);
       }
+
+      // ---- selve kartet ----
+      el("kandidatTotalt").textContent = d.totalt;
+      const romRader = el("kandidatRader");
+      romRader.innerHTML = "";
+      sortert.slice(0, 3).forEach(([status, antall], i) => {
+        const t = document.createElementNS(SVG_NS, "text");
+        t.setAttribute("x", 100);
+        t.setAttribute("y", 104 + i * 13);
+        t.textContent = status.slice(0, 14) + ": " + antall;
+        romRader.append(t);
+      });
+
+      const nokkel = JSON.stringify(d.traktall ?? {});
+      if (sisteKandidatNokkel !== undefined && nokkel !== sisteKandidatNokkel) {
+        const tekst = "Kandidattrakten oppdatert (" + d.totalt + " søknader totalt)";
+        slaAlarm("sone-kandidater");
+        leggILogg(tekst, "var(--kandidat)", ["sone-kandidater"]);
+        visTalebobleForTreff(["sone-kandidater"], tekst);
+      }
+      sisteKandidatNokkel = nokkel;
     } catch (err) {
       el("kandidaterSum").innerHTML = "– <small>utilgjengelig</small>";
+      el("kandidatTotalt").textContent = "–";
       console.warn("Fikk ikke hentet kandidattrakten:", err);
     }
   }
