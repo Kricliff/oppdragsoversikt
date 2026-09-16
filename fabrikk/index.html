@@ -132,8 +132,17 @@
   }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
 
-  .scene { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 8px; overflow: hidden; box-shadow: 0 0 0 1px #000 inset, 0 30px 60px -30px rgba(57, 224, 122, 0.12); }
+  .scene { position: relative; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 8px; overflow: hidden; box-shadow: 0 0 0 1px #000 inset, 0 30px 60px -30px rgba(57, 224, 122, 0.12); }
   svg { display: block; width: 100%; height: auto; }
+  .robot { cursor: pointer; }
+  .agent-tooltip {
+    position: absolute; z-index: 30; pointer-events: none; transform: translate(-50%, -100%);
+    background: var(--bg-0); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.45rem 0.65rem; font-family: "Inter", sans-serif; font-size: 0.75rem; color: var(--text);
+    white-space: nowrap; box-shadow: 0 10px 24px -10px rgba(0,0,0,0.6);
+  }
+  .agent-tooltip b { font-family: "Chakra Petch", sans-serif; font-size: 0.72rem; }
+  .agent-tooltip .kort { display: block; color: var(--text-muted); margin-top: 0.15rem; white-space: normal; max-width: 220px; }
 
   .under { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.2rem; margin-top: 1.2rem; align-items: start; }
   .kort {
@@ -218,6 +227,7 @@
   .agent .navnrad { display: flex; align-items: center; gap: 0.4rem; }
   .agent .navn { font-size: 0.8rem; font-weight: 600; }
   .agent .rolle { font-size: 0.68rem; color: var(--text-muted); }
+  .agent .beskrivelse { font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; margin-top: 0.3rem; }
   .agent .puls { width: 6px; height: 6px; border-radius: 50%; background: var(--staal); flex: none; }
   .agent.jobber .puls { background: var(--hendelse); box-shadow: 0 0 6px var(--hendelse); }
   .agent .xpbar { height: 4px; border-radius: 999px; background: #0009; margin-top: 0.4rem; overflow: hidden; }
@@ -432,6 +442,7 @@
   </div>
 
   <div class="scene">
+    <div class="agent-tooltip" id="agentTooltip" hidden></div>
     <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Romstasjonens dekk-kart, sett ovenfra">
       <defs>
         <!-- Avfaset dekkplating i stedet for et enkelt rutenett - hvert panel har hjørnene
@@ -733,11 +744,9 @@
           </g>
           <rect x="586" y="512" width="82" height="5" rx="2" fill="var(--staal-mork)"/>
 
-          <g class="robot" id="claudeAgent" style="color: var(--staal-mork)" transform="translate(627 546)">
+          <g class="robot" id="claudeAgent" data-nr="12" style="color: var(--staal-mork)" transform="translate(627 546)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <g transform="rotate(-90)"><use href="#robot"/></g>
-            <circle class="nr-bg" cx="20" cy="-6" r="8"/>
-            <text class="nr" x="20" y="-3" text-anchor="middle" font-size="9" font-weight="700">12</text>
           </g>
 
           <circle class="statusdot" cx="590" cy="444" r="5"/>
@@ -759,11 +768,9 @@
           <!-- den fasetterte "edelstenen" - Obsidian sitt eget formspråk - pluss agenten -->
           <path d="M 610 630 L 618 622 L 626 630 L 618 640 Z" fill="var(--obsidian-myk)" stroke="var(--obsidian)" stroke-width="1.5"/>
 
-          <g class="robot" id="arkivarAgent" style="color: var(--obsidian)" transform="translate(650 632) scale(0.82)">
+          <g class="robot" id="arkivarAgent" data-nr="13" style="color: var(--obsidian)" transform="translate(650 632) scale(0.82)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
-            <circle class="nr-bg" cx="0" cy="-20" r="8"/>
-            <text class="nr" x="0" y="-17" text-anchor="middle" font-size="9" font-weight="700">13</text>
           </g>
 
           <text x="627" y="661" text-anchor="middle" font-size="9" fill="var(--text-muted)">Sist logg skrevet</text>
@@ -1136,44 +1143,57 @@
   const ROBOTER = [
     { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--recman)", varighet: 11,
       bane: "M 78 246 L 194 246 L 194 426 L 78 426 Z", utloser: ["sone-recman"],
+      kort: "Henter oppdrag og kandidater fra Recman.",
       jobb: "Henter oppdrag og kandidater fra Recman. Dataen mellomlagres i 20 minutter, så den går ikke tur-retur oftere enn det." },
     { nr: 2, navn: "Budbringeren", sone: "Eksterne kilder", farge: "var(--eksterne)", varighet: 10,
       bane: "M 66 504 L 210 504 L 210 592 L 66 592 Z", utloser: ["sone-eksterne"],
+      kort: "Henter vær, busstider, NRK og kundenytt utenfra.",
       jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra. Faller én av dem, lyser boksen hans rødt." },
     { nr: 3, navn: "Oppslagsvakten", sone: "Functions", farge: "var(--teal)", varighet: 9,
       bane: "M 300 110 L 508 110 L 508 162 L 300 162 Z", utloser: ["benk-notat", "benk-bilde"],
+      kort: "Passer post-it-lappen og bilde-oppslaget.",
       jobb: "Passer post-it-lappen og bilde-oppslaget. Går for full maskin når noen legger ut eller fjerner noe fra admin." },
     { nr: 4, navn: "Listeføreren", sone: "Functions", farge: "var(--teal)", varighet: 10.5,
       bane: "M 300 166 L 508 166 L 508 218 L 300 218 Z", utloser: ["benk-bursdager", "benk-skjulte"],
+      kort: "Holder styr på bursdager og parkerte oppdrag.",
       jobb: "Holder styr på bursdagslisten og hvilke oppdrag som er parkert bort fra tavlen." },
     { nr: 5, navn: "Bryterbetjenten", sone: "Functions", farge: "var(--teal)", varighet: 12,
       bane: "M 300 222 L 508 222 L 508 274 L 300 274 Z", utloser: ["benk-innstillinger", "benk-skjermer"],
+      kort: "Tar imot bryterendringer fra admin.",
       jobb: "Tar imot bryterendringer fra admin og holder skjermregisteret oppdatert." },
     { nr: 6, navn: "Lagerarbeideren", sone: "Functions", farge: "var(--teal)", varighet: 13,
       bane: "M 300 300 L 508 300 L 508 370 L 300 370 Z", utloser: ["sone-functions"],
+      kort: "Gjør selve lagerarbeidet i KV.",
       jobb: "Selve lagerarbeidet i KV. Han rører på seg ved enhver lagring, uansett hvilken benk den kom fra." },
     { nr: 7, navn: "Vakten", sone: "Slusen", farge: "var(--staal-mork)", varighet: 7,
       bane: "M 600 262 L 654 262 L 654 344 L 600 344 Z", utloser: ["sone-sluse"],
+      kort: "Sjekker adminnøkkelen på hver skriving.",
       jobb: "Sjekker adminnøkkelen på hver eneste skriving. Setter opp farten når noen blir avvist." },
     { nr: 8, navn: "Operatøren", sone: "/admin", farge: "var(--aktiv)", varighet: 8.5,
       bane: "M 730 190 L 890 190 L 890 212 L 730 212 Z", utloser: ["sone-admin"],
+      kort: "Står ved kontrollpulten i /admin.",
       jobb: "Står ved kontrollpulten. Rører på seg hver gang noen endrer noe fra admin-siden." },
     { nr: 9, navn: "Postbudet", sone: "Teamskanal", farge: "var(--teamskanal)", varighet: 9.5,
       bane: "M 730 458 L 890 458 L 890 496 L 730 496 Z", utloser: ["sone-teamskanal"],
+      kort: "Henter Teams-meldinger hvert 15. minutt.",
       jobb: "Henter meldinger fra Teams hvert 15. minutt på hverdager. Blir han gående i halv fart i arbeidstiden, har jobben stoppet." },
     { nr: 10, navn: "Skjermpasseren", sone: "Tavla", farge: "var(--aktiv)", varighet: 13,
       bane: "M 962 268 L 1138 268 L 1138 452 L 962 452 Z", utloser: ["sone-tavle"],
+      kort: "Holder storskjermen oppdatert.",
       jobb: "Holder storskjermen på veggen oppdatert og følger med på at skjermene svarer." },
     { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--tavle)", varighet: 10,
       bane: "M 956 462 L 1144 462 L 1144 558 L 956 558 Z", utloser: ["sone-tavle"],
+      kort: "Passer gjestevisningen.",
       jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." },
     // Sitter i ro ved maskinen og har derfor ingen rute å gå. Tegnet direkte i kartet,
     // men står med i listen som de andre - den gjør en like reell jobb.
     { nr: 12, navn: "Claude", sone: "Kontrollrommet", farge: "var(--staal-mork)", stasjonaer: true, domId: "claudeAgent",
       utloser: ["sone-claude"],
+      kort: "Ruller ut ny kode på forespørsel.",
       jobb: "Meg. Sitter midt på gulvet og ruller ut ny kode på det Kristian ber om. Banene ut til avdelingene ligger der hele tiden, svakt tegnet - de lyser grønt og får en puls når ny kode faktisk gjelder for den avdelingen. Endringer Kristian selv gjør i /admin lyser der, ikke her: de to ser helt like ut utenfra, så de kan ikke tilskrives noen." },
     { nr: 13, navn: "Arkivaren", sone: "Obsidian-hvelvet", farge: "var(--obsidian)", stasjonaer: true, domId: "arkivarAgent",
       utloser: ["sone-obsidian"],
+      kort: "Skriver dagens hendelser til Obsidian-hvelvet.",
       jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." }
   ];
 
@@ -1242,20 +1262,40 @@
     return p;
   }
 
+  // Nummeret sto tidligere fast over hver agent på selve kartet - erstattet med et
+  // HUD-skilt som bare vises på hover, med nummer + kort beskrivelse. Den fulle
+  // beskrivelsen (r.jobb) ligger fortsatt i Agentroster under, se tegnAgentRoster().
+  const agentTooltipEl = () => document.getElementById("agentTooltip");
+  function koblAgentTooltip(elm, r) {
+    elm.addEventListener("mouseenter", () => visAgentTooltip(elm, r));
+    elm.addEventListener("mousemove", () => visAgentTooltip(elm, r));
+    elm.addEventListener("mouseleave", skjulAgentTooltip);
+  }
+  function visAgentTooltip(elm, r) {
+    const tip = agentTooltipEl();
+    tip.innerHTML = "<b>Nr. " + r.nr + " - " + r.navn + "</b><span class=\"kort\">" + r.kort + "</span>";
+    tip.hidden = false;
+    const sceneRekt = elm.closest(".scene").getBoundingClientRect();
+    const robotRekt = elm.getBoundingClientRect();
+    tip.style.left = (robotRekt.left + robotRekt.width / 2 - sceneRekt.left) + "px";
+    tip.style.top = (robotRekt.top - sceneRekt.top - 6) + "px";
+  }
+  function skjulAgentTooltip() { agentTooltipEl().hidden = true; }
+
   function byggAktorer() {
     const robotLag = el("roboter");
     for (const r of ROBOTER) {
-      if (r.stasjonaer) continue; // tegnet direkte i kartet, har ingen rute å gå
+      if (r.stasjonaer) { const stasjonElm = document.getElementById(r.domId); if (stasjonElm) koblAgentTooltip(stasjonElm, r); continue; } // tegnet direkte i kartet, har ingen rute å gå
       const g = document.createElementNS(SVG_NS, "g");
       g.setAttribute("class", "robot");
       g.setAttribute("id", "robot-" + r.nr);
+      g.setAttribute("data-nr", r.nr);
       g.style.color = r.farge;
       g.innerHTML =
         '<circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>' +
-        '<g class="kropp"><use href="#robot"/></g>' +
-        '<circle class="nr-bg" cx="0" cy="-20" r="8"/>' +
-        '<text class="nr" x="0" y="-17" text-anchor="middle" font-size="9" font-weight="700">' + r.nr + "</text>";
+        '<g class="kropp"><use href="#robot"/></g>';
       robotLag.append(g);
+      koblAgentTooltip(g, r);
       const bane = lagBane(r.bane);
       const lengde = bane.getTotalLength();
       aktorer.push({
@@ -1667,6 +1707,13 @@
       rolle.className = "rolle";
       rolle.textContent = r.sone;
 
+      // Nummeret over agenten på selve kartet er erstattet med en hover-tooltip (se
+      // koblAgentTooltip) - den fulle beskrivelsen får plass her i stedet, der det
+      // faktisk er rom for den.
+      const beskrivelse = document.createElement("div");
+      beskrivelse.className = "beskrivelse";
+      beskrivelse.textContent = r.jobb;
+
       const xpbar = document.createElement("div");
       xpbar.className = "xpbar";
       const xpspan = document.createElement("span");
@@ -1677,7 +1724,7 @@
       sist.className = "sist";
       sist.textContent = nede ? "Trenger tilsyn" : jobber ? "Jobber akkurat nå" : xp > 0 ? xp + " hendelser i dag" : "Venter på oppgave";
 
-      info.append(navnrad, rolle, xpbar, sist);
+      info.append(navnrad, rolle, beskrivelse, xpbar, sist);
       div.append(lvl, avatar, info);
       rot.append(div);
     }
