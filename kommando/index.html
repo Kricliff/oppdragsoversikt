@@ -11,29 +11,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
-     AI OPS · KOMMANDOSENTER
-     Erstatter /fabrikk som lenken fra /admin peker til (se admin/index.html).
-     /fabrikk ligger fortsatt igjen som fil (ikke slettet), men er ikke lenket til lenger.
+     AI OPS · KOMMANDOSENTER - pixel-art romstasjon i tverrsnitt.
+     Erstatter den forrige CRT-cyberpunk-visningen (kort-ring + SVG-gulvkart) med én
+     <canvas> som tegner stasjonen som et dukkehus i verdensrommet (Fallout Shelter/
+     FTL/Startopia-referansen fra oppdraget), rendret på en fast virtuell oppløsning og
+     skalert opp med heltallsfaktor - se STASJON-modulen i <script> for selve motoren.
 
      VIKTIG - datagrunnlag (les før du endrer noe her):
-     Det finnes INGEN datamodell for "AI-agenter med aktive oppdrag/kø/gjennomstrømning"
-     noe sted i dette prosjektet. Det nærmeste er:
-       - functions/api/agentstatus.js: {oppgaver:{navn:{ok,grunn,sist}}} - kun to ekte
-         planlagte jobber rapporterer hit (teamskanal-oppdatering, obsidian-fabrikk-logg).
-       - fabrikk/index.html sin ROBOTER-liste (kopiert inn under som AGENTER) - 13 navngitte
-         "agenter", men de fleste er illustrasjoner av interne undersystemer som blinker når
-         ekte aktivitet skjer et sted i appen, IKKE selvstendige agenter med egen kø.
-       - functions/api/endringslogg.js / avviste.js / kvforbruk.js - ekte hendelses- og
-         forbrukstall, men ingen tidsserie og ingen "kø".
-     Denne siden finner derfor ALDRI på tall den ikke har: agenter uten et reelt signal
-     vises tydelig som "INGEN SIGNAL", ikke med en gjettet kø/gjennomstrømning. Se
-     AGENTER-listen og KOMMENTAR-blokken ved pollHelse()/pollHendelser() for nøyaktig
-     hvilket ekte endepunkt som driver hvilken modul.
+     Det finnes verken D1, R2, Queues eller ekte Cloudflare Cron Triggers i dette
+     prosjektet (sjekket wrangler.toml og functions/api/ på nytt) - kun Pages Functions
+     + KV (NOTAT_KV binding) + eksterne API-kall. Romlisten under er derfor de FAKTISKE
+     tjenestene, ikke oppdragets eksempelliste (Workers/D1/R2/Queues/Cron/API Gateway
+     finnes ikke og er utelatt):
+       RECMAN            - /api/oppdrag, /api/telling, /api/tilbud, /api/avsluttet
+       EKSTERNE KILDER   - /api/vaer, /api/avganger, /api/nrk, /api/kundenytt
+       KV STORE          - NOTAT_KV (notat/bilde/bursdager/skjulte/innstillinger/
+                            skjermer) + /api/kvforbruk
+       ADMIN             - bryterendringer/skjermregister fra /admin
+       SLUSEN            - /api/avviste (adminnøkkel-avvisning)
+       TEAMSKANAL        - /api/teamskanal
+       TAVLA             - /api/skjermer (heartbeat/gjestevisning)
+       PLANLAGTE JOBBER  - /api/agentstatus (Claude/Arkivaren - planlagte Claude-økter,
+                            IKKE en ekte Cloudflare Cron Trigger)
+
+     Hver av de 13 agentene tilhører ETT fast rom, avledet av hvilket ekte signal de
+     representerer (se AGENTER lenger ned) - dagens data gir ALDRI en reell "agent
+     bytter tjeneste"-hendelse, så heisen mellom dekkene bærer bevisst ingen oppdiktede
+     agent-reiser. Den er et ekte, animert strukturelt element (se Heis-modulen), ikke
+     en fabrikert visualisering av noe som ikke skjer.
      ============================================================ */
 
   :root {
     --bg: #05040c;
-    --bg-deep: #0a0620;
     --panel: rgba(18, 12, 40, 0.55);
     --panel-border: rgba(0, 229, 255, 0.35);
     --magenta: #ff2d95;
@@ -46,85 +55,26 @@
     --text-faint: #4a5080;
     color-scheme: dark;
   }
-
   * { box-sizing: border-box; }
-
   body {
-    margin: 0;
-    min-width: 1280px;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    overflow-x: auto;
-    position: relative;
+    margin: 0; min-width: 0; background: var(--bg); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; overflow-x: hidden; position: relative;
   }
-
-  @media (max-width: 1279px) {
-    body::before {
-      content: "AI Ops · Kommandosenter krever minst 1280px skjermbredde.";
-      position: fixed; inset: 0; z-index: 999;
-      display: flex; align-items: center; justify-content: center;
-      padding: 2rem; text-align: center; font-family: 'VT323', monospace; font-size: 1.4rem;
-      background: var(--bg); color: var(--cyan);
-    }
-  }
-
   h1, h2, h3 { font-family: 'Press Start 2P', monospace; margin: 0; }
+  .crt-heading { text-shadow: 1px 0 var(--magenta), -1px 0 var(--cyan); letter-spacing: 0.06em; }
 
-  .crt-heading {
-    text-shadow: 1px 0 var(--magenta), -1px 0 var(--cyan);
-    letter-spacing: 0.06em;
-  }
-
-  /* ============ Bakgrunn: indigo-glød, vignett, flimring ============ */
   .fx-bg {
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse 60% 45% at 50% 30%, rgba(90, 40, 160, 0.35), transparent 70%),
-      radial-gradient(ellipse 80% 60% at 20% 90%, rgba(0, 90, 140, 0.18), transparent 70%),
-      var(--bg-deep);
-    animation: flimmer 7s ease-in-out infinite;
+    background: radial-gradient(ellipse 60% 45% at 50% 30%, rgba(90,40,160,0.28), transparent 70%),
+      radial-gradient(ellipse 80% 60% at 20% 90%, rgba(0,90,140,0.15), transparent 70%), #0a0620;
   }
-  @keyframes flimmer {
-    0%, 100% { filter: brightness(1); }
-    48% { filter: brightness(1); }
-    50% { filter: brightness(1.05); }
-    52% { filter: brightness(0.97); }
-    76% { filter: brightness(1); }
-    78% { filter: brightness(1.06); }
-  }
-
-  .fx-vignette {
-    position: fixed; inset: 0; z-index: 5; pointer-events: none;
-    background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
-  }
-
-  .fx-scanlines {
-    position: fixed; inset: 0; z-index: 6; pointer-events: none;
+  .fx-vignette { position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%); }
+  .fx-scanlines { position: fixed; inset: 0; z-index: 6; pointer-events: none;
     background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 2px, transparent 3px);
-    mix-blend-mode: overlay;
-  }
+    mix-blend-mode: overlay; }
+  body.redusert-bevegelse .fx-flimmer { display: none; }
 
-  .fx-sweep {
-    position: fixed; left: 0; right: 0; height: 140px; z-index: 7; pointer-events: none;
-    top: -140px;
-    background: linear-gradient(to bottom, transparent, rgba(0,229,255,0.06), transparent);
-    animation: sweep 6s linear infinite;
-  }
-  @keyframes sweep {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(calc(100vh + 140px)); }
-  }
-
-  .fx-curve {
-    position: fixed; inset: 0; z-index: 8; pointer-events: none;
-    box-shadow: inset 0 0 180px rgba(0,0,0,0.55), inset 0 0 40px rgba(0,229,255,0.05);
-  }
-
-  body.redusert-bevegelse .fx-sweep,
-  body.redusert-bevegelse .fx-bg { animation: none; }
-
-  /* ============ Boot-sekvens ============ */
   #boot {
     position: fixed; inset: 0; z-index: 100; background: #000;
     display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -136,237 +86,90 @@
   #boot-linjer div.vis { opacity: 1; }
   #boot-hint { margin-top: 1.5rem; color: var(--text-faint); font-size: 1rem; }
 
-  /* ============ Stage ============ */
   #stage {
-    position: relative; z-index: 1;
-    min-height: 100vh;
+    position: relative; z-index: 1; min-height: 100vh;
     opacity: 0; transition: opacity 0.6s ease;
-    display: grid;
-    grid-template-columns: 260px 1fr 260px;
+    display: grid; grid-template-columns: 250px 1fr 250px;
     grid-template-rows: auto auto 1fr auto;
-    grid-template-areas:
-      "topbar topbar topbar"
-      "search search search"
-      "telemL bridge telemR"
-      "log log log";
-    gap: 0.75rem;
-    padding: 0.9rem;
+    grid-template-areas: "topbar topbar topbar" "search search search" "telemL stasjon telemR" "log log log";
+    gap: 0.7rem; padding: 0.8rem;
   }
   #stage.vis { opacity: 1; }
-
-  /* ============ Toppstatuslinje ============ */
-  #topbar {
-    grid-area: topbar;
-    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
-    padding: 0.7rem 1.1rem;
-    background: var(--panel); border: 1px solid var(--panel-border);
-    border-radius: 4px;
+  @media (max-width: 1279px) {
+    #stage { grid-template-columns: 1fr; grid-template-areas: "topbar" "search" "liste" "log"; }
+    #telemL, #telemR, #stasjonWrap { display: none; }
+    #listeFallback { display: flex !important; }
   }
-  #topbar .stasjonsnavn { font-size: 0.8rem; color: var(--magenta); }
-  #topbar .klokke { font-family: 'VT323', monospace; font-size: 1.6rem; color: var(--cyan); }
-  .topbar-tall { font-family: 'VT323', monospace; font-size: 1.15rem; letter-spacing: 0.03em; }
+
+  #topbar {
+    grid-area: topbar; display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap;
+    padding: 0.65rem 1.05rem; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px;
+  }
+  #topbar .stasjonsnavn { font-size: 0.75rem; color: var(--magenta); }
+  #topbar .klokke { font-family: 'VT323', monospace; font-size: 1.5rem; color: var(--cyan); }
+  .topbar-tall { font-family: 'VT323', monospace; font-size: 1.1rem; letter-spacing: 0.03em; }
   .topbar-tall b { color: var(--text); font-weight: 600; }
-  .topbar-tall .ok { color: var(--green); }
-  .topbar-tall .feil { color: var(--red); }
-  .topbar-tall .ukjent { color: var(--text-faint); }
+  .topbar-tall .ok { color: var(--green); } .topbar-tall .feil { color: var(--red); } .topbar-tall .ukjent { color: var(--text-faint); }
   #alt-status {
-    margin-left: auto;
-    font-family: 'Press Start 2P', monospace; font-size: 0.65rem;
-    padding: 0.5rem 0.9rem; border-radius: 3px; letter-spacing: 0.04em;
+    margin-left: auto; font-family: 'Press Start 2P', monospace; font-size: 0.62rem;
+    padding: 0.45rem 0.85rem; border-radius: 3px; letter-spacing: 0.04em;
     border: 1px solid var(--green); color: var(--green);
     box-shadow: 0 0 8px rgba(57,255,106,0.4), inset 0 0 8px rgba(57,255,106,0.15);
     display: flex; align-items: center; gap: 0.5rem;
   }
   #alt-status::before { content: "●"; }
-  #alt-status.feil {
-    border-color: var(--red); color: var(--red);
-    box-shadow: 0 0 8px rgba(255,43,61,0.5), inset 0 0 8px rgba(255,43,61,0.2);
-    animation: blinkRod 1s steps(2) infinite;
-  }
+  #alt-status.feil { border-color: var(--red); color: var(--red);
+    box-shadow: 0 0 8px rgba(255,43,61,0.5), inset 0 0 8px rgba(255,43,61,0.2); animation: blinkRod 1s steps(2) infinite; }
   @keyframes blinkRod { 50% { opacity: 0.45; } }
-  #lyd-knapp {
+  #lyd-knapp, #zoom-knapp {
     background: none; border: 1px solid var(--panel-border); color: var(--text-dim);
-    font-family: 'VT323', monospace; font-size: 1.1rem; padding: 0.3rem 0.7rem;
-    border-radius: 3px; cursor: pointer;
+    font-family: 'VT323', monospace; font-size: 1.05rem; padding: 0.3rem 0.65rem; border-radius: 3px; cursor: pointer;
   }
   #lyd-knapp[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
 
-  /* ============ Søk/filter ============ */
   #search { grid-area: search; display: flex; align-items: center; gap: 0.6rem;
     background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px;
-    padding: 0.4rem 0.9rem; font-family: 'VT323', monospace; font-size: 1.2rem; }
+    padding: 0.4rem 0.9rem; font-family: 'VT323', monospace; font-size: 1.15rem; }
   #search .prompt { color: var(--green); }
-  #search input {
-    flex: 1; background: none; border: none; outline: none; color: var(--text);
-    font-family: 'VT323', monospace; font-size: 1.2rem; letter-spacing: 0.02em;
-  }
+  #search input { flex: 1; background: none; border: none; outline: none; color: var(--text);
+    font-family: 'VT323', monospace; font-size: 1.15rem; }
   #search input::placeholder { color: var(--text-faint); }
-  #search .hint { color: var(--text-faint); font-size: 0.95rem; }
-  .visning-bytter { display: flex; gap: 2px; flex: none; }
-  .visning-knapp {
-    background: none; border: 1px solid var(--panel-border); color: var(--text-dim);
-    font-family: 'VT323', monospace; font-size: 1.05rem; letter-spacing: 0.05em;
-    padding: 0.25rem 0.7rem; cursor: pointer;
-  }
-  .visning-knapp:first-child { border-radius: 3px 0 0 3px; }
-  .visning-knapp:last-child { border-radius: 0 3px 3px 0; }
-  .visning-knapp[aria-pressed="true"] { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
-  #popUtKnapp {
-    background: none; border: 1px solid var(--panel-border); color: var(--text-dim);
-    font-family: 'VT323', monospace; font-size: 1.05rem; padding: 0.25rem 0.7rem;
-    border-radius: 3px; cursor: pointer; flex: none;
-  }
-  #popUtKnapp:hover { color: var(--cyan); border-color: var(--cyan); }
+  #search .hint { color: var(--text-faint); font-size: 0.9rem; }
 
-  /* ============ Telemetri (sider) ============ */
-  .telemetri { display: flex; flex-direction: column; gap: 0.75rem; }
-  #telemL { grid-area: telemL; }
-  #telemR { grid-area: telemR; }
-  .scope {
-    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px;
-    padding: 0.6rem 0.7rem; position: relative;
-  }
+  .telemetri { display: flex; flex-direction: column; gap: 0.7rem; }
+  #telemL { grid-area: telemL; } #telemR { grid-area: telemR; }
+  .scope { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px; padding: 0.55rem 0.65rem; position: relative; }
   .scope .hjorne { position: absolute; width: 8px; height: 8px; border: 1px solid var(--cyan); opacity: 0.7; }
   .scope .hjorne.tl { top: -1px; left: -1px; border-right: none; border-bottom: none; }
   .scope .hjorne.tr { top: -1px; right: -1px; border-left: none; border-bottom: none; }
   .scope .hjorne.bl { bottom: -1px; left: -1px; border-right: none; border-top: none; }
   .scope .hjorne.br { bottom: -1px; right: -1px; border-left: none; border-top: none; }
-  .scope h3 { font-family: 'VT323', monospace; font-size: 1.05rem; letter-spacing: 0.08em;
-    color: var(--cyan); text-transform: uppercase; margin-bottom: 0.3rem; }
-  .scope .verdi { font-size: 1.3rem; color: var(--text); }
-  .scope .verdi small { color: var(--text-faint); font-size: 0.75rem; }
-  .scope svg { width: 100%; height: 46px; display: block; margin-top: 0.3rem; }
+  .scope h3 { font-family: 'VT323', monospace; font-size: 1rem; letter-spacing: 0.08em; color: var(--cyan); text-transform: uppercase; margin-bottom: 0.25rem; }
+  .scope .verdi { font-size: 1.25rem; color: var(--text); }
+  .scope .verdi small { color: var(--text-faint); font-size: 0.72rem; }
+  .scope svg { width: 100%; height: 42px; display: block; margin-top: 0.25rem; }
   .scope polyline { fill: none; stroke-width: 2; }
-  .scope .merknad { font-size: 0.7rem; color: var(--text-faint); margin-top: 0.2rem; font-family: 'VT323', monospace; }
+  .scope .merknad { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.2rem; font-family: 'VT323', monospace; }
 
-  /* ============ Broen (kjerne + agentmoduler) ============ */
-  #bridge { grid-area: bridge; position: relative; min-height: 680px; }
-  #visningBro { position: absolute; inset: 0; width: 100%; height: 100%; }
-  #streams { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+  #stasjonWrap { grid-area: stasjon; position: relative; min-height: 560px; display: flex; align-items: center; justify-content: center; }
+  #stasjonCanvas { image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; border: 1px solid var(--panel-border); }
+  #hudTooltip {
+    position: absolute; z-index: 20; pointer-events: none; background: #0a0618;
+    border: 1px solid var(--cyan); border-radius: 3px; padding: 0.4rem 0.6rem;
+    font-family: 'VT323', monospace; font-size: 1.05rem; color: var(--text); white-space: nowrap; display: none;
+  }
+  #hudTooltip .rom { color: var(--cyan); }
+  #hudTooltip .feil { color: var(--red); }
 
-  /* ============ Gulvkart (romvisning) - agenter som går i hvert sitt rom,
-     samme prinsipp som fabrikk/index.html sin ROBOTER/bane-teknikk (SVG-sti +
-     getPointAtLength i requestAnimationFrame-løkken, se oppdaterRomAktorer), bare
-     omstylet til samme CRT-cyberpunk-språk som resten av kommandosenteret i stedet
-     for 80-talls pixel-art. ============ */
-  #visningRom { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .sone-panel { fill: var(--panel); stroke: var(--panel-border); stroke-width: 1.5; }
-  .sone-hjorne { stroke: var(--cyan); stroke-width: 2; fill: none; opacity: 0.8; }
-  .sone-navn {
-    fill: var(--cyan); font-family: 'VT323', monospace; font-size: 17px;
-    letter-spacing: 0.06em; text-transform: uppercase;
-  }
-  .agent-navn-liten {
-    fill: var(--text-dim); font-family: 'VT323', monospace; font-size: 12px;
-  }
-  .bane { fill: none; stroke: var(--panel-border); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.5; }
-  .blip circle.kropp { r: 7; }
-  .blip circle.glo { r: 13; opacity: 0.35; }
-  .blip[data-status="ok"] circle.kropp { fill: var(--green); }
-  .blip[data-status="ok"] circle.glo { fill: var(--green); }
-  .blip[data-status="aktiv"] circle.kropp { fill: var(--cyan); }
-  .blip[data-status="aktiv"] circle.glo { fill: var(--cyan); }
-  .blip[data-status="feil"] circle.kropp { fill: var(--red); animation: blipBlink 0.9s steps(2) infinite; }
-  .blip[data-status="feil"] circle.glo { fill: var(--red); }
-  .blip[data-status="idle"] circle.kropp { fill: var(--text-faint); }
-  .blip[data-status="idle"] circle.glo { fill: none; }
-  .blip[data-status="ukjent"] circle.kropp { fill: none; stroke: var(--text-faint); stroke-dasharray: 2 2; }
-  .blip[data-status="ukjent"] circle.glo { fill: none; }
-  .blip .kropp { animation: blipPuls 2.4s ease-in-out infinite; }
-  @keyframes blipPuls { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-  @keyframes blipBlink { 50% { opacity: 0.3; } }
-  body.redusert-bevegelse .blip .kropp { animation: none; }
-  body.redusert-bevegelse .blip[data-status="feil"] circle.kropp { animation: none; }
+  #listeFallback { display: none; grid-area: liste; flex-direction: column; gap: 0.6rem; }
+  .liste-rom { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px; padding: 0.6rem 0.8rem; }
+  .liste-rom h3 { font-family: 'VT323', monospace; font-size: 1.15rem; color: var(--cyan); letter-spacing: 0.05em; }
+  .liste-rom .agentrad { display: flex; justify-content: space-between; font-family: 'VT323', monospace; font-size: 1.05rem; color: var(--text-dim); padding: 0.15rem 0; }
+  .liste-rom .agentrad .ikon { width: 1.4em; display: inline-block; }
 
-  #core {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    width: 130px; height: 130px; border-radius: 50%; z-index: 2;
-    display: flex; align-items: center; justify-content: center;
-    background: radial-gradient(circle, rgba(255,45,149,0.35), rgba(0,229,255,0.12) 55%, transparent 75%);
-  }
-  #core .ring {
-    position: absolute; inset: 0; border-radius: 50%;
-    border: 2px solid transparent;
-    background: conic-gradient(var(--cyan), var(--magenta), var(--cyan)) border-box;
-    -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
-    animation: spinn 6s linear infinite;
-  }
-  #core .kjerne-lys {
-    width: 46px; height: 46px; border-radius: 50%;
-    background: radial-gradient(circle, #fff, var(--cyan) 40%, var(--magenta) 90%);
-    box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--magenta);
-    animation: puls 2.4s ease-in-out infinite;
-  }
-  #core .etikett {
-    position: absolute; bottom: -26px; font-family: 'VT323', monospace; font-size: 0.95rem;
-    color: var(--text-dim); letter-spacing: 0.1em; white-space: nowrap;
-  }
-  @keyframes spinn { to { transform: rotate(360deg); } }
-  @keyframes puls { 0%, 100% { transform: scale(0.9); opacity: 0.85; } 50% { transform: scale(1.08); opacity: 1; } }
-  body.redusert-bevegelse #core .ring { animation: none; }
-
-  .agent {
-    /* Grunn-transform (posisjon + skalering for å unngå overlapp) settes av
-       plasserAgenter() i JS via el.style.transform, og hover-løftet av loftAgent() -
-       begge skriver hele transform-strengen på én gang i stedet for å kombinere en
-       CSS-side var(--agent-skala) med en :hover-regel, se de funksjonene. */
-    position: absolute; width: 148px;
-    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 4px;
-    padding: 0.5rem 0.6rem; z-index: 3; cursor: pointer;
-    transition: box-shadow 0.15s ease, border-color 0.15s ease;
-  }
-  /* transform har BEVISST ingen transition: plasserAgenter() kaller seg selv på nytt
-     hver gang #bridge endrer størrelse (ResizeObserver - vindu endres, webfonter svapper
-     inn og endrer radraden over, osv.), og en animert transform ville da måtte fullføre
-     FØR neste kall for å ikke risikere å fryse fast på en mellomliggende, feil verdi -
-     noe som viste seg upålitelig (og ga et reelt, om enn lite, overlapp mellom nabokort
-     ved enkelte vindusstørrelser). Ompossisjonering skjer derfor øyeblikkelig; det er
-     uansett et sjeldent, ikke-interaktivt øyeblikk (vindu endres/side lastes), ikke noe
-     brukeren aktivt følger med på slik som hover gjør. Hover-glowen (box-shadow/border)
-     beholder sin egen transition under, siden den ikke har dette problemet. */
-  .agent:hover, .agent:focus-visible {
-    box-shadow: 0 0 18px rgba(0,229,255,0.45);
-    border-color: var(--cyan);
-    z-index: 4;
-    outline: none;
-  }
-  .agent.skjult { display: none; }
-  .agent .topp { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.15rem; }
-  .agent .lys {
-    width: 10px; height: 10px; border-radius: 50%; flex: none;
-    background: var(--text-faint); box-shadow: none;
-  }
-  .agent[data-status="ok"] .lys { background: var(--green); box-shadow: 0 0 6px var(--green); animation: puste 2.6s ease-in-out infinite; }
-  .agent[data-status="aktiv"] .lys { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); animation: puste 1.1s ease-in-out infinite; }
-  .agent[data-status="feil"] .lys { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blinkRod 0.9s steps(2) infinite; }
-  .agent[data-status="ukjent"] .lys { background: transparent; border: 1px dashed var(--text-faint); }
-  @keyframes puste { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
-  body.redusert-bevegelse .agent .lys { animation: none !important; }
-
-  .agent .navn { font-family: 'VT323', monospace; font-size: 1.05rem; letter-spacing: 0.05em; }
-  .agent .ikon-status { font-size: 0.7rem; color: var(--text-dim); }
-  .agent .jobb { font-size: 0.68rem; color: var(--text-dim); line-height: 1.3; height: 2.5em; overflow: hidden; margin: 0.2rem 0; }
-  .agent .bunn { display: flex; justify-content: space-between; align-items: center; font-size: 0.68rem; color: var(--text-faint); font-family: 'VT323', monospace; }
-  .agent[data-status="feil"] { border-color: var(--red); }
-  .agent[data-status="feil"] .navn { color: var(--red); }
-
-  .agent[data-status="aktiv"] {
-    animation: agentPuls 1.6s ease-in-out infinite;
-  }
-  @keyframes agentPuls {
-    0%, 100% { box-shadow: 0 0 0 rgba(0,229,255,0); }
-    50% { box-shadow: 0 0 14px rgba(0,229,255,0.35); }
-  }
-  body.redusert-bevegelse .agent[data-status="aktiv"],
-  body.redusert-bevegelse .agent[data-status="feil"] { animation: none; }
-
-  /* ============ Hendelseslogg ============ */
-  #eventlog {
-    grid-area: log; background: var(--panel); border: 1px solid var(--panel-border);
-    border-radius: 4px; padding: 0.5rem 0.9rem; height: 150px; overflow-y: auto;
-    font-family: 'VT323', monospace; font-size: 1.05rem; display: flex; flex-direction: column-reverse;
-  }
+  #eventlog { grid-area: log; background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 4px; padding: 0.5rem 0.9rem; height: 130px; overflow-y: auto;
+    font-family: 'VT323', monospace; font-size: 1.02rem; display: flex; flex-direction: column-reverse; }
   #eventlog .rad { display: flex; gap: 0.7rem; color: var(--text-dim); white-space: pre-wrap; }
   #eventlog .rad .tid { color: var(--text-faint); flex: none; }
   #eventlog .rad .kilde { color: var(--cyan); flex: none; width: 130px; }
@@ -375,40 +178,25 @@
   #eventlog .markor { display: inline-block; width: 8px; background: var(--cyan); animation: blinkRod 0.8s steps(2) infinite; }
   body.redusert-bevegelse #eventlog .markor { animation: none; }
 
-  /* ============ Detaljpanel ============ */
   #detail {
     position: fixed; top: 0; right: 0; bottom: 0; width: 380px; z-index: 50;
-    background: #0a0618; border-left: 1px solid var(--panel-border);
-    box-shadow: -12px 0 40px rgba(0,0,0,0.6);
-    padding: 1.2rem; transform: translateX(100%); transition: transform 0.25s ease;
-    overflow-y: auto;
+    background: #0a0618; border-left: 1px solid var(--panel-border); box-shadow: -12px 0 40px rgba(0,0,0,0.6);
+    padding: 1.2rem; transform: translateX(100%); transition: transform 0.25s ease; overflow-y: auto;
   }
   #detail.vis { transform: translateX(0); }
-  #detail .lukk { position: absolute; top: 0.8rem; right: 0.9rem; background: none; border: none;
-    color: var(--text-dim); font-size: 1.4rem; cursor: pointer; }
+  #detail .lukk { position: absolute; top: 0.8rem; right: 0.9rem; background: none; border: none; color: var(--text-dim); font-size: 1.4rem; cursor: pointer; }
   #detail h2 { font-family: 'VT323', monospace; font-size: 1.6rem; color: var(--cyan); margin-bottom: 0.6rem; }
   #detail .felt { margin-bottom: 0.9rem; font-size: 0.95rem; }
-  #detail .felt label { display: block; color: var(--text-faint); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.2rem; }
+  #detail .felt label { display: block; color: var(--text-faint); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.2rem; }
   #detail a.lenke { color: var(--magenta); text-decoration: none; border-bottom: 1px dashed var(--magenta); }
+  #detail .agentliste-i-rom .agentrad { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid var(--panel-border); font-size: 0.9rem; cursor: pointer; }
 
-  /* ============ Hjelpeoverlay ============ */
-  #help {
-    position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.75);
-    display: flex; align-items: center; justify-content: center;
-  }
+  #help { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; }
   #help.skjult { display: none; }
-  #help .boks {
-    background: #0a0618; border: 1px solid var(--panel-border); border-radius: 4px;
-    padding: 1.5rem 2rem; font-family: 'VT323', monospace; font-size: 1.15rem; min-width: 360px;
-  }
+  #help .boks { background: #0a0618; border: 1px solid var(--panel-border); border-radius: 4px; padding: 1.5rem 2rem; font-family: 'VT323', monospace; font-size: 1.1rem; min-width: 340px; }
   #help h2 { font-family: 'VT323', monospace; font-size: 1.4rem; color: var(--cyan); margin-bottom: 0.8rem; }
   #help dl { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; margin: 0; }
-  #help dt { color: var(--magenta); }
-  #help dd { margin: 0; color: var(--text-dim); }
-
-  .synlig-for-skjermlesere {
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0);
-  }
+  #help dt { color: var(--magenta); } #help dd { margin: 0; color: var(--text-dim); }
 </style>
 </head>
 <body>
@@ -416,14 +204,9 @@
 <div class="fx-bg"></div>
 <div class="fx-vignette"></div>
 <div class="fx-scanlines"></div>
-<div class="fx-sweep"></div>
-<div class="fx-curve"></div>
 
 <div id="boot">
-  <div>
-    <div id="boot-linjer"></div>
-    <div id="boot-hint">Klikk for å hoppe over</div>
-  </div>
+  <div><div id="boot-linjer"></div><div id="boot-hint">Klikk for å hoppe over</div></div>
 </div>
 
 <div id="stage">
@@ -431,32 +214,25 @@
     <div class="stasjonsnavn crt-heading">AI OPS · KOMMANDOSENTER</div>
     <div class="klokke" id="klokke">--:--:--</div>
     <div class="topbar-tall">AGENTER <b id="tallAlle">0</b> · <span class="ok" id="tallOk">0</span> AKTIVE · <span id="tallIdle">0</span> IDLE · <span class="feil" id="tallFeil">0</span> FEIL · <span class="ukjent" id="tallUkjent">0</span> UTEN SIGNAL</div>
-    <div class="topbar-tall">BELASTNING <b id="belastning">0%</b></div>
     <div id="alt-status">ALL SYSTEMS NOMINAL</div>
+    <button id="zoom-knapp" title="Bytt zoom-nivå">🔍 AUTO</button>
     <button id="lyd-knapp" aria-pressed="false" title="Lyd av/på">🔈 LYD AV</button>
   </div>
 
   <div id="search">
     <span class="prompt">&gt;</span>
-    <input type="text" id="sokFelt" placeholder="filtrer agenter... (navn eller oppgave)" autocomplete="off">
+    <input type="text" id="sokFelt" placeholder="filtrer agenter eller rom..." autocomplete="off">
     <span class="hint">/ for å søke · ? for hjelp</span>
-    <div class="visning-bytter" role="group" aria-label="Velg visning">
-      <button class="visning-knapp" data-visning="bro" aria-pressed="true">BRO</button>
-      <button class="visning-knapp" data-visning="rom" aria-pressed="false">GULVKART</button>
-    </div>
-    <button id="popUtKnapp" title="Åpne gjeldende visning i eget vindu">⧉ EGET VINDU</button>
   </div>
 
   <div id="telemL" class="telemetri">
-    <div class="scope">
-      <span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
+    <div class="scope"><span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
       <h3>KV · Skrivinger i dag</h3>
       <div class="verdi"><span id="kvSkriv">–</span> <small id="kvSkrivTak">/ – kvote</small></div>
       <svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline id="graf-kvSkriv" points="" stroke="var(--cyan)"/></svg>
       <div class="merknad">Samplet siden siden ble åpnet - ikke historikk fra serveren</div>
     </div>
-    <div class="scope">
-      <span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
+    <div class="scope"><span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
       <h3>KV · Lesinger i dag</h3>
       <div class="verdi"><span id="kvLes">–</span></div>
       <svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline id="graf-kvLes" points="" stroke="var(--magenta)"/></svg>
@@ -464,30 +240,22 @@
     </div>
   </div>
 
-  <div id="bridge">
-    <div id="visningBro">
-      <canvas id="streams"></canvas>
-      <div id="core">
-        <div class="ring"></div>
-        <div class="kjerne-lys"></div>
-        <div class="etikett">REAKTOR</div>
-      </div>
-      <!-- Agentmoduler settes inn av JS (byggAgentmoduler/plasserAgenter) -->
-    </div>
-    <svg id="visningRom" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet" hidden>
-      <!-- Soner, patruljestier og agent-blips bygges av JS (byggRomvisning) -->
-    </svg>
+  <div id="stasjonWrap">
+    <canvas id="stasjonCanvas"></canvas>
+    <div id="hudTooltip"></div>
+  </div>
+
+  <div id="listeFallback">
+    <!-- Forenklet listeoppsett under 1280px - bygges av JS (byggListeFallback) -->
   </div>
 
   <div id="telemR" class="telemetri">
-    <div class="scope">
-      <span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
+    <div class="scope"><span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
       <h3>Avviste skrivinger</h3>
       <div class="verdi"><span id="avvisteAntall">0</span> totalt</div>
       <div class="merknad" id="avvisteSist">Sist: aldri</div>
     </div>
-    <div class="scope">
-      <span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
+    <div class="scope"><span class="hjorne tl"></span><span class="hjorne tr"></span><span class="hjorne bl"></span><span class="hjorne br"></span>
       <h3>Hendelser · siste 15 min</h3>
       <div class="verdi"><span id="hendelserTelling">0</span></div>
       <svg viewBox="0 0 100 40" preserveAspectRatio="none"><polyline id="graf-hendelser" points="" stroke="var(--amber)"/></svg>
@@ -500,12 +268,7 @@
 
 <div id="detail" aria-hidden="true">
   <button class="lukk" id="detailLukk" aria-label="Lukk">✕</button>
-  <h2 id="detailNavn"></h2>
-  <div class="felt"><label>Status</label><span id="detailStatus"></span></div>
-  <div class="felt"><label>Oppgave</label><span id="detailJobb"></span></div>
-  <div class="felt"><label>Sist observert</label><span id="detailSist"></span></div>
-  <div class="felt" id="detailGrunnFelt" hidden><label>Feilårsak</label><span id="detailGrunn"></span></div>
-  <div class="felt"><a class="lenke" id="detailLenke" href="../index.html" target="_blank" rel="noopener">Se tavlen →</a></div>
+  <div id="detailInnhold"></div>
 </div>
 
 <div id="help" class="skjult" aria-hidden="true">
@@ -515,6 +278,7 @@
       <dt>/</dt><dd>Fokuser søk/filter</dd>
       <dt>Esc</dt><dd>Lukk detaljpanel / hjelp</dd>
       <dt>M</dt><dd>Lyd av/på</dd>
+      <dt>Z</dt><dd>Bytt zoom</dd>
       <dt>?</dt><dd>Vis/skjul denne hjelpen</dd>
     </dl>
   </div>
@@ -525,216 +289,485 @@
   "use strict";
 
   // ============================================================
-  // AGENTER - kopiert fra fabrikk/index.html sin ROBOTER-liste (nr/navn/jobb er identiske
-  // med kilden der, se fabrikk/index.html rundt linje 1136). Bevisst en KOPI, ikke et delt
-  // modul - denne siden skal ikke røre fabrikk-filen i det hele tatt.
-  //
-  // Hvert element har ETT eller FLERE av fire signal-oppsett, avhengig av hva som
-  // faktisk finnes (INGEN av dem er oppdiktet - se INNHOLDSKILDER og skjermer-håndteringen
-  // lenger ned for nøyaktig hvilket ekte GET-endepunkt som driver hvilket felt):
-  //   agentstatus: <oppgavenavn>  -> ekte ok/feil/sist fra /api/agentstatus (60s)
-  //   helse: [...]                -> HEAD-sjekk mot ekte GET-endepunkter (60s), samme
-  //                                   liste og kadens som fabrikkens HELSESJEKKER
-  //   hendelse: true              -> pulser når INNHOLDSKILDER-oppføringer merket med
-  //                                   nettopp denne agent-id-en faktisk endrer seg (15s)
-  //
-  // Utvidelse (2026-09-xx): de seks modulene som først sto som "INGEN SIGNAL" (fordi de i
-  // fabrikk/index.html bare er illustrasjoner av interne undersystemer, ikke selvstendige
-  // agenter) har nå fått et EKTE signal hver, hentet fra nøyaktig de samme GET-endepunktene
-  // fabrikkens KILDER-liste allerede poller - se fabrikk/index.html rundt linje 952-1030
-  // for kildehenvisningen på hver av dem:
-  //   Oppslagsvakten   -> /api/notat + /api/bilde?status endrer seg
-  //   Listeføreren     -> /api/bursdager + /api/skjulte endrer seg
-  //   Bryterbetjenten  -> /api/innstillinger endrer seg, eller skjermregisteret STRUKTURELT
-  //                       endrer seg (skjerm lagt til/fjernet/omdøpt)
-  //   Operatøren       -> unionen av ALLE de fem admin-kildene over (samme "sone-admin"-
-  //                       idé som i fabrikk: lyser når NOE skjer i /admin, uansett hva)
-  //   Skjermpasseren   -> en av skjermene i /api/skjermer har heartbeatet nylig (utledet av
-  //                       at "sistSett" på minst én skjerm har rykket fremover)
-  //   Gjesteverten     -> hvilke(n) skjermer som står i gjestevisning (/api/skjermer sitt
-  //                       gjestevisning-felt) har endret seg
-  // Ett ekte tall gjenstår fortsatt uten et rimelig signal: Claude/Arkivaren vil vise
-  // "INGEN SIGNAL" lokalt inntil /api/agentstatus faktisk har en oppføring for dem (i
-  // produksjon, når de planlagte jobbene har kjørt minst én gang) - det er korrekt
-  // oppførsel, ikke en mangel her.
+  // DATAGRUNNLAG - AGENTER og ROM. Se KOMMENTAR øverst i <style> for hvilket ekte
+  // endepunkt som ligger bak hvert rom. Hver agent har ETT fast hjemme-rom, avledet
+  // av hvilket ekte signal den representerer - ingen agent bytter rom i denne
+  // modellen fordi ingen reell "byttet tjeneste"-hendelse finnes i dataene våre.
   // ============================================================
-  const AGENTER = [
-    { id: "uthenteren", navn: "UTHENTEREN", jobb: "Henter oppdrag/kandidater fra Recman, mellomlagret 20 min.", helse: ["/api/oppdrag", "/api/telling", "/api/tilbud", "/api/avsluttet"], hendelse: true },
-    { id: "budbringeren", navn: "BUDBRINGEREN", jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra.", helse: ["/api/vaer", "/api/avganger", "/api/nrk", "/api/kundenytt"] },
-    { id: "oppslagsvakten", navn: "OPPSLAGSVAKTEN", jobb: "Passer post-it-lappen og bilde-oppslaget.", hendelse: true },
-    { id: "listeforeren", navn: "LISTEFØREREN", jobb: "Holder styr på bursdagslisten og parkerte oppdrag.", hendelse: true },
-    { id: "bryterbetjenten", navn: "BRYTERBETJENTEN", jobb: "Tar imot bryterendringer fra admin og skjermregisteret.", hendelse: true },
-    { id: "lagerarbeideren", navn: "LAGERARBEIDEREN", jobb: "Selve lagerarbeidet i KV - rører seg ved enhver lagring.", kvforbruk: true },
-    { id: "vakten", navn: "VAKTEN", jobb: "Sjekker adminnøkkelen på hver eneste skriving.", hendelse: true },
-    { id: "operatoren", navn: "OPERATØREN", jobb: "Står ved kontrollpulten i /admin.", hendelse: true },
-    { id: "postbudet", navn: "POSTBUDET", jobb: "Henter Teams-meldinger hvert 15. min på hverdager.", hendelse: true },
-    { id: "skjermpasseren", navn: "SKJERMPASSEREN", jobb: "Holder storskjermen oppdatert, følger med skjermene.", hendelse: true },
-    { id: "gjesteverten", navn: "GJESTEVERTEN", jobb: "Passer gjestevisningen for besøkende.", hendelse: true },
-    { id: "claude", navn: "CLAUDE", jobb: "Ruller ut ny kode, oppdaterer Teamskanalen hvert 15. min.", agentstatus: "teamskanal-oppdatering" },
-    { id: "arkivaren", navn: "ARKIVAREN", jobb: "Skriver dagens hendelser til Obsidian-hvelvet kl 23:55.", agentstatus: "obsidian-fabrikk-logg" }
+  const ROOMS = [
+    { id: "recman", navn: "RECMAN", type: "data", helse: ["/api/oppdrag", "/api/telling", "/api/tilbud", "/api/avsluttet"] },
+    { id: "eksterne", navn: "EKSTERNE KILDER", type: "gateway", helse: ["/api/vaer", "/api/avganger", "/api/nrk", "/api/kundenytt"] },
+    { id: "admin", navn: "ADMIN", type: "console" },
+    { id: "kv", navn: "KV STORE", type: "storage", kvforbruk: true },
+    { id: "sluse", navn: "SLUSEN", type: "gateway" },
+    { id: "teamskanal", navn: "TEAMSKANAL", type: "comms" },
+    { id: "tavle", navn: "TAVLA", type: "screen" },
+    { id: "jobber", navn: "PLANLAGTE JOBBER", type: "console" }
+  ];
+  // Data-drevet dekk-oppsett: legg til en ny rad her (og ev. et nytt rom i ROOMS) for
+  // å la stasjonen vokse med et dekk - selve layouten (piksel-rektangler) regnes ut av
+  // beregnLayout(), ingenting er hardkodet på skjermkoordinater.
+  const DEKKER = [
+    ["recman", "eksterne", "admin"],
+    ["kv", "sluse", "teamskanal"],
+    ["tavle", "jobber"]
   ];
 
-  // ingenSignal finnes ikke lenger som et satt felt (alle 13 har nå et reelt oppsett),
-  // men funksjonen beholdes slik at koden under fortsatt degraderer pent den dagen en
-  // fremtidig agent legges til UTEN et signal - se agentStatus/byggAgentmoduler.
-  const harIngenSignal = (a) => !a.agentstatus && !a.helse && !a.hendelse && !a.kvforbruk;
+  const AGENTER = [
+    { id: "uthenteren", navn: "UTHENTEREN", jobb: "Henter oppdrag/kandidater fra Recman, mellomlagret 20 min.", rom: "recman", helse: ["/api/oppdrag", "/api/telling", "/api/tilbud", "/api/avsluttet"], hendelse: true },
+    { id: "budbringeren", navn: "BUDBRINGEREN", jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra.", rom: "eksterne", helse: ["/api/vaer", "/api/avganger", "/api/nrk", "/api/kundenytt"] },
+    { id: "oppslagsvakten", navn: "OPPSLAGSVAKTEN", jobb: "Passer post-it-lappen og bilde-oppslaget.", rom: "kv", hendelse: true },
+    { id: "listeforeren", navn: "LISTEFØREREN", jobb: "Holder styr på bursdagslisten og parkerte oppdrag.", rom: "kv", hendelse: true },
+    { id: "lagerarbeideren", navn: "LAGERARBEIDEREN", jobb: "Selve lagerarbeidet i KV - rører seg ved enhver lagring.", rom: "kv", kvforbruk: true },
+    { id: "bryterbetjenten", navn: "BRYTERBETJENTEN", jobb: "Tar imot bryterendringer fra admin og skjermregisteret.", rom: "admin", hendelse: true },
+    { id: "operatoren", navn: "OPERATØREN", jobb: "Står ved kontrollpulten i /admin.", rom: "admin", hendelse: true },
+    { id: "vakten", navn: "VAKTEN", jobb: "Sjekker adminnøkkelen på hver eneste skriving.", rom: "sluse", hendelse: true },
+    { id: "postbudet", navn: "POSTBUDET", jobb: "Henter Teams-meldinger hvert 15. min på hverdager.", rom: "teamskanal", hendelse: true },
+    { id: "skjermpasseren", navn: "SKJERMPASSEREN", jobb: "Holder storskjermen oppdatert, følger med skjermene.", rom: "tavle", hendelse: true },
+    { id: "gjesteverten", navn: "GJESTEVERTEN", jobb: "Passer gjestevisningen for besøkende.", rom: "tavle", hendelse: true },
+    { id: "claude", navn: "CLAUDE", jobb: "Ruller ut ny kode, oppdaterer Teamskanalen hvert 15. min.", rom: "jobber", agentstatus: "teamskanal-oppdatering" },
+    { id: "arkivaren", navn: "ARKIVAREN", jobb: "Skriver dagens hendelser til Obsidian-hvelvet kl 23:55.", rom: "jobber", agentstatus: "obsidian-fabrikk-logg" }
+  ];
+  // Distinkte draktfarger, én per agent - ren visuell identifikasjon, ikke statusfarge
+  // (status vises separat via lys/ikon/blink, se tegnAgent()).
+  const AGENT_FARGER = ["#ff2d95", "#00e5ff", "#ffb000", "#39ff6a", "#a06bff", "#ff6b3d",
+    "#3dd8c8", "#e8e24a", "#ff8fc4", "#6be0ff", "#c4ff6b", "#ff4a4a", "#8fa8ff"];
+  AGENTER.forEach((a, i) => (a.farge = AGENT_FARGER[i % AGENT_FARGER.length]));
 
-  // Samme kadens som fabrikk/index.html (POLL_HENDELSER_MS/POLL_HELSE_MS/POLL_TUNG_MS) -
-  // gjenbruker akkurat de samme endepunktene, så vi skal ikke be serveren om noe oftere
-  // enn den allerede blir spurt om fra den andre visningen.
   const POLL_HENDELSER_MS = 15 * 1000;
   const POLL_HELSE_MS = 60 * 1000;
   const POLL_TUNG_MS = 5 * 60 * 1000;
-  const HEAT_HALVERINGSTID_MS = 8 * 1000; // hvor fort reaktor-/agentpulsen roer seg ned igjen
 
   const redusertBevegelse = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (redusertBevegelse) document.body.classList.add("redusert-bevegelse");
 
+  function el(id) { return document.getElementById(id); }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function sidenTekst(t) {
+    const sek = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (sek < 60) return sek + "s siden"; if (sek < 3600) return Math.round(sek / 60) + "m siden"; return Math.round(sek / 3600) + "t siden";
+  }
+  const harIngenSignal = (a) => !a.agentstatus && !a.helse && !a.hendelse && !a.kvforbruk;
+
   const state = {
-    heatGlobal: 0,
-    agentHeat: new Map(AGENTER.map((a) => [a.id, 0])),
     agentStatus: new Map(AGENTER.map((a) => [a.id, { status: harIngenSignal(a) ? "ukjent" : "idle", sist: null, grunn: null }])),
+    agentHeat: new Map(AGENTER.map((a) => [a.id, 0])),
+    romHeat: new Map(ROOMS.map((r) => [r.id, 0])),
+    romFeil: new Map(ROOMS.map((r) => [r.id, false])),
     kvHistorikk: { skriv: [], les: [] },
-    hendelseHistorikk: [], // tidsstempler siste 15 min, til sparkline
+    hendelseHistorikk: [],
+    sok: "",
     lyd: false
   };
 
-  function el(id) { return document.getElementById(id); }
+  // ============================================================
+  // STASJON - canvas-motoren. Fast virtuell oppløsning, skalert opp med heltallsfaktor,
+  // og et separat "oppdater i faste tidssteg / tegn hver frame"-mønster (akkumulator)
+  // slik at bevegelsen går like fort uansett skjermens faktiske bildefrekvens.
+  // ============================================================
+  const VBREDDE = 480, VHOYDE = 270;
+  const canvas = el("stasjonCanvas");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const PALETT = {
+    romMork: "#161022", romPanel: "#241a38", romPanelLys: "#3a2b58",
+    hullMork: "#0a0816", hullPanel: "#181228", rivet: "#2e2448",
+    cyan: "#00e5ff", magenta: "#ff2d95", amber: "#ffb000", gronn: "#39ff6a", rod: "#ff2b3d",
+    hvit: "#f4f7ff", staalMork: "#3a3550", staalLys: "#5a5470",
+    stjerneFjern: "#241f3a", stjerneMidt: "#4a4570", stjerneNaer: "#aab0ff"
+  };
+
+  let zoomModus = "auto"; // "auto" | 2 | 3
+  let skala = 1, offsetX = 0, offsetY = 0;
+
+  function tilpassCanvas() {
+    const wrap = el("stasjonWrap");
+    const bredde = wrap.clientWidth, hoyde = wrap.clientHeight;
+    let s;
+    if (zoomModus === "auto") s = Math.max(1, Math.floor(Math.min(bredde / VBREDDE, hoyde / VHOYDE)));
+    else s = zoomModus;
+    skala = s;
+    canvas.width = VBREDDE * s; canvas.height = VHOYDE * s;
+    canvas.style.width = canvas.width + "px"; canvas.style.height = canvas.height + "px";
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  function skjermTilVirtuell(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: Math.floor((clientX - rect.left) / skala), y: Math.floor((clientY - rect.top) / skala) };
+  }
+
+  // ---------------- Layout (data-drevet - se DEKKER/ROOMS) ----------------
+  const layout = { romRekt: new Map(), heisX: 0, heisTopp: 0, heisBunn: 0 };
+
+  function beregnLayout() {
+    const interiorX0 = 12, interiorX1 = VBREDDE - 12;
+    const heisBredde = 12;
+    const heisX0 = Math.round((interiorX0 + interiorX1) / 2 - heisBredde / 2);
+    const heisX1 = heisX0 + heisBredde;
+    const dekkY0 = 22, dekkY1 = VHOYDE - 34;
+    const gap = 4;
+    const dekkHoyde = (dekkY1 - dekkY0 - gap * (DEKKER.length - 1)) / DEKKER.length;
+
+    layout.heisX = heisX0; layout.heisX1 = heisX1; layout.heisTopp = dekkY0; layout.heisBunn = dekkY1;
+    layout.romRekt.clear();
+
+    DEKKER.forEach((romIder, i) => {
+      const y = Math.round(dekkY0 + i * (dekkHoyde + gap));
+      const h = Math.round(dekkHoyde);
+      const midt = Math.ceil(romIder.length / 2);
+      const venstre = romIder.slice(0, midt), hoyre = romIder.slice(midt);
+      [[venstre, interiorX0, heisX0], [hoyre, heisX1, interiorX1]].forEach(([ider, x0, x1]) => {
+        if (ider.length === 0) return;
+        const bredde = (x1 - x0) / ider.length;
+        ider.forEach((romId, j) => {
+          const x = Math.round(x0 + j * bredde);
+          const w = Math.round(bredde) - (j < ider.length - 1 ? 2 : 0);
+          layout.romRekt.set(romId, { x, y, w, h });
+        });
+      });
+    });
+  }
+
+  // ---------------- Bakgrunn: parallax-stjerner + planet ----------------
+  const STJERNELAG = [
+    { antall: 40, fart: 2, storrelse: 1, farge: PALETT.stjerneFjern },
+    { antall: 24, fart: 5, storrelse: 1, farge: PALETT.stjerneMidt },
+    { antall: 12, fart: 10, storrelse: 2, farge: PALETT.stjerneNaer }
+  ].map((lag) => ({
+    ...lag,
+    punkter: Array.from({ length: lag.antall }, () => ({ x: Math.random() * VBREDDE, y: Math.random() * (VHOYDE * 0.55) }))
+  }));
+  const PLANET = { x: 46, y: VHOYDE - 40, r: 22, vinkel: 0 };
+  let meteor = null;
+
+  function oppdaterBakgrunn(dt) {
+    if (redusertBevegelse) return;
+    STJERNELAG.forEach((lag) => {
+      lag.punkter.forEach((p) => {
+        p.x -= (lag.fart * dt) / 1000;
+        if (p.x < -2) p.x = VBREDDE + 2;
+      });
+    });
+    PLANET.vinkel += dt / 9000;
+    if (!meteor && Math.random() < 0.0006 * dt) meteor = { x: VBREDDE + 10, y: 10 + Math.random() * 40, t: 0 };
+    if (meteor) {
+      meteor.x -= (60 * dt) / 1000; meteor.y += (20 * dt) / 1000; meteor.t += dt;
+      if (meteor.x < -10 || meteor.t > 6000) meteor = null;
+    }
+  }
+
+  function tegnBakgrunn() {
+    ctx.fillStyle = "#04030a"; ctx.fillRect(0, 0, VBREDDE, VHOYDE);
+    STJERNELAG.forEach((lag) => {
+      ctx.fillStyle = lag.farge;
+      lag.punkter.forEach((p) => ctx.fillRect(Math.round(p.x), Math.round(p.y), lag.storrelse, lag.storrelse));
+    });
+    // planet - enkel skygget sirkel med en sakte roterende "kontinent"-flekk
+    ctx.fillStyle = "#2a5a8a"; ctx.beginPath(); ctx.arc(PLANET.x, PLANET.y, PLANET.r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1c3f5f"; ctx.beginPath(); ctx.arc(PLANET.x - PLANET.r * 0.3, PLANET.y - PLANET.r * 0.3, PLANET.r * 0.85, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#3f8f52";
+    const kx = PLANET.x + Math.cos(PLANET.vinkel) * PLANET.r * 0.5, ky = PLANET.y + Math.sin(PLANET.vinkel) * PLANET.r * 0.2;
+    ctx.fillRect(Math.round(kx) - 4, Math.round(ky) - 3, 8, 6);
+    if (meteor) {
+      ctx.fillStyle = PALETT.amber;
+      for (let i = 0; i < 5; i++) ctx.fillRect(Math.round(meteor.x + i * 2), Math.round(meteor.y - i), 1, 1);
+      ctx.fillStyle = PALETT.hvit; ctx.fillRect(Math.round(meteor.x), Math.round(meteor.y), 2, 2);
+    }
+  }
+
+  // ---------------- Skrog ----------------
+  function tegnSkrog() {
+    const x0 = 6, y0 = 14, x1 = VBREDDE - 6, y1 = VHOYDE - 20;
+    ctx.fillStyle = PALETT.hullMork; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.strokeStyle = PALETT.staalLys; ctx.lineWidth = 2; ctx.strokeRect(x0 + 1, y0 + 1, x1 - x0 - 2, y1 - y0 - 2);
+    // nagler langs kanten
+    ctx.fillStyle = PALETT.rivet;
+    for (let x = x0 + 6; x < x1; x += 14) { ctx.fillRect(x, y0 + 3, 2, 2); ctx.fillRect(x, y1 - 5, 2, 2); }
+    // koøyer
+    ctx.fillStyle = "#0c1830";
+    [[16, y0 + 6], [x1 - 20, y0 + 6]].forEach(([cx, cy]) => { ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fill(); });
+    // antenne + solcellepaneler på toppen
+    ctx.strokeStyle = PALETT.staalLys; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(VBREDDE / 2, y0); ctx.lineTo(VBREDDE / 2, y0 - 8); ctx.stroke();
+    ctx.fillStyle = PALETT.rod; ctx.fillRect(VBREDDE / 2 - 1, y0 - 10, 2, 2);
+    ctx.fillStyle = PALETT.cyan;
+    ctx.fillRect(x0 - 14, y0 + 10, 12, 30); ctx.fillRect(x1 + 2, y0 + 10, 12, 30);
+    ctx.strokeStyle = PALETT.hullMork;
+    for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x0 - 14, y0 + 10 + i * 7); ctx.lineTo(x0 - 2, y0 + 10 + i * 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1 + 2, y0 + 10 + i * 7); ctx.lineTo(x1 + 14, y0 + 10 + i * 7); ctx.stroke(); }
+    // dockingport i bunnen
+    ctx.fillStyle = PALETT.staalMork; ctx.fillRect(VBREDDE / 2 - 14, y1, 28, 8);
+    ctx.fillStyle = PALETT.amber; ctx.fillRect(VBREDDE / 2 - 2, y1 + 2, 4, 4);
+  }
+
+  // ---------------- Rom ----------------
+  function romStatus(romId) {
+    if (state.romFeil.get(romId)) return "error";
+    const heat = state.romHeat.get(romId) ?? 0;
+    if (heat > 0.55) return "active";
+    if (heat > 0.15) return "degraded-ish"; // ren overgang, ikke en offisiell tilstand
+    return "idle";
+  }
+
+  function tegnRom(rom, rekt, tid) {
+    const { x, y, w, h } = rekt;
+    const heat = state.romHeat.get(rom.id) ?? 0;
+    const feil = state.romFeil.get(rom.id);
+    const treffSok = state.sok && (rom.navn.toLowerCase().includes(state.sok) ||
+      AGENTER.some((a) => a.rom === rom.id && a.navn.toLowerCase().includes(state.sok)));
+
+    // vegger
+    ctx.fillStyle = PALETT.romMork; ctx.fillRect(x, y, w, h);
+    const lysstyrke = feil ? (Math.sin(tid / 120) > 0 ? 0.5 : 0.15) : Math.min(1, 0.25 + heat * 0.9);
+    ctx.fillStyle = "rgba(255,255,255," + (lysstyrke * 0.06).toFixed(3) + ")"; ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = feil ? PALETT.rod : (heat > 0.5 ? PALETT.cyan : PALETT.staalMork);
+    ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+    // navneskilt
+    ctx.fillStyle = PALETT.staalMork; ctx.fillRect(x + 2, y + 2, w - 4, 8);
+    ctx.font = "6px monospace"; ctx.fillStyle = feil ? PALETT.rod : PALETT.hvit; ctx.textBaseline = "top";
+    ctx.fillText(rom.navn.slice(0, Math.floor((w - 6) / 4)), x + 4, y + 3);
+
+    // aktivitetslys (hjørne) - ALDRI kun farge: ikon/form følger med
+    const lysX = x + w - 7, lysY = y + 4;
+    ctx.fillStyle = feil ? PALETT.rod : heat > 0.5 ? PALETT.gronn : PALETT.staalLys;
+    ctx.fillRect(lysX, lysY, 3, 3);
+    if (feil) { ctx.fillStyle = PALETT.hvit; ctx.fillRect(lysX + 1, lysY - 3, 1, 2); ctx.fillRect(lysX + 1, lysY, 1, 1); } // "!" over lyset
+
+    // søk-highlight
+    if (treffSok) { ctx.strokeStyle = PALETT.hvit; ctx.lineWidth = 1; ctx.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3); }
+
+    // rom-spesifikk liten dekor (svært forenklet ikonografi per type)
+    ctx.fillStyle = PALETT.romPanel;
+    if (rom.type === "storage") { for (let i = 0; i < 3; i++) ctx.fillRect(x + 4 + i * 6, y + h - 10, 4, 8); }
+    if (rom.type === "screen") { ctx.fillRect(x + w - 16, y + h - 12, 12, 8); ctx.fillStyle = heat > 0.3 ? PALETT.cyan : PALETT.staalMork; ctx.fillRect(x + w - 14, y + h - 10, 8, 4); }
+    if (rom.type === "gateway") { ctx.fillRect(x + 4, y + h - 12, 3, 10); ctx.fillRect(x + w - 7, y + h - 12, 3, 10); }
+  }
+
+  // ---------------- Heis ----------------
+  const heis = { pos: 0.3, retning: 1, fart: 0.00012 };
+  function oppdaterHeis(dt) {
+    if (redusertBevegelse) return;
+    heis.pos += heis.retning * heis.fart * dt;
+    if (heis.pos > 1) { heis.pos = 1; heis.retning = -1; }
+    if (heis.pos < 0) { heis.pos = 0; heis.retning = 1; }
+  }
+  function tegnHeis() {
+    const { heisX, heisX1, heisTopp, heisBunn } = layout;
+    ctx.fillStyle = "#0c0918"; ctx.fillRect(heisX, heisTopp, heisX1 - heisX, heisBunn - heisTopp);
+    ctx.strokeStyle = PALETT.staalMork;
+    for (let y = heisTopp; y < heisBunn; y += 6) { ctx.beginPath(); ctx.moveTo(heisX, y); ctx.lineTo(heisX1, y); ctx.stroke(); }
+    const platY = heisTopp + heis.pos * (heisBunn - heisTopp - 4);
+    ctx.fillStyle = PALETT.amber; ctx.fillRect(heisX, Math.round(platY), heisX1 - heisX, 3);
+  }
+
+  // ---------------- Agenter (16x16 pixel-sprites, tegnet prosedyralt) ----------------
+  // Enkel tilstandsmaskin: idle (puster ved døra) / working (ved konsollen, med
+  // ikonboble) / alert (utropstegn, rask gange mot romsentrum). Posisjon INNAD i eget
+  // rom - se KOMMENTAR øverst i fila for hvorfor agenter ikke bytter rom.
+  AGENTER.forEach((a, i) => {
+    a.gangfase = Math.random() * 10;
+    a.retning = 1;
+    a.px = 0; a.py = 0; // settes i plasserAgentSpor()
+    a.malX = 0;
+  });
+
+  function plasserAgentSpor() {
+    ROOMS.forEach((rom) => {
+      const rekt = layout.romRekt.get(rom.id);
+      if (!rekt) return;
+      const agenterHer = AGENTER.filter((a) => a.rom === rom.id);
+      const n = agenterHer.length;
+      agenterHer.forEach((a, i) => {
+        const slotX = rekt.x + 8 + ((i + 0.5) * (rekt.w - 16)) / n;
+        a.doerX = rekt.x + 6; a.konsollX = slotX;
+        a.py = rekt.y + rekt.h - 10;
+        if (!a.px) a.px = a.konsollX;
+        a.romY = rekt.y;
+        a.romX0 = rekt.x + 3; a.romX1 = rekt.x + rekt.w - 3;
+      });
+    });
+  }
+
+  function agentMaltilstand(id) {
+    const s = state.agentStatus.get(id).status;
+    if (s === "feil") return "alert";
+    if (s === "aktiv" || s === "ok") return "working";
+    return "idle";
+  }
+
+  function oppdaterAgenter(dt) {
+    AGENTER.forEach((a) => {
+      const mal = agentMaltilstand(a.id);
+      a.tilstand = mal;
+      const malX = mal === "idle" ? a.doerX : a.konsollX;
+      const fart = (mal === "alert" ? 0.055 : 0.022) * dt;
+      if (Math.abs(a.px - malX) > 0.5) {
+        const dx = Math.sign(malX - a.px) * Math.min(fart, Math.abs(malX - a.px));
+        a.px += dx; a.retning = dx >= 0 ? 1 : -1;
+        if (!redusertBevegelse) a.gangfase += dt / 130;
+      }
+    });
+  }
+
+  // Prosedyral 16x16-figur: hjelm, drakt, kontur - ingen ekstern spritefil.
+  function tegnAgent(a, tid) {
+    const x = Math.round(a.px), y = Math.round(a.py);
+    const gaar = Math.abs(a.px - (a.tilstand === "idle" ? a.doerX : a.konsollX)) > 0.5;
+    const frame = redusertBevegelse ? 0 : gaar ? Math.floor(a.gangfase) % 4 : Math.floor(tid / 500) % 2;
+    const beinOffset = gaar ? (frame % 2 === 0 ? -1 : 1) : 0;
+    ctx.save();
+    ctx.translate(x, y);
+    if (a.retning < 0) ctx.scale(-1, 1);
+
+    // kontur + drakt
+    ctx.fillStyle = "#0a0816";
+    ctx.fillRect(-4, -13, 8, 13);
+    ctx.fillStyle = a.farge;
+    ctx.fillRect(-3, -12, 6, 8); // kropp
+    ctx.fillStyle = "#e8e2d4";
+    ctx.fillRect(-3, -13, 6, 4); // hjelm
+    ctx.fillStyle = a.tilstand === "alert" ? PALETT.rod : PALETT.cyan;
+    ctx.fillRect(-2, -12, 4, 2); // visir
+    ctx.fillStyle = "#20182e";
+    ctx.fillRect(-3 + beinOffset, -4, 3, 4); ctx.fillRect(0 - beinOffset, -4, 3, 4); // bein
+
+    if (a.tilstand === "working") {
+      const bobleFrame = Math.floor(tid / 400) % 2;
+      ctx.fillStyle = "#e8e2d4"; ctx.fillRect(4, -18, 6, 5);
+      ctx.fillStyle = PALETT.staalMork; ctx.fillRect(5, -17, 4, 3 - bobleFrame);
+    }
+    if (a.tilstand === "alert") {
+      ctx.fillStyle = PALETT.rod; ctx.fillRect(-1, -20, 2, 5); ctx.fillRect(-1, -13, 2, 1);
+    }
+    ctx.restore();
+  }
+
+  function tegnAgentOverflow(rom, rekt) {
+    const agenter = AGENTER.filter((a) => a.rom === rom.id);
+    if (agenter.length <= 12) return;
+    ctx.font = "6px monospace"; ctx.fillStyle = PALETT.hvit;
+    ctx.fillText("+" + (agenter.length - 12), rekt.x + rekt.w - 16, rekt.y + rekt.h - 8);
+  }
+
+  // ---------------- Datastrømmer (piksel-prikker langs kabler) ----------------
+  let partikler = [];
+  function spawnPartikkel(romId) {
+    if (redusertBevegelse) return;
+    const rekt = layout.romRekt.get(romId);
+    if (!rekt) return;
+    const tilHeis = rekt.x < layout.heisX;
+    partikler.push({ x: tilHeis ? rekt.x + rekt.w : rekt.x, y: rekt.y + rekt.h / 2, tx: layout.heisX + (layout.heisX1 - layout.heisX) / 2, ty: rekt.y + rekt.h / 2, t: 0 });
+  }
+  function oppdaterPartikler(dt) {
+    if (redusertBevegelse) { partikler = []; return; }
+    partikler.forEach((p) => (p.t += dt / 700));
+    partikler = partikler.filter((p) => p.t < 1);
+  }
+  function tegnPartikler() {
+    ctx.fillStyle = PALETT.cyan;
+    partikler.forEach((p) => { const x = p.x + (p.tx - p.x) * p.t, y = p.y + (p.ty - p.y) * p.t; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); });
+  }
 
   // ---------------- Boot-sekvens ----------------
-  const BOOT_LINJER = [
-    "INITIALIZING STATION...",
-    "LOADING AGENT REGISTRY... 13 UNITS FOUND",
-    "CONNECTING TO RECMAN UPLINK... OK",
-    "CONNECTING TO KV STORE... OK",
-    "CALIBRATING SENSOR ARRAY...",
-    "ALL SYSTEMS NOMINAL",
-    "WELCOME, OPERATOR"
-  ];
-
+  let bootDekkSynlig = 0;
+  const BOOT_LINJER = ["INITIALIZING STATION...", "LOADING DECK SCHEMATICS...", "PRESSURIZING MODULES...", "AGENT REGISTRY... 13 UNITS", "ALL SYSTEMS NOMINAL"];
   function kjorBoot() {
-    const boot = el("boot");
-    const linjerEl = el("boot-linjer");
+    const boot = el("boot"); const linjerEl = el("boot-linjer");
     let timere = [];
     BOOT_LINJER.forEach((tekst, i) => {
-      const div = document.createElement("div");
-      div.textContent = tekst;
-      linjerEl.appendChild(div);
-      timere.push(setTimeout(() => div.classList.add("vis"), i * 220));
+      const div = document.createElement("div"); div.textContent = tekst; linjerEl.appendChild(div);
+      timere.push(setTimeout(() => { div.classList.add("vis"); bootDekkSynlig = Math.min(DEKKER.length, Math.ceil(((i + 1) / BOOT_LINJER.length) * DEKKER.length)); }, i * 260));
     });
     const ferdig = () => {
-      timere.forEach(clearTimeout);
-      boot.classList.add("skjult");
-      el("stage").classList.add("vis");
-      boot.removeEventListener("click", ferdig);
+      timere.forEach(clearTimeout); bootDekkSynlig = DEKKER.length;
+      boot.classList.add("skjult"); el("stage").classList.add("vis"); boot.removeEventListener("click", ferdig);
     };
-    timere.push(setTimeout(ferdig, BOOT_LINJER.length * 220 + 400));
+    timere.push(setTimeout(ferdig, BOOT_LINJER.length * 260 + 400));
     boot.addEventListener("click", ferdig);
   }
 
-  // ---------------- Klokke ----------------
-  function tikkKlokke() {
-    el("klokke").textContent = new Date().toLocaleTimeString("no-NO");
+  // ---------------- Hovedløkke: fast tidssteg (akkumulator) ----------------
+  const TIDSSTEG_MS = 1000 / 60;
+  let akkumulator = 0, sisteFrame = 0;
+
+  function oppdater(dt) {
+    oppdaterBakgrunn(dt); oppdaterHeis(dt); oppdaterAgenter(dt); oppdaterPartikler(dt);
+    state.romHeat.forEach((v, k) => state.romHeat.set(k, v * Math.pow(0.5, dt / 4000)));
   }
 
-  // ---------------- Radiell plassering av agentmodulene ----------------
-  // BUG funnet og rettet: radius ble regnet ut fra tilgjengelig plass ALENE
-  // (min(bredde,høyde)/2 - 90), uten noen gang å sjekke om det faktisk er nok plass til
-  // AGENTER.length kort av bredde CARD_W ved DEN radiusen. Med 13 kort a 148px bredde
-  // ble kordeavstanden mellom nabokort (2r·sin(π/N)) fort kortere enn selve kortbredden
-  // - dvs. kortene overlappet - hver gang broen ikke var vesentlig bredere/høyere enn
-  // margin-verdien 90 skulle tilsi.
-  //
-  // Fasit: for at nabokort aldri skal overlappe må kordeavstanden mellom dem være minst
-  // kortbredde+mellomrom, altså radius >= (CARD_W+GAP) / (2·sin(π/N)) - se
-  // KREVD_RADIUS under. Er det nok plass til den radiusen, brukes den fulle tilgjengelige
-  // radiusen (gir luftigere, mer sirkulær plassering). Er det IKKE nok plass (svært smal
-  // eller lav skjerm), krympes kortene ned med nøyaktig den faktoren som gjør at de
-  // fortsatt akkurat ikke overlapper på den radiusen som faktisk er tilgjengelig, i
-  // stedet for å la dem overlappe.
-  const CARD_W = 148;
-  const CARD_GAP = 16;
-
-  function plasserAgenter() {
-    const bridge = el("bridge");
-    const bredde = bridge.clientWidth;
-    const hoyde = bridge.clientHeight;
-    const senterX = bredde / 2;
-    const senterY = hoyde / 2;
-    const n = AGENTER.length;
-
-    const tilgjengeligRadius = Math.min(bredde, hoyde) / 2 - 80;
-    // Kordeavstanden (2r·sin(π/n)) garanterer nok EUKLIDSK avstand mellom nabosentre,
-    // men kortene er ikke rotert til å stå på tvers av sirkelen - de står alltid rett
-    // opp. To rette rektangler overlapper når BÅDE dx og dy samtidig er mindre enn
-    // henholdsvis bredde og høyde - noe som kan skje selv om den euklidske avstanden
-    // akkurat treffer minstekravet, ved vinkler som ikke er rent vannrette. Testet fram:
-    // uten margin ga dette et reelt (om enn lite, ~2-3px) overlapp for enkelte nabopar.
-    // KREVD_MARGIN legger på litt ekstra klaring for å dekke dette i praksis, i stedet
-    // for å regne ut riktig vinkelavhengig minsteavstand for et rektangel.
-    const KREVD_MARGIN = 1.15;
-    const krevdRadius = (CARD_W + CARD_GAP) * KREVD_MARGIN / (2 * Math.sin(Math.PI / n));
-    const radius = Math.max(60, tilgjengeligRadius);
-    const skala = Math.max(0.55, Math.min(1, tilgjengeligRadius / krevdRadius));
-
-    AGENTER.forEach((a, i) => {
-      const vinkel = (i / n) * Math.PI * 2 - Math.PI / 2;
-      const x = senterX + Math.cos(vinkel) * radius;
-      const y = senterY + Math.sin(vinkel) * radius;
-      const modEl = el("agent-" + a.id);
-      if (!modEl) return;
-      modEl.style.left = x + "px";
-      modEl.style.top = y + "px";
-      // Se KOMMENTAR ved .agent i <style> - hele transformen (posisjon + skala) settes
-      // her, ikke via CSS var(), og lagres på elementet slik at hover/fokus kan legge
-      // løftet oppå akkurat DENNE skalaen i stedet for å overskrive den.
-      modEl.dataset.grunnTransform = "translate(-50%, -50%) scale(" + skala.toFixed(3) + ")";
-      modEl.style.transform = modEl.dataset.grunnTransform;
-      modEl.dataset.x = x;
-      modEl.dataset.y = y;
+  function tegn(tid) {
+    tegnBakgrunn();
+    tegnSkrog();
+    DEKKER.slice(0, bootDekkSynlig).forEach((romIder) => {
+      romIder.forEach((romId) => {
+        const rom = ROOMS.find((r) => r.id === romId); const rekt = layout.romRekt.get(romId);
+        if (rom && rekt) tegnRom(rom, rekt, tid);
+      });
     });
+    if (bootDekkSynlig >= DEKKER.length) {
+      tegnHeis();
+      tegnPartikler();
+      AGENTER.slice().sort((a, b) => a.py - b.py).forEach((a) => tegnAgent(a, tid));
+      ROOMS.forEach((rom) => { const rekt = layout.romRekt.get(rom.id); if (rekt) tegnAgentOverflow(rom, rekt); });
+      if (hoverRom) tegnHover(hoverRom);
+    }
   }
 
-  function loftAgent(modEl, loft) {
-    const grunn = modEl.dataset.grunnTransform || "translate(-50%, -50%)";
-    modEl.style.transform = loft ? grunn + " translateY(-4px) scale(1.06)" : grunn;
+  function frame(naa) {
+    const dt = Math.min(250, naa - sisteFrame); sisteFrame = naa;
+    akkumulator += dt;
+    while (akkumulator >= TIDSSTEG_MS) { oppdater(TIDSSTEG_MS); akkumulator -= TIDSSTEG_MS; }
+    ctx.save(); ctx.scale(skala, skala); tegn(naa); ctx.restore();
+    requestAnimationFrame(frame);
   }
 
-  function byggAgentmoduler() {
-    const visningBro = el("visningBro");
-    AGENTER.forEach((a, i) => {
-      const div = document.createElement("div");
-      div.className = "agent";
-      div.id = "agent-" + a.id;
-      div.dataset.status = harIngenSignal(a) ? "ukjent" : "idle";
-      div.tabIndex = 0;
-      div.setAttribute("role", "button");
-      div.setAttribute("aria-haspopup", "true");
-      // Faseforskyvning så statuslysene puster i utakt med hverandre, ikke synkront.
-      div.style.animationDelay = (-(i * 0.37)).toFixed(2) + "s";
-      div.innerHTML =
-        '<div class="topp"><span class="lys" aria-hidden="true"></span><span class="navn">' + a.navn + '</span></div>' +
-        '<div class="jobb">' + escapeHtml(a.jobb) + '</div>' +
-        '<div class="bunn"><span class="ikon-status">' + ikonForStatus(harIngenSignal(a) ? "ukjent" : "idle") + '</span><span class="sist">–</span></div>';
-      div.addEventListener("click", () => visDetalj(a));
-      div.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); visDetalj(a); } });
-      div.addEventListener("mouseenter", () => loftAgent(div, true));
-      div.addEventListener("mouseleave", () => loftAgent(div, false));
-      div.addEventListener("focus", () => loftAgent(div, true));
-      div.addEventListener("blur", () => loftAgent(div, false));
-      visningBro.appendChild(div);
-    });
-    plasserAgenter();
-    // Et vanlig window "resize" holder ikke alene: webfontene (Press Start 2P/VT323/IBM
-    // Plex Mono) svapper inn ETTER første layout og endrer da høyden på topbar/søk/logg,
-    // som igjen endrer hvor mye plass #bridge faktisk får i grid-raden "1fr" - uten å
-    // trigge noen resize-hendelse. Første forsøk plasserte derfor hele agent-ringen for
-    // høyt oppe, klemt sammen i toppen av broen. ResizeObserver fanger ALLE endringer i
-    // #bridge sin faktiske størrelse, uansett årsak.
-    new ResizeObserver(plasserAgenter).observe(el("bridge"));
+  function tegnHover(romId) {
+    const rekt = layout.romRekt.get(romId); if (!rekt) return;
+    ctx.strokeStyle = PALETT.cyan; ctx.lineWidth = 1;
+    ctx.strokeRect(rekt.x - 1.5, rekt.y - 1.5, rekt.w + 3, rekt.h + 3);
   }
 
-  // Status skal ALDRI vises med farge alene - hver status har også et eget ikon/tekst.
+  // ---------------- Hit-testing (skjerm-px -> virtuelle px -> rom/agent) ----------------
+  let hoverRom = null;
+
+  function finnRomVedPunkt(vx, vy) {
+    for (const rom of ROOMS) { const r = layout.romRekt.get(rom.id); if (r && vx >= r.x && vx <= r.x + r.w && vy >= r.y && vy <= r.y + r.h) return rom.id; }
+    return null;
+  }
+  function finnAgentVedPunkt(vx, vy) {
+    return AGENTER.find((a) => Math.abs(a.px - vx) <= 5 && vy >= a.py - 14 && vy <= a.py);
+  }
+
+  canvas.addEventListener("mousemove", (e) => {
+    const { x, y } = skjermTilVirtuell(e.clientX, e.clientY);
+    const agent = finnAgentVedPunkt(x, y);
+    const romId = finnRomVedPunkt(x, y);
+    hoverRom = romId;
+    const tip = el("hudTooltip");
+    if (agent) {
+      const s = state.agentStatus.get(agent.id);
+      tip.innerHTML = '<span class="rom">' + agent.navn + '</span> · ' + ikonForStatus(s.status) + (s.grunn ? '<br><span class="feil">' + escapeHtml(s.grunn) + "</span>" : "");
+      tip.style.display = "block";
+    } else if (romId) {
+      const rom = ROOMS.find((r) => r.id === romId);
+      const n = AGENTER.filter((a) => a.rom === romId).length;
+      tip.innerHTML = '<span class="rom">' + rom.navn + "</span> · " + n + " agent(er) · " + (state.romFeil.get(romId) ? '<span class="feil">FEIL</span>' : Math.round((state.romHeat.get(romId) ?? 0) * 100) + "% aktivitet");
+      tip.style.display = "block";
+    } else tip.style.display = "none";
+    if (tip.style.display === "block") { tip.style.left = e.clientX - canvas.getBoundingClientRect().left + 14 + "px"; tip.style.top = e.clientY - canvas.getBoundingClientRect().top + 10 + "px"; }
+  });
+  canvas.addEventListener("mouseleave", () => { hoverRom = null; el("hudTooltip").style.display = "none"; });
+  canvas.addEventListener("click", (e) => {
+    const { x, y } = skjermTilVirtuell(e.clientX, e.clientY);
+    const agent = finnAgentVedPunkt(x, y);
+    if (agent) return visAgentDetalj(agent);
+    const romId = finnRomVedPunkt(x, y);
+    if (romId) return visRomDetalj(ROOMS.find((r) => r.id === romId));
+  });
+
   function ikonForStatus(status) {
     if (status === "ok" || status === "aktiv") return "● OK";
     if (status === "feil") return "▲ FEIL";
@@ -742,277 +775,98 @@
     return "○ IDLE";
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // ---------------- Detaljpanel ----------------
+  function visRomDetalj(rom) {
+    const agenter = AGENTER.filter((a) => a.rom === rom.id);
+    el("detailInnhold").innerHTML =
+      "<h2>" + escapeHtml(rom.navn) + "</h2>" +
+      '<div class="felt"><label>Tilstand</label><span>' + (state.romFeil.get(rom.id) ? "▲ FEIL" : Math.round((state.romHeat.get(rom.id) ?? 0) * 100) + "% aktivitet") + "</span></div>" +
+      '<div class="felt"><label>Agenter her</label><div class="agentliste-i-rom">' +
+      agenter.map((a) => '<div class="agentrad" data-agent="' + a.id + '"><span>' + escapeHtml(a.navn) + "</span><span>" + ikonForStatus(state.agentStatus.get(a.id).status) + "</span></div>").join("") +
+      "</div></div>" +
+      '<div class="felt"><a class="lenke" href="../index.html" target="_blank" rel="noopener">Se tavlen →</a></div>';
+    document.querySelectorAll("#detailInnhold [data-agent]").forEach((elm) => elm.addEventListener("click", () => visAgentDetalj(AGENTER.find((a) => a.id === elm.dataset.agent))));
+    apneDetalj();
   }
-
-  // ============================================================
-  // GULVKART - andre visning av de SAMME 13 agentene (samme AGENTER-liste, samme
-  // state.agentStatus), der agentene går rundt i hvert sitt rom i stedet for å stå
-  // som kort i en ring. Rommene her er ikke ment å pixel-matche fabrikk/index.html -
-  // det er en ny, selvstendig visning i samme CRT-cyberpunk-språk - men selve
-  // teknikken (SVG-sti + getPointAtLength() drevet av rAF-løkken i frame()) er
-  // hentet direkte derfra, siden den allerede er utprøvd og fungerer pålitelig.
-  //
-  // Sonene grupperer agentene omtrent slik fabrikk gjorde det (flere agenter kan
-  // dele ett rom/en sone, med hver sin lille patruljerute inni). Stasjonære agenter
-  // (Claude, Arkivaren - de har ingen "rute" i fabrikk heller) får bare et fast,
-  // pulserende punkt midt i rommet sitt i stedet for en bane.
-  // ============================================================
-  const SVG_NS = "http://www.w3.org/2000/svg";
-  // Samme kart-oppsett (soneplassering/-størrelse) som fabrikk/index.html sine "glo"-
-  // rektangler (se der, rundt linje 495-775) - gjenbrukt tall for tall, kun omstylet til
-  // CRT-cyberpunk i stedet for 80-talls pixel-art. Sonen "OBSERVASJONSDEKKET" er utelatt
-  // her, siden den ikke representerer noen agent. Multi-agent-soner (FUNCTIONS, TAVLA) får
-  // et eksplisitt "rect" per agent, hentet fra de samme sonenes indre "benk"-oppsett i
-  // fabrikk, i stedet for å dele sonen opp likt/mekanisk.
-  const ROM_SONER = [
-    { navn: "RECMAN", x: 34, y: 188, w: 204, h: 266, agenter: [{ id: "uthenteren" }] },
-    { navn: "CLOUDFLARE FUNCTIONS", x: 258, y: 68, w: 292, h: 516, agenter: [
-        { id: "oppslagsvakten", rect: [280, 112, 122, 52] },
-        { id: "listeforeren", rect: [280, 168, 122, 52] },
-        { id: "bryterbetjenten", rect: [280, 224, 122, 52] },
-        { id: "lagerarbeideren", rect: [280, 300, 244, 110] }
-      ] },
-    { navn: "ADMIN", x: 698, y: 68, w: 224, h: 166, agenter: [{ id: "operatoren" }] },
-    { navn: "EKSTERNE KILDER", x: 34, y: 462, w: 204, h: 156, agenter: [{ id: "budbringeren" }] },
-    { navn: "TEAMSKANAL", x: 698, y: 416, w: 224, h: 168, agenter: [{ id: "postbudet" }] },
-    { navn: "TAVLA", x: 932, y: 68, w: 236, h: 516, agenter: [
-        { id: "skjermpasseren", rect: [962, 116, 176, 104] },
-        { id: "gjesteverten", rect: [962, 470, 176, 80] }
-      ] },
-    { navn: "SLUSEN", x: 566, y: 218, w: 122, h: 214, agenter: [{ id: "vakten" }] },
-    { navn: "KONTROLLROMMET", x: 566, y: 424, w: 122, h: 156, agenter: [{ id: "claude", stasjonaer: true }] },
-    { navn: "OBSIDIAN-HVELVET", x: 566, y: 588, w: 122, h: 112, agenter: [{ id: "arkivaren", stasjonaer: true }] }
-  ];
-  const romAktorer = []; // {id, path, lengde, pos, stasjonaer}
-
-  function svgEl(navn, attrs) {
-    const e = document.createElementNS(SVG_NS, navn);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    return e;
+  function visAgentDetalj(a) {
+    const s = state.agentStatus.get(a.id);
+    el("detailInnhold").innerHTML =
+      "<h2>" + escapeHtml(a.navn) + "</h2>" +
+      '<div class="felt"><label>Status</label><span>' + ikonForStatus(s.status) + "</span></div>" +
+      '<div class="felt"><label>Oppgave</label><span>' + escapeHtml(a.jobb) + "</span></div>" +
+      '<div class="felt"><label>Sist observert</label><span>' + (s.sist ? new Date(s.sist).toLocaleString("no-NO") + " (" + sidenTekst(s.sist) + ")" : "Ingen data ennå") + "</span></div>" +
+      (s.grunn ? '<div class="felt"><label>Feilårsak</label><span>' + escapeHtml(s.grunn) + "</span></div>" : "") +
+      '<div class="felt"><a class="lenke" href="../index.html" target="_blank" rel="noopener">Se tavlen →</a></div>';
+    apneDetalj();
   }
+  function apneDetalj() { el("detail").classList.add("vis"); el("detail").setAttribute("aria-hidden", "false"); }
+  function lukkDetalj() { el("detail").classList.remove("vis"); el("detail").setAttribute("aria-hidden", "true"); }
+  el("detailLukk").addEventListener("click", lukkDetalj);
 
-  // Enkel rektangulær patruljesti innenfor en gitt boks - samme "gå langs kanten av
-  // rommet"-idé som fabrikkens roboter, bare uten den isometriske vinkelen.
-  function patruljeSti(x, y, w, h, margin) {
-    const x0 = x + margin, y0 = y + margin, x1 = x + w - margin, y1 = y + h - margin;
-    return "M " + x0 + " " + y0 + " L " + x1 + " " + y0 + " L " + x1 + " " + y1 + " L " + x0 + " " + y1 + " Z";
+  // ---------------- Forenklet listeoppsett (<1280px) ----------------
+  function byggListeFallback() {
+    const wrap = el("listeFallback");
+    wrap.innerHTML = ROOMS.map((rom) => {
+      const agenter = AGENTER.filter((a) => a.rom === rom.id);
+      return '<div class="liste-rom"><h3>' + escapeHtml(rom.navn) + "</h3>" +
+        agenter.map((a) => '<div class="agentrad"><span><span class="ikon">' + (state.agentStatus.get(a.id).status === "feil" ? "▲" : "●") + "</span>" + escapeHtml(a.navn) + "</span><span>" + ikonForStatus(state.agentStatus.get(a.id).status) + "</span></div>").join("") +
+        "</div>";
+    }).join("");
   }
+  // RETTET: sto først som "bygg bare på nytt hvis den alt har innhold" - siden lista
+  // starter tom, ble den da ALDRI bygget i det hele tatt (heller ikke ved første kall).
+  // Bygges nå ubetinget - billig DOM (maks 8 rom x noen agentrader), kalles uansett
+  // sjelden (kun når en agentstatus faktisk endrer seg).
+  function oppdaterListeFallback() { byggListeFallback(); }
 
-  function byggRomvisning() {
-    const svg = el("visningRom");
-    const agentMap = new Map(AGENTER.map((a) => [a.id, a]));
-
-    ROM_SONER.forEach((sone) => {
-      const g = svgEl("g", { class: "sone" });
-      // Selve panelfyllet legges 8px innenfor sonens yttergrense (samme innrykk som
-      // fabrikkens "glo"→indre-panel-forhold) - to naboer sin yttergrense kan i fabrikk
-      // ligge inntil/overlappe litt (kun en usynlig glødekant der), men et FYLT panel her
-      // ville da synlig overlappet naboen (bekreftet: SLUSEN/KONTROLLROMMET-grensen).
-      g.appendChild(svgEl("rect", { class: "sone-panel", x: sone.x + 8, y: sone.y + 8, width: sone.w - 16, height: sone.h - 16, rx: 3 }));
-      // HUD-hjørnemarkører, avledet direkte fra sonens egne mål - samme idé som
-      // .scope sine hjørner i telemetri-panelene, bare tegnet som SVG-linjer her.
-      const arm = Math.min(16, sone.w / 6, sone.h / 6);
-      [[sone.x, sone.y, arm, 0, 0, arm], [sone.x + sone.w, sone.y, -arm, 0, 0, arm],
-       [sone.x, sone.y + sone.h, arm, 0, 0, -arm], [sone.x + sone.w, sone.y + sone.h, -arm, 0, 0, -arm]]
-        .forEach(([cx, cy, dx1, dy1, dx2, dy2]) => {
-          g.appendChild(svgEl("path", { class: "sone-hjorne",
-            d: "M " + (cx + dx1) + " " + (cy + dy1) + " L " + cx + " " + cy + " L " + (cx + dx2) + " " + (cy + dy2) }));
-        });
-      g.appendChild(svgEl("text", { class: "sone-navn", x: sone.x + 10, y: sone.y + 22 }));
-      g.lastChild.textContent = sone.navn;
-      svg.appendChild(g);
-
-      sone.agenter.forEach((agentSpec) => {
-        const agentId = agentSpec.id;
-        const a = agentMap.get(agentId);
-        if (!a) return;
-        // Enkelt-agent-soner bruker sonens eget indre areal (innenfor sonebar-headeren);
-        // multi-agent-soner (Functions/Tavla) bruker et eksplisitt rect satt over.
-        const [cellX, cellY, cellW, cellH] = agentSpec.rect || [sone.x + 10, sone.y + 34, sone.w - 20, sone.h - 44];
-
-        if (agentSpec.stasjonaer) {
-          const cx = cellX + cellW / 2, cy = cellY + cellH / 2;
-          const bg = svgEl("g", { class: "blip", id: "blip-" + agentId, "data-status": state.agentStatus.get(agentId).status, transform: "translate(" + cx + "," + cy + ")" });
-          bg.appendChild(svgEl("circle", { class: "glo" }));
-          bg.appendChild(svgEl("circle", { class: "kropp" }));
-          svg.appendChild(bg);
-          const navnEl = svgEl("text", { class: "agent-navn-liten", x: cx, y: cy + 26, "text-anchor": "middle" });
-          navnEl.textContent = a.navn;
-          svg.appendChild(navnEl);
-          romAktorer.push({ id: agentId, stasjonaer: true });
-          return;
-        }
-
-        const margin = Math.min(14, cellW * 0.15, cellH * 0.3);
-        const d = patruljeSti(cellX, cellY, cellW, cellH, margin);
-        const pathEl = svgEl("path", { class: "bane", d });
-        svg.appendChild(pathEl);
-
-        const navnEl = svgEl("text", { class: "agent-navn-liten", x: cellX, y: cellY - 6 });
-        navnEl.textContent = a.navn;
-        svg.appendChild(navnEl);
-
-        const bg = svgEl("g", { class: "blip", id: "blip-" + agentId, "data-status": state.agentStatus.get(agentId).status });
-        bg.appendChild(svgEl("circle", { class: "glo" }));
-        bg.appendChild(svgEl("circle", { class: "kropp" }));
-        svg.appendChild(bg);
-
-        const lengde = pathEl.getTotalLength();
-        romAktorer.push({ id: agentId, path: pathEl, lengde, pos: Math.random() * lengde });
-      });
-    });
-  }
-
-  // Kalles fra frame() (samme rAF-løkke som partiklene/reaktoren) - beveger hver
-  // agent langs sin egen sti, med fart avledet av AKKURAT den samme status-dataen
-  // som resten av siden (state.agentStatus/state.agentHeat) - INGEN egen kø/fart-
-  // modell er funnet opp for gulvkartet, det er bare en annen VISNING av samme tall.
-  const ROM_FART_IDLE = 0.006; // px/ms - sakte, ambient "i live"-bevegelse
-  const ROM_FART_AKTIV = 0.09; // tydelig raskere når noe faktisk skjer akkurat nå
-
-  function oppdaterRomAktorer(dt) {
-    romAktorer.forEach((r) => {
-      if (r.stasjonaer) return;
-      const status = state.agentStatus.get(r.id).status;
-      const heat = state.agentHeat.get(r.id) ?? 0;
-      const fart = ROM_FART_IDLE + (ROM_FART_AKTIV - ROM_FART_IDLE) * Math.min(1, heat + (status === "ok" ? 0.3 : 0));
-      r.pos = (r.pos + fart * dt) % r.lengde;
-      const pt = r.path.getPointAtLength(r.pos);
-      const blip = document.getElementById("blip-" + r.id);
-      if (blip) blip.setAttribute("transform", "translate(" + pt.x.toFixed(1) + "," + pt.y.toFixed(1) + ")");
-    });
-  }
-
-  // ---------------- Visningsbytte (bro/gulvkart) + eget vindu ----------------
-  function lesVisningFraUrl() {
-    const q = new URLSearchParams(location.search).get("visning");
-    if (q === "bro" || q === "rom") return q;
-    try { const lagret = localStorage.getItem("kommando-visning"); if (lagret === "bro" || lagret === "rom") return lagret; } catch {}
-    return "bro";
-  }
-
-  function settVisning(visning) {
-    // Bruker style.display direkte (ikke .hidden) - .hidden er kun EN attributt blant
-    // flere som til slutt avgjør beregnet display, og ble observert å ikke alene være
-    // nok til å skjule #visningRom pålitelig (gulvkartet ble stående synlig oppå/bak
-    // agentkortene). Inline style vinner alltid over enhver annen CSS-regel, uansett.
-    el("visningBro").style.display = visning === "bro" ? "" : "none";
-    el("visningRom").style.display = visning === "rom" ? "" : "none";
-    document.querySelectorAll(".visning-knapp").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.visning === visning)));
-    try { localStorage.setItem("kommando-visning", visning); } catch {}
-    const url = new URL(location.href);
-    url.searchParams.set("visning", visning);
-    history.replaceState(null, "", url);
-  }
-
-  function koblVisningsbytte() {
-    document.querySelectorAll(".visning-knapp").forEach((b) => {
-      b.addEventListener("click", () => settVisning(b.dataset.visning));
-    });
-    // Åpner NÅVÆRENDE visning i et helt eget vindu (egen fane/skjerm) - lar Kristian
-    // ha f.eks. gulvkartet på én skjerm og agentkortene på en annen samtidig, siden
-    // begge vinduene bare er denne samme siden med ?visning= satt til hver sin verdi.
-    el("popUtKnapp").addEventListener("click", () => {
-      const url = new URL(location.href);
-      url.searchParams.set("visning", document.querySelector('.visning-knapp[aria-pressed="true"]').dataset.visning);
-      window.open(url.toString(), "_blank", "width=1400,height=900,noopener");
-    });
-    settVisning(lesVisningFraUrl());
+  // ---------------- Topptall + status ----------------
+  function oppdaterTopptall() {
+    let ok = 0, idle = 0, feil = 0, ukjent = 0;
+    for (const { status } of state.agentStatus.values()) {
+      if (status === "ok" || status === "aktiv") ok++; else if (status === "feil") feil++; else if (status === "ukjent") ukjent++; else idle++;
+    }
+    el("tallAlle").textContent = AGENTER.length; el("tallOk").textContent = ok; el("tallIdle").textContent = idle;
+    el("tallFeil").textContent = feil; el("tallUkjent").textContent = ukjent;
+    const altEl = el("alt-status");
+    if (feil > 0) { altEl.classList.add("feil"); altEl.textContent = feil === 1 ? "1 SYSTEM KREVER OPPMERKSOMHET" : feil + " SYSTEMER KREVER OPPMERKSOMHET"; }
+    else { altEl.classList.remove("feil"); altEl.textContent = "ALL SYSTEMS NOMINAL"; }
+    oppdaterListeFallback();
   }
 
   function settAgentStatus(id, status, sist, grunn) {
     const gammel = state.agentStatus.get(id);
     state.agentStatus.set(id, { status, sist: sist ?? gammel.sist, grunn: grunn ?? null });
-    const modEl = el("agent-" + id);
-    if (modEl) {
-      modEl.dataset.status = status;
-      modEl.querySelector(".ikon-status").textContent = ikonForStatus(status);
-      const sistEl = modEl.querySelector(".sist");
-      const t = sist ?? gammel.sist;
-      sistEl.textContent = t ? sidenTekst(t) : "–";
-    }
-    // Gulvkart-blippen (om den finnes for denne agenten) speiler samme status - se
-    // byggRomvisning(). Egen "aktiv"-farge (cyan) markerer en fersk puls, "ok" (grønn)
-    // er hviletilstanden etterpå - akkurat som statuslyset på selve agentkortet.
-    const blipEl = document.getElementById("blip-" + id);
-    if (blipEl) blipEl.dataset.status = status;
+    const a = AGENTER.find((x) => x.id === id);
+    if (a) { const feilNa = status === "feil"; state.romFeil.set(a.rom, AGENTER.some((x) => x.rom === a.rom && state.agentStatus.get(x.id).status === "feil") || feilNa); }
     oppdaterTopptall();
     if (status === "feil" && gammel.status !== "feil") pipp(220);
   }
 
   function pulsAgent(id) {
     state.agentHeat.set(id, 1);
+    const a = AGENTER.find((x) => x.id === id);
+    if (a) { state.romHeat.set(a.rom, Math.min(1, (state.romHeat.get(a.rom) ?? 0) + 0.6)); spawnPartikkel(a.rom); }
     const nyStatus = state.agentStatus.get(id).status === "feil" ? "feil" : "aktiv";
     settAgentStatus(id, nyStatus, Date.now());
-    // Faller tilbake til "idle"/"ok" igjen etter en liten stund, se dempHeat().
-    clearTimeout(pulsAgent._t?.[id]);
-    pulsAgent._t = pulsAgent._t || {};
-    pulsAgent._t[id] = setTimeout(() => {
-      if (state.agentStatus.get(id).status !== "feil") settAgentStatus(id, "ok", state.agentStatus.get(id).sist);
-    }, 2500);
-  }
-
-  function sidenTekst(t) {
-    const sek = Math.max(0, Math.round((Date.now() - t) / 1000));
-    if (sek < 60) return sek + "s siden";
-    if (sek < 3600) return Math.round(sek / 60) + "m siden";
-    return Math.round(sek / 3600) + "t siden";
-  }
-
-  function oppdaterTopptall() {
-    let ok = 0, idle = 0, feil = 0, ukjent = 0;
-    for (const { status } of state.agentStatus.values()) {
-      if (status === "ok" || status === "aktiv") ok++;
-      else if (status === "feil") feil++;
-      else if (status === "ukjent") ukjent++;
-      else idle++;
-    }
-    el("tallAlle").textContent = AGENTER.length;
-    el("tallOk").textContent = ok;
-    el("tallIdle").textContent = idle;
-    el("tallFeil").textContent = feil;
-    el("tallUkjent").textContent = ukjent;
-    el("belastning").textContent = Math.round((ok / AGENTER.length) * 100) + "%";
-
-    const altEl = el("alt-status");
-    if (feil > 0) {
-      altEl.classList.add("feil");
-      altEl.textContent = feil === 1 ? "1 SYSTEM KREVER OPPMERKSOMHET" : feil + " SYSTEMER KREVER OPPMERKSOMHET";
-    } else {
-      altEl.classList.remove("feil");
-      altEl.textContent = "ALL SYSTEMS NOMINAL";
-    }
+    clearTimeout(pulsAgent._t?.[id]); pulsAgent._t = pulsAgent._t || {};
+    pulsAgent._t[id] = setTimeout(() => { if (state.agentStatus.get(id).status !== "feil") settAgentStatus(id, "ok", state.agentStatus.get(id).sist); }, 2500);
   }
 
   // ---------------- Hendelseslogg ----------------
   function leggILogg(tekst, kilde, type) {
     const logEl = el("eventlog");
-    const rad = document.createElement("div");
-    rad.className = "rad" + (type ? " " + type : "");
+    const rad = document.createElement("div"); rad.className = "rad" + (type ? " " + type : "");
     const tid = new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     rad.innerHTML = '<span class="tid">' + tid + '</span><span class="kilde">' + escapeHtml(kilde) + '</span><span class="tekst"></span>';
     logEl.insertBefore(rad, logEl.firstChild);
     while (logEl.children.length > 200) logEl.removeChild(logEl.lastChild);
-
-    // Skriver ut teksten tegn for tegn med en blinkende markør, som ønsket i spesifikasjonen.
     const tekstEl = rad.querySelector(".tekst");
     if (redusertBevegelse) { tekstEl.textContent = tekst; return; }
-    let i = 0;
-    const markor = document.createElement("span");
-    markor.className = "markor";
-    markor.textContent = " ";
+    let i = 0; const markor = document.createElement("span"); markor.className = "markor"; markor.textContent = " ";
     tekstEl.appendChild(markor);
-    const skriv = setInterval(() => {
-      i++;
-      tekstEl.textContent = tekst.slice(0, i);
-      tekstEl.appendChild(markor);
-      if (i >= tekst.length) clearInterval(skriv);
-    }, 12);
+    const skriv = setInterval(() => { i++; tekstEl.textContent = tekst.slice(0, i); tekstEl.appendChild(markor); if (i >= tekst.length) clearInterval(skriv); }, 12);
   }
 
-  state.hendelseHistorikk = [];
   function registrerHendelse() {
     const naa = Date.now();
     state.hendelseHistorikk.push(naa);
@@ -1020,390 +874,150 @@
     el("hendelserTelling").textContent = state.hendelseHistorikk.length;
     tegnSparkline("graf-hendelser", bucketTell(state.hendelseHistorikk, 15));
   }
-
   function bucketTell(tidsstempler, antallBoetter) {
-    const naa = Date.now();
-    const vindu = 15 * 60 * 1000;
-    const boetter = new Array(antallBoetter).fill(0);
-    tidsstempler.forEach((t) => {
-      const idx = Math.min(antallBoetter - 1, Math.floor(((naa - t) / vindu) * antallBoetter));
-      boetter[antallBoetter - 1 - idx]++;
-    });
+    const naa = Date.now(), vindu = 15 * 60 * 1000, boetter = new Array(antallBoetter).fill(0);
+    tidsstempler.forEach((t) => { const idx = Math.min(antallBoetter - 1, Math.floor(((naa - t) / vindu) * antallBoetter)); boetter[antallBoetter - 1 - idx]++; });
     return boetter;
   }
-
   function tegnSparkline(svgId, verdier) {
-    const poly = el(svgId);
-    if (!poly || verdier.length === 0) return;
+    const poly = el(svgId); if (!poly || verdier.length === 0) return;
     const maks = Math.max(1, ...verdier);
-    const punkter = verdier.map((v, i) => (i / (verdier.length - 1 || 1)) * 100 + "," + (38 - (v / maks) * 34)).join(" ");
-    poly.setAttribute("points", punkter);
+    poly.setAttribute("points", verdier.map((v, i) => (i / (verdier.length - 1 || 1)) * 100 + "," + (38 - (v / maks) * 34)).join(" "));
   }
 
-  // ---------------- Polling: hendelser (15s) ----------------
-  async function hentJson(url) {
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
-  }
+  // ---------------- Polling (samme kadens og endepunkter som før) ----------------
+  async function hentJson(url) { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
 
-  // Generisk innholds-diffing, samme prinsipp (og samme kilder!) som fabrikkens KILDER-
-  // liste (se fabrikk/index.html linje ~952-1030): hver oppføring vet selv hvordan den
-  // regner ut en "signatur" av svaret sitt, og logger/pulser bare når signaturen faktisk
-  // endrer seg fra én runde til neste - ALDRI ved første henting (da har vi ikke noe å
-  // sammenligne mot ennå, og ville ellers logget en falsk "hendelse" for alt som allerede
-  // lå der fra før siden ble åpnet).
-  //
-  // "operatoren" er lagt til som ekstra agent på alle de admin-redigerbare kildene, siden
-  // Operatøren i fabrikk ("sone-admin") nettopp er unionen av dem - lyser når NOE skjer i
-  // /admin, uansett hvilken av de fem det gjelder.
   const INNHOLDSKILDER = [
-    {
-      id: "endringslogg", url: "/api/endringslogg", agenter: ["uthenteren"], type: "ok",
+    { id: "endringslogg", url: "/api/endringslogg", agenter: ["uthenteren"], type: "ok",
       signatur: (d) => (d.hendelser?.length ?? 0) + ":" + (d.hendelser?.[0]?.tidspunkt ?? 0),
-      tekst: (d) => {
-        const h = d.hendelser?.[0];
-        if (!h) return "Endring i oppdragene fra Recman";
-        const hvem = [h.tittel, h.kunde].filter(Boolean).join(" - ") || "et oppdrag";
-        return h.type === "nytt" ? "Nytt oppdrag: " + hvem : h.type === "borte" ? "Oppdrag borte fra tavlen: " + hvem : "Statusendring: " + hvem;
-      }
-    },
-    {
-      id: "avviste", url: "/api/avviste", agenter: ["vakten"], type: "feil",
-      signatur: (d) => d.antall ?? 0,
-      tekst: (d) => "Avvist skriveforsøk registrert (" + (d.antall ?? 0) + " totalt)",
-      ekstra: (d) => { el("avvisteAntall").textContent = d.antall ?? 0; el("avvisteSist").textContent = d.sist ? "Sist: " + sidenTekst(d.sist) : "Sist: aldri"; }
-    },
-    {
-      id: "teamskanal", url: "/api/teamskanal", agenter: ["postbudet"], type: "ok",
-      signatur: (d) => (d.meldinger?.length ?? 0) + ":" + (d.meldinger?.[0]?.tidspunkt ?? 0),
-      tekst: (d) => "Ny melding fra " + (d.meldinger?.[0]?.fra ?? "Teamskanal")
-    },
-    {
-      id: "notat", url: "/api/notat", agenter: ["oppslagsvakten", "operatoren"], type: "ok",
-      signatur: (d) => String(d.tekst ?? ""),
-      tekst: (d) => (d.tekst ? "Ny post-it-lapp lagt inn fra admin" : "Post-it-lappen ble tømt")
-    },
-    {
-      id: "bilde", url: "/api/bilde?status", agenter: ["oppslagsvakten", "operatoren"], type: "ok",
-      signatur: (d) => String(d.harBilde) + ":" + String(d.lagtUt ?? ""),
-      tekst: (d) => (d.harBilde ? "Nytt bilde-oppslag lagt ut på tavlen" : "Bilde-oppslaget ble fjernet")
-    },
-    {
-      id: "bursdager", url: "/api/bursdager", agenter: ["listeforeren", "operatoren"], type: "ok",
-      signatur: (d) => JSON.stringify(d.bursdager ?? []),
-      tekst: () => "Bursdagslisten ble endret fra admin"
-    },
-    {
-      id: "skjulte", url: "/api/skjulte", agenter: ["listeforeren", "operatoren"], type: "ok",
-      signatur: (d) => JSON.stringify(d.skjulte ?? []),
-      tekst: () => "Et oppdrag ble parkert eller hentet tilbake på tavlen"
-    },
-    {
-      id: "innstillinger", url: "/api/innstillinger", agenter: ["bryterbetjenten", "operatoren"], type: "ok",
-      signatur: (d) => JSON.stringify(d),
-      tekst: () => "En bryter ble endret i admin"
-    }
+      tekst: (d) => { const h = d.hendelser?.[0]; if (!h) return "Endring i oppdragene fra Recman"; const hvem = [h.tittel, h.kunde].filter(Boolean).join(" - ") || "et oppdrag"; return h.type === "nytt" ? "Nytt oppdrag: " + hvem : h.type === "borte" ? "Oppdrag borte fra tavlen: " + hvem : "Statusendring: " + hvem; } },
+    { id: "avviste", url: "/api/avviste", agenter: ["vakten"], type: "feil",
+      signatur: (d) => d.antall ?? 0, tekst: (d) => "Avvist skriveforsøk registrert (" + (d.antall ?? 0) + " totalt)",
+      ekstra: (d) => { el("avvisteAntall").textContent = d.antall ?? 0; el("avvisteSist").textContent = d.sist ? "Sist: " + sidenTekst(d.sist) : "Sist: aldri"; } },
+    { id: "teamskanal", url: "/api/teamskanal", agenter: ["postbudet"], type: "ok",
+      signatur: (d) => (d.meldinger?.length ?? 0) + ":" + (d.meldinger?.[0]?.tidspunkt ?? 0), tekst: (d) => "Ny melding fra " + (d.meldinger?.[0]?.fra ?? "Teamskanal") },
+    { id: "notat", url: "/api/notat", agenter: ["oppslagsvakten", "operatoren"], type: "ok",
+      signatur: (d) => String(d.tekst ?? ""), tekst: (d) => (d.tekst ? "Ny post-it-lapp lagt inn fra admin" : "Post-it-lappen ble tømt") },
+    { id: "bilde", url: "/api/bilde?status", agenter: ["oppslagsvakten", "operatoren"], type: "ok",
+      signatur: (d) => String(d.harBilde) + ":" + String(d.lagtUt ?? ""), tekst: (d) => (d.harBilde ? "Nytt bilde-oppslag lagt ut på tavlen" : "Bilde-oppslaget ble fjernet") },
+    { id: "bursdager", url: "/api/bursdager", agenter: ["listeforeren", "operatoren"], type: "ok",
+      signatur: (d) => JSON.stringify(d.bursdager ?? []), tekst: () => "Bursdagslisten ble endret fra admin" },
+    { id: "skjulte", url: "/api/skjulte", agenter: ["listeforeren", "operatoren"], type: "ok",
+      signatur: (d) => JSON.stringify(d.skjulte ?? []), tekst: () => "Et oppdrag ble parkert eller hentet tilbake på tavlen" },
+    { id: "innstillinger", url: "/api/innstillinger", agenter: ["bryterbetjenten", "operatoren"], type: "ok",
+      signatur: (d) => JSON.stringify(d), tekst: () => "En bryter ble endret i admin" }
   ];
-
   const sisteSignatur = new Map();
-
   async function pollInnholdskilde(kilde) {
     try {
       const d = await hentJson(kilde.url);
-      const signatur = kilde.signatur(d);
-      const forrige = sisteSignatur.get(kilde.id);
+      const signatur = kilde.signatur(d); const forrige = sisteSignatur.get(kilde.id);
       kilde.ekstra?.(d);
-      if (forrige !== undefined && signatur !== forrige) {
-        leggILogg(kilde.tekst(d), kilde.agenter[0].toUpperCase(), kilde.type);
-        kilde.agenter.forEach(pulsAgent);
-        registrerHendelse();
-        varmOppReaktor();
-      }
+      if (forrige !== undefined && signatur !== forrige) { leggILogg(kilde.tekst(d), kilde.agenter[0].toUpperCase(), kilde.type); kilde.agenter.forEach(pulsAgent); registrerHendelse(); }
       sisteSignatur.set(kilde.id, signatur);
     } catch (err) { console.warn("Fikk ikke hentet " + kilde.url + ":", err); }
   }
-
-  // Skjermregisteret (/api/skjermer) driver TRE forskjellige agent-signaler fra ÉN og
-  // samme henting - se kommentaren ved AGENTER lenger opp for hva hver av dem betyr:
-  //   1. strukturell endring (skjerm lagt til/fjernet/omdøpt) -> Bryterbetjenten + Operatøren
-  //   2. minst én skjerm har heartbeatet siden forrige runde  -> Skjermpasseren
-  //   3. hvilke skjermer som står i gjestevisning har endret seg -> Gjesteverten
-  let sisteSkjermerStruktur = null;
-  let sisteMaksSistSett = null;
-  let sisteGjestevisningSett = null;
-
+  let sisteSkjermerStruktur = null, sisteMaksSistSett = null, sisteGjestevisningSett = null;
   async function pollSkjermer() {
     try {
-      const d = await hentJson("/api/skjermer");
-      const skjermer = d.skjermer ?? [];
-
+      const d = await hentJson("/api/skjermer"); const skjermer = d.skjermer ?? [];
       const struktur = JSON.stringify(skjermer.map((s) => [s.id, s.navn, s.gjestevisning]).sort());
-      if (sisteSkjermerStruktur !== null && struktur !== sisteSkjermerStruktur) {
-        leggILogg("Skjermregisteret ble endret (" + skjermer.length + " skjermer)", "BRYTERBETJENTEN", "ok");
-        pulsAgent("bryterbetjenten");
-        pulsAgent("operatoren");
-        registrerHendelse();
-        varmOppReaktor();
-      }
+      if (sisteSkjermerStruktur !== null && struktur !== sisteSkjermerStruktur) { leggILogg("Skjermregisteret ble endret (" + skjermer.length + " skjermer)", "BRYTERBETJENTEN", "ok"); pulsAgent("bryterbetjenten"); pulsAgent("operatoren"); registrerHendelse(); }
       sisteSkjermerStruktur = struktur;
-
       const maksSistSett = skjermer.reduce((m, s) => Math.max(m, s.sistSett ?? 0), 0);
-      if (sisteMaksSistSett !== null && maksSistSett > sisteMaksSistSett) {
-        pulsAgent("skjermpasseren");
-      }
+      if (sisteMaksSistSett !== null && maksSistSett > sisteMaksSistSett) pulsAgent("skjermpasseren");
       sisteMaksSistSett = maksSistSett;
-
       const gjestevisningSett = JSON.stringify(skjermer.filter((s) => s.gjestevisning).map((s) => s.id).sort());
-      if (sisteGjestevisningSett !== null && gjestevisningSett !== sisteGjestevisningSett) {
-        const antall = JSON.parse(gjestevisningSett).length;
-        leggILogg(antall > 0 ? "Gjestevisning slått på (" + antall + " skjerm(er))" : "Gjestevisning slått av igjen", "GJESTEVERTEN", "ok");
-        pulsAgent("gjesteverten");
-        registrerHendelse();
-        varmOppReaktor();
-      }
+      if (sisteGjestevisningSett !== null && gjestevisningSett !== sisteGjestevisningSett) { const antall = JSON.parse(gjestevisningSett).length; leggILogg(antall > 0 ? "Gjestevisning slått på (" + antall + " skjerm(er))" : "Gjestevisning slått av igjen", "GJESTEVERTEN", "ok"); pulsAgent("gjesteverten"); registrerHendelse(); }
       sisteGjestevisningSett = gjestevisningSett;
     } catch (err) { console.warn("Fikk ikke hentet skjermer:", err); }
   }
+  async function pollHendelser() { await Promise.all([...INNHOLDSKILDER.map(pollInnholdskilde), pollSkjermer()]); }
 
-  async function pollHendelser() {
-    await Promise.all([...INNHOLDSKILDER.map(pollInnholdskilde), pollSkjermer()]);
-  }
-
-  // ---------------- Polling: helse (60s) ----------------
   async function pollHelse() {
     try {
-      const d = await hentJson("/api/agentstatus");
-      const oppgaver = d.oppgaver ?? {};
+      const d = await hentJson("/api/agentstatus"); const oppgaver = d.oppgaver ?? {};
       AGENTER.filter((a) => a.agentstatus).forEach((a) => {
         const o = oppgaver[a.agentstatus];
-        if (!o) { settAgentStatus(a.id, "ukjent", null); return; }
+        if (!o) return settAgentStatus(a.id, "ukjent", null);
         const varFeil = state.agentStatus.get(a.id).status === "feil";
         settAgentStatus(a.id, o.ok ? "ok" : "feil", o.sist, o.ok ? null : o.grunn);
         if (o.ok && varFeil) leggILogg(a.navn + " friskmeldt", a.navn, "ok");
       });
     } catch (err) { console.warn("Fikk ikke hentet agentstatus:", err); }
-
-    // Samme HEAD-sjekk-mønster som fabrikkens HELSESJEKKER - vi bryr oss kun om
-    // 200 vs. ikke-200 her, ikke selve svaret.
-    const agenterMedHelse = AGENTER.filter((a) => a.helse);
-    for (const a of agenterMedHelse) {
+    for (const a of AGENTER.filter((x) => x.helse)) {
       try {
         const svar = await Promise.all(a.helse.map((url) => fetch(url, { method: "HEAD", cache: "no-store" })));
         const feil = svar.some((r) => !r.ok);
         settAgentStatus(a.id, feil ? "feil" : (state.agentStatus.get(a.id).status === "feil" ? "ok" : state.agentStatus.get(a.id).status), Date.now());
-        if (!feil && state.agentHeat.get(a.id) === 0) {
-          // Ingen fabrikk-lignende "aktiv nå"-hendelse her (rene HEAD-sjekker sier bare at
-          // kilden svarer, ikke at det skjedde noe nytt) - lar status stå på "idle"/"ok"
-          // uten å tvinge frem en kunstig puls.
-        }
-      } catch (err) {
-        settAgentStatus(a.id, "feil", Date.now(), String(err.message ?? err));
-      }
+      } catch (err) { settAgentStatus(a.id, "feil", Date.now(), String(err.message ?? err)); }
     }
   }
 
-  // ---------------- Polling: kvforbruk (5 min) ----------------
   async function pollTungt() {
     try {
       const d = await hentJson("/api/kvforbruk");
-      if (!d.tilgjengelig) {
-        el("kvSkriv").textContent = "–";
-        el("kvLes").textContent = "–";
-        return;
-      }
+      if (!d.tilgjengelig) { el("kvSkriv").textContent = "–"; el("kvLes").textContent = "–"; return; }
       const forrigeSkriv = state.kvHistorikk.skriv.at(-1);
-      el("kvSkriv").textContent = d.skriv;
-      el("kvSkrivTak").textContent = "/ " + d.tak + " kvote";
-      el("kvLes").textContent = d.les;
-
-      state.kvHistorikk.skriv.push(d.skriv);
-      state.kvHistorikk.les.push(d.les);
-      state.kvHistorikk.skriv = state.kvHistorikk.skriv.slice(-30);
-      state.kvHistorikk.les = state.kvHistorikk.les.slice(-30);
-      tegnSparkline("graf-kvSkriv", state.kvHistorikk.skriv);
-      tegnSparkline("graf-kvLes", state.kvHistorikk.les);
-
-      if (forrigeSkriv !== undefined && d.skriv > forrigeSkriv) {
-        pulsAgent("lagerarbeideren");
-        leggILogg("KV-skriving registrert (" + d.skriv + " i dag)", "LAGERARBEIDEREN", "ok");
-        varmOppReaktor();
-      }
+      el("kvSkriv").textContent = d.skriv; el("kvSkrivTak").textContent = "/ " + d.tak + " kvote"; el("kvLes").textContent = d.les;
+      state.kvHistorikk.skriv.push(d.skriv); state.kvHistorikk.les.push(d.les);
+      state.kvHistorikk.skriv = state.kvHistorikk.skriv.slice(-30); state.kvHistorikk.les = state.kvHistorikk.les.slice(-30);
+      tegnSparkline("graf-kvSkriv", state.kvHistorikk.skriv); tegnSparkline("graf-kvLes", state.kvHistorikk.les);
+      if (forrigeSkriv !== undefined && d.skriv > forrigeSkriv) { pulsAgent("lagerarbeideren"); leggILogg("KV-skriving registrert (" + d.skriv + " i dag)", "LAGERARBEIDEREN", "ok"); }
     } catch (err) { console.warn("Fikk ikke hentet kvforbruk:", err); }
   }
 
-  // ---------------- Reaktor-/partikkelanimasjon (rAF, ikke setInterval) ----------------
-  const canvas = el("streams");
-  const ctx = canvas.getContext("2d");
-  let partikler = [];
+  // ---------------- Søk/filter, lyd, hjelp, zoom ----------------
+  el("sokFelt").addEventListener("input", (e) => { state.sok = e.target.value.trim().toLowerCase(); });
 
-  function varmOppReaktor() { state.heatGlobal = Math.min(1, state.heatGlobal + 0.35); }
-
-  function tilpassCanvas() {
-    const bridge = el("bridge");
-    canvas.width = bridge.clientWidth;
-    canvas.height = bridge.clientHeight;
-  }
-
-  function spawnPartikkel(fraX, fraY, farge) {
-    if (redusertBevegelse) return;
-    partikler.push({ fraX, fraY, tilX: canvas.width / 2, tilY: canvas.height / 2, t: 0, farge });
-  }
-
-  let sisteFrame = performance.now();
-  function frame(naa) {
-    const dt = Math.min(50, naa - sisteFrame);
-    sisteFrame = naa;
-
-    // Eksponentiell nedkjøling - gir en jevn "puster ut"-følelse uten en løpende
-    // setInterval-kjede, se HEAT_HALVERINGSTID_MS.
-    const henfall = Math.pow(0.5, dt / HEAT_HALVERINGSTID_MS);
-    state.heatGlobal *= henfall;
-    for (const [id, h] of state.agentHeat) state.agentHeat.set(id, h * henfall);
-
-    document.documentElement.style.setProperty("--core-intensity", state.heatGlobal.toFixed(3));
-    const kjerneLys = document.querySelector("#core .kjerne-lys");
-    if (kjerneLys) kjerneLys.style.filter = "brightness(" + (1 + state.heatGlobal * 0.8) + ")";
-
-    if (!redusertBevegelse) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (Math.random() < 0.15 + state.heatGlobal * 0.6) {
-        const kandidater = AGENTER.filter((a) => state.agentHeat.get(a.id) > 0.05);
-        if (kandidater.length) {
-          const a = kandidater[Math.floor(Math.random() * kandidater.length)];
-          const modEl = el("agent-" + a.id);
-          if (modEl) spawnPartikkel(parseFloat(modEl.dataset.x), parseFloat(modEl.dataset.y), state.agentStatus.get(a.id).status === "feil" ? "#ff2b3d" : "#00e5ff");
-        }
-      }
-      partikler.forEach((p) => (p.t += dt / 900));
-      partikler = partikler.filter((p) => p.t < 1);
-      partikler.forEach((p) => {
-        const x = p.fraX + (p.tilX - p.fraX) * p.t;
-        const y = p.fraY + (p.tilY - p.fraY) * p.t;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = p.farge;
-        ctx.globalAlpha = 1 - p.t;
-        ctx.shadowColor = p.farge;
-        ctx.shadowBlur = 8;
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-      oppdaterRomAktorer(dt);
-    }
-
-    requestAnimationFrame(frame);
-  }
-
-  // ---------------- Detaljpanel ----------------
-  let aktivDetalj = null;
-  function visDetalj(a) {
-    aktivDetalj = a;
-    const s = state.agentStatus.get(a.id);
-    el("detailNavn").textContent = a.navn;
-    el("detailStatus").textContent = ikonForStatus(s.status);
-    el("detailJobb").textContent = a.jobb;
-    el("detailSist").textContent = s.sist ? new Date(s.sist).toLocaleString("no-NO") + " (" + sidenTekst(s.sist) + ")" : "Ingen data ennå";
-    const grunnFelt = el("detailGrunnFelt");
-    if (s.grunn) { grunnFelt.hidden = false; el("detailGrunn").textContent = s.grunn; } else grunnFelt.hidden = true;
-    el("detail").classList.add("vis");
-    el("detail").setAttribute("aria-hidden", "false");
-  }
-  function lukkDetalj() {
-    el("detail").classList.remove("vis");
-    el("detail").setAttribute("aria-hidden", "true");
-    aktivDetalj = null;
-  }
-  el("detailLukk").addEventListener("click", lukkDetalj);
-
-  // ---------------- Søk/filter ----------------
-  el("sokFelt").addEventListener("input", (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    AGENTER.forEach((a) => {
-      const treff = !q || a.navn.toLowerCase().includes(q) || a.jobb.toLowerCase().includes(q);
-      el("agent-" + a.id).classList.toggle("skjult", !treff);
-    });
-  });
-
-  // ---------------- Hjelpeoverlay + hurtigtaster ----------------
-  function veksleHjelp(vis) {
-    const helpEl = el("help");
-    const skalVises = vis ?? helpEl.classList.contains("skjult");
-    helpEl.classList.toggle("skjult", !skalVises);
-    helpEl.setAttribute("aria-hidden", String(!skalVises));
-  }
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "/" && document.activeElement !== el("sokFelt")) {
-      e.preventDefault();
-      el("sokFelt").focus();
-    } else if (e.key === "Escape") {
-      lukkDetalj();
-      veksleHjelp(false);
-      el("sokFelt").blur();
-    } else if (e.key === "?" ) {
-      veksleHjelp();
-    } else if (e.key.toLowerCase() === "m" && document.activeElement !== el("sokFelt")) {
-      veksleLyd();
-    }
-  });
-
-  // ---------------- Lyd (valgfri, av som standard) ----------------
+  function veksleHjelp(vis) { const h = el("help"); const skal = vis ?? h.classList.contains("skjult"); h.classList.toggle("skjult", !skal); h.setAttribute("aria-hidden", String(!skal)); }
   let audioCtx = null;
-  function veksleLyd() {
-    state.lyd = !state.lyd;
-    el("lyd-knapp").setAttribute("aria-pressed", String(state.lyd));
-    el("lyd-knapp").textContent = state.lyd ? "🔊 LYD PÅ" : "🔈 LYD AV";
-  }
+  function veksleLyd() { state.lyd = !state.lyd; el("lyd-knapp").setAttribute("aria-pressed", String(state.lyd)); el("lyd-knapp").textContent = state.lyd ? "🔊 LYD PÅ" : "🔈 LYD AV"; }
   el("lyd-knapp").addEventListener("click", veksleLyd);
-
   function pipp(frekvens) {
     if (!state.lyd) return;
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.frequency.value = frekvens;
-      osc.type = "square";
-      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.15);
-    } catch { /* lyd er valgfritt pynt - stille feil er greit */ }
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.frequency.value = frekvens; osc.type = "square";
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+      osc.connect(gain).connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    } catch {}
   }
+  function veksleZoom() {
+    zoomModus = zoomModus === "auto" ? 2 : zoomModus === 2 ? 3 : "auto";
+    el("zoom-knapp").textContent = "🔍 " + (zoomModus === "auto" ? "AUTO" : zoomModus + "X");
+    tilpassCanvas();
+  }
+  el("zoom-knapp").addEventListener("click", veksleZoom);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== el("sokFelt")) { e.preventDefault(); el("sokFelt").focus(); }
+    else if (e.key === "Escape") { lukkDetalj(); veksleHjelp(false); el("sokFelt").blur(); }
+    else if (e.key === "?") veksleHjelp();
+    else if (e.key.toLowerCase() === "m" && document.activeElement !== el("sokFelt")) veksleLyd();
+    else if (e.key.toLowerCase() === "z" && document.activeElement !== el("sokFelt")) veksleZoom();
+  });
 
   // ---------------- Init ----------------
   function init() {
-    byggAgentmoduler();
-    byggRomvisning();
-    koblVisningsbytte();
+    beregnLayout();
+    plasserAgentSpor();
     tilpassCanvas();
-    window.addEventListener("resize", tilpassCanvas);
-    tikkKlokke();
-    setInterval(tikkKlokke, 1000);
+    new ResizeObserver(() => { beregnLayout(); plasserAgentSpor(); tilpassCanvas(); }).observe(el("stasjonWrap"));
+    tikkKlokke(); setInterval(tikkKlokke, 1000);
     oppdaterTopptall();
 
-    pollHendelser();
-    pollHelse();
-    pollTungt();
+    pollHendelser(); pollHelse(); pollTungt();
     setInterval(pollHendelser, POLL_HENDELSER_MS);
     setInterval(pollHelse, POLL_HELSE_MS);
     setInterval(pollTungt, POLL_TUNG_MS);
-    // Fjern spinnere for "sist aktiv"-tekstene på agentmodulene med jevne mellomrom
-    // (rent kosmetisk, teksten skal bare telle oppover mens ingenting nytt skjer).
-    setInterval(() => {
-      AGENTER.forEach((a) => {
-        const s = state.agentStatus.get(a.id);
-        const sistEl = el("agent-" + a.id)?.querySelector(".sist");
-        if (sistEl && s.sist) sistEl.textContent = sidenTekst(s.sist);
-      });
-    }, 5000);
 
     requestAnimationFrame((t) => { sisteFrame = t; frame(t); });
     kjorBoot();
   }
+  function tikkKlokke() { el("klokke").textContent = new Date().toLocaleTimeString("no-NO"); }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
