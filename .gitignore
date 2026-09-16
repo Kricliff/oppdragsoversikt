@@ -1,1 +1,7 @@
 .wrangler/
+
+# Lokale hemmeligheter for `wrangler pages dev`. Ekte nøkler bor som secrets i
+# Cloudflare, aldri i repoet - denne fila er kun for testverdier under utvikling,
+# og skal uansett aldri kunne committes ved et uhell.
+.dev.vars
+.dev.vars.*
