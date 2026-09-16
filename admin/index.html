@@ -376,6 +376,12 @@
     </div>
 
     <div class="kort">
+      <h2>Forslag fra agentmøtet</h2>
+      <p class="storrelse-hint">Arkitekten leter etter forbedringer, Cybersec går dem etter i sømmene, og Administratoren legger dem fram her. <b>Ingenting bygges før du har trykket Godkjenn.</b> Det er ikke en avtale med agentene - serveren nekter dem å sette godkjent-status uansett hva de finner på.</p>
+      <div id="forslagListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
       <h2>Siste endringer på tavlen</h2>
       <p class="storrelse-hint">Oppdrag som har dukket opp, forsvunnet, byttet status, blitt signert eller avsluttet</p>
       <div id="endringerListe"><p class="endring-tom">Laster…</p></div>
@@ -1096,6 +1102,113 @@
   });
 
   lastBildeStatus();
+
+  // ---------- forslag fra agentmøtet ----------
+  // Selve godkjenningsporten ligger i functions/api/forslag.js, ikke her: knappene under
+  // sender bare handlingen "avgjor", som kun adminnøkkelen slipper gjennom. Denne siden
+  // er derfor det ENESTE stedet et forslag kan bli godkjent, og agentene kommer ikke til.
+  const forslagListeEl = document.getElementById("forslagListe");
+  const STATUSTEKST = {
+    ny: "Venter på deg", godkjent: "Godkjent", avvist: "Avvist",
+    bygges: "Coderen bygger", testes: "Testeren verifiserer",
+    ferdig: "Ferdig", blokkert: "Blokkert av Cybersec"
+  };
+
+  function tegnForslag(data) {
+    const apne = (data.forslag ?? []).filter((f) => f.status !== "avvist" && f.status !== "ferdig");
+    if (!apne.length) {
+      forslagListeEl.innerHTML = '<p class="endring-tom">Ingen forslag akkurat nå. Arkitekten leter hver morgen klokka ni.</p>';
+      return;
+    }
+    forslagListeEl.replaceChildren(...apne.map((f) => {
+      const rad = document.createElement("div");
+      rad.className = "endring-rad";
+
+      const tittel = document.createElement("p");
+      tittel.style.margin = "0 0 4px";
+      tittel.style.fontWeight = "600";
+      tittel.textContent = f.tittel;
+      rad.append(tittel);
+
+      const merke = document.createElement("p");
+      merke.className = "storrelse-hint";
+      merke.style.margin = "0 0 6px";
+      merke.textContent = (STATUSTEKST[f.status] ?? f.status) + (f.anslag ? " · " + f.anslag : "");
+      if (f.status === "blokkert") merke.style.color = "#b23b3b";
+      rad.append(merke);
+
+      if (f.begrunnelse) {
+        const b = document.createElement("p");
+        b.className = "storrelse-hint";
+        b.style.margin = "0 0 6px";
+        b.textContent = f.begrunnelse;
+        rad.append(b);
+      }
+      // Cybersec sin merknad står ALLTID synlig - det er den viktigste linja i kortet.
+      if (f.sikkerhet?.merknad) {
+        const s = document.createElement("p");
+        s.className = "storrelse-hint";
+        s.style.margin = "0 0 6px";
+        s.style.color = f.status === "blokkert" ? "#b23b3b" : "";
+        s.textContent = "Cybersec: " + f.sikkerhet.merknad;
+        rad.append(s);
+      }
+      if (f.forhandsvisning) {
+        const a = document.createElement("a");
+        a.href = f.forhandsvisning;
+        a.textContent = "Se forhåndsvisning";
+        a.className = "storrelse-hint";
+        a.style.display = "inline-block";
+        a.style.marginBottom = "6px";
+        rad.append(a);
+      }
+
+      if (f.status === "ny" || f.status === "blokkert") {
+        const knapper = document.createElement("div");
+        knapper.style.display = "flex";
+        knapper.style.gap = "8px";
+        if (f.status === "ny") knapper.append(lagKnapp("Godkjenn", () => avgjor(f.id, "godkjent")));
+        knapper.append(lagKnapp("Avvis", () => avgjor(f.id, "avvist")));
+        rad.append(knapper);
+      }
+      return rad;
+    }));
+  }
+
+  function lagKnapp(tekst, handling) {
+    const k = document.createElement("button");
+    k.type = "button";
+    k.className = "lagreknapp";
+    k.textContent = tekst;
+    k.addEventListener("click", async () => {
+      k.disabled = true;
+      try { await handling(); } finally { k.disabled = false; }
+    });
+    return k;
+  }
+
+  async function avgjor(id, status) {
+    try {
+      const r = await fetch("/api/forslag", {
+        method: "POST",
+        headers: adminHeaders({ "content-type": "application/json" }),
+        body: JSON.stringify({ handling: "avgjor", id, status })
+      });
+      tegnForslag(await r.json());
+    } catch (err) {
+      console.warn("Fikk ikke avgjort forslaget:", err);
+    }
+  }
+
+  async function lastForslag() {
+    try {
+      const r = await fetch("/api/forslag", { cache: "no-store" });
+      tegnForslag(await r.json());
+    } catch {
+      forslagListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet forslagene.</p>';
+    }
+  }
+  lastForslag();
 </script>
 </body>
 </html>
