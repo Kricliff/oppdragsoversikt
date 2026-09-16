@@ -19,7 +19,12 @@
 // et bevisst UNNTAK fra unntaket - den har en skrivehandler UTEN egen nøkkelsjekk (skjermer
 // skal kunne melde seg inn uten nøkkel), og er derfor kun beskyttet av nettopp denne
 // grense-sperren. Legg den ALDRI til her uten samtidig å legge en ekte nøkkelsjekk i den.
-const UNNTATTE_RUTER = new Set(["/api/teamskanal", "/api/endringslogg", "/api/avviste", "/api/agentstatus", "/api/kvforbruk"]);
+//
+// /api/forslag (agentmøtet) hører hjemme her etter samme regel som teamskanal og
+// agentstatus: GET er et rent oppslag, og hver eneste skrivehandling krever enten
+// AGENT_STATUS_NOKKEL eller ADMIN_SKRIVENOKKEL uavhengig av denne sperren. Godkjenning
+// av et forslag krever i tillegg admin-nøkkelen alene - agentnøkkelen kommer ikke forbi.
+const UNNTATTE_RUTER = new Set(["/api/teamskanal", "/api/endringslogg", "/api/avviste", "/api/agentstatus", "/api/kvforbruk", "/api/forslag"]);
 
 export async function onRequest(context) {
   const branch = context.env.CF_PAGES_BRANCH;

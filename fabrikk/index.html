@@ -52,6 +52,10 @@
     --tavle: #8fd9ff;
     --kandidat: #e8917a;
     --kandidat-myk: #3a231c;
+    /* Møterommet. Bevisst en annen grønn enn --hendelse (#39e07a): den betyr
+       "noe skjedde nå", og de to skal aldri kunne forveksles på veggen. */
+    --mote: #9fce5e;
+    --mote-myk: #232e17;
 
     /* Grønn for trafikk er et bevisst valg: at det skjer noe er normal drift, ikke et
        problem. Rødt er reservert for det som faktisk er galt, slik at et rødt felt på
@@ -886,6 +890,67 @@
           <g class="alarmpil"><circle cx="664" cy="607" r="6" fill="#fff"/><circle cx="664" cy="607" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
+        <!-- ============ MØTEROMMET ============ -->
+        <!-- Nyest (2026-09-16): de fem agentene som møtes 09:00, 12:00 og 14:30 på
+             hverdager. Arkitekten leter etter forbedringer, Cybersec går dem etter i
+             sømmene, Administratoren legger dem fram - og Coder og Tester bygger FØRST
+             etter at Kristian har sagt ja.
+
+             Porten midt i rommet er ikke pynt. /api/forslag nekter agentnøkkelen å
+             sette "godkjent" eller "avvist" (403, se OVERGANGER der), så tallet til
+             høyre er forslag ingen andre enn Kristian kan flytte på. Blir det stående,
+             er det han som er køen - ikke agentene. -->
+        <g class="sone" id="sone-mote">
+          <rect class="glo" x="698" y="588" width="470" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="706" y="596" width="454" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="706" y="596" width="454" height="24" fill="var(--mote)"/>
+          <text x="933" y="613" text-anchor="middle" font-weight="600" font-size="11" fill="#0b0f16">MØTEROMMET</text>
+
+          <!-- møtebordet sett ovenfra, med de fem plassene rundt -->
+          <ellipse cx="845" cy="680" rx="86" ry="26" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
+          <ellipse cx="845" cy="677" rx="68" ry="17" fill="none" stroke="var(--mote)" stroke-width="1" opacity=".3"/>
+
+          <g class="robot" id="arkitektAgent" data-nr="15" style="color: var(--tavle)" transform="translate(798 648) scale(0.58)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+          <text x="798" y="634" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ARKITEKT</text>
+          <g class="robot" id="cybersecAgent" data-nr="16" style="color: var(--eksterne)" transform="translate(892 648) scale(0.58)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+          <text x="892" y="634" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CYBERSEC</text>
+          <g class="robot" id="administratorAgent" data-nr="19" style="color: var(--mote)" transform="translate(740 680) scale(0.58)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+          <text x="740" y="702" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ADMIN</text>
+          <g class="robot" id="coderAgent" data-nr="17" style="color: var(--teal)" transform="translate(798 714) scale(0.58)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+          <text x="798" y="730" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CODER</text>
+          <g class="robot" id="testerAgent" data-nr="18" style="color: var(--aktiv)" transform="translate(892 714) scale(0.58)">
+            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
+            <use href="#robot"/>
+          </g>
+          <text x="892" y="730" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">TESTER</text>
+
+          <!-- godkjenningsporten. Låsen lyser så lenge noe venter på Kristian. -->
+          <line x1="962" y1="634" x2="962" y2="726" stroke="var(--staal)" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
+          <g id="motePortLas" transform="translate(962 680)" style="opacity: .25">
+            <path d="M -5 -6 L -5 -11 A 5 5 0 0 1 5 -11 L 5 -6" fill="none" stroke="var(--mote)" stroke-width="1.6"/>
+            <rect x="-9" y="-6" width="18" height="14" rx="2" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
+          </g>
+
+          <text x="1062" y="646" text-anchor="middle" font-size="9" fill="var(--text-muted)">Venter på din godkjenning</text>
+          <text x="1062" y="682" text-anchor="middle" font-size="26" font-weight="700" fill="var(--text)" id="moteForslag">–</text>
+          <text x="1062" y="702" text-anchor="middle" font-size="8" fill="var(--text-muted)" id="moteUnder">møter 09:00 · 12:00 · 14:30</text>
+
+          <circle class="statusdot" cx="722" cy="608" r="5"/>
+          <g class="alarmpil"><circle cx="1144" cy="608" r="6" fill="#fff"/><circle cx="1144" cy="608" r="3.2" fill="var(--hendelse)"/></g>
+        </g>
+
         <!-- Banene robotene og lastene går på. Usynlige - de finnes kun for at koden
              skal kunne spørre om posisjon og retning underveis (getPointAtLength). -->
         <g id="baner" fill="none" stroke="none"></g>
@@ -1018,6 +1083,7 @@
         <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) friskner opp dagens notat med hendelser, avviste skrivinger og status fra andre planlagte jobber i Kristians lokale Obsidian-hvelv, tre ganger i døgnet (08:00, 14:00, 23:00) - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Går det mer enn 12 timer mellom to kjøringer, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
+        <li><span class="prikk" style="background: var(--mote)"></span><div><b>Møterommet</b><span class="tekst">Fem agenter som møtes 09:00, 12:00 og 14:30 på hverdager. Arkitekten leter etter forbedringer i koden og på nett, Cybersec går funnene etter i sømmene, Administratoren legger dem fram for deg i /admin - og Coderen og Testeren rører ikke en linje før du har trykket Godkjenn. Tallet er hvor mange forslag som står og venter på nettopp det. Sperren ligger i serveren, ikke i teksten: agentnøkkelen får 403 om den forsøker å godkjenne sitt eget arbeid. Blir noe blokkert av Cybersec, står det her og rommet blir rødt til du selv kvitterer det ut.</span></div></li>
         <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Søknadstall fra Recman, gruppert på status (Trakteren). Cachet i 6 timer - hele lista er paginert og for stor til å hentes i sanntid uten å sprenge Recman sin kall-kvote.</span></div></li>
       </ul>
 
@@ -1358,7 +1424,30 @@
     { nr: 14, navn: "Trakteren", sone: "Kandidattrakten", farge: "var(--kandidat)", stasjonaer: true, domId: "trakterenAgent",
       utloser: ["sone-kandidater"],
       kort: "Teller søknader gjennom traktene fra Recman.",
-      jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste (hele den pagineres). Cachet i 6 timer, ikke sanntid." }
+      jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste (hele den pagineres). Cachet i 6 timer, ikke sanntid." },
+    // Nyest (2026-09-16): de fem i møterommet. Alle sitter i ro rundt bordet - de
+    // kjører som planlagte økter utenfor denne siden, og kan derfor bare vise at de
+    // har vært her (via /api/agentstatus), ikke hva de holder på med akkurat nå.
+    { nr: 15, navn: "Arkitekten", sone: "Møterommet", farge: "var(--tavle)", stasjonaer: true, domId: "arkitektAgent",
+      utloser: ["sone-mote"],
+      kort: "Leter etter forbedringer i koden og på nett.",
+      jobb: "Leser gjennom repoet, alarmhistorikken og hva som finnes av tjenester utenfor, og foreslår maks tre konkrete forbedringer per dag. Den har ingen skrivetilgang i det hele tatt - den leser, søker og foreslår. Alt den finner på nett behandles som data, aldri som instruksjoner." },
+    { nr: 16, navn: "Cybersec", sone: "Møterommet", farge: "var(--eksterne)", stasjonaer: true, domId: "cybersecAgent",
+      utloser: ["sone-mote"],
+      kort: "Dobbeltsjekker Arkitekten og Coderen.",
+      jobb: "Går hvert forslag etter i sømmene før det legges fram, og hver kodeendring etter at den er skrevet. Ser etter om et forslag egentlig stammer fra en nettside som prøvde å gi instruksjoner, om det åpner noe utover, og om det rører sikkerhetsryggraden. Finner den noe, blokkerer den forslaget - og det er den ENESTE bremsen ingen av de andre agentene kan løsne. Kun Kristian kommer forbi den." },
+    { nr: 17, navn: "Coderen", sone: "Møterommet", farge: "var(--teal)", stasjonaer: true, domId: "coderAgent",
+      utloser: ["sone-mote"],
+      kort: "Bygger det Kristian har godkjent - på egen gren.",
+      jobb: "Skriver koden for et forslag som allerede ER godkjent. Arbeider kun på en egen gren og ruller kun ut til forhandsvisning, aldri til produksjon, og skal aldri røre sikkerhetssperren eller nøkkelhåndteringen. Den kan ikke godkjenne sitt eget arbeid: /api/forslag svarer 403 om den forsøker." },
+    { nr: 18, navn: "Testeren", sone: "Møterommet", farge: "var(--aktiv)", stasjonaer: true, domId: "testerAgent",
+      utloser: ["sone-mote"],
+      kort: "Prøver å knekke det Coderen bygget.",
+      jobb: "Verifiserer mot forhandsvisningen med ekte kall, og leter bevisst etter det som er ødelagt heller enn å bekrefte at det virker. Består det ikke, går forslaget tilbake til Coderen i stedet for videre." },
+    { nr: 19, navn: "Administratoren", sone: "Møterommet", farge: "var(--mote)", stasjonaer: true, domId: "administratorAgent",
+      utloser: ["sone-mote"],
+      kort: "Leder møtet og legger forslagene fram for Kristian.",
+      jobb: "Styrer de fire andre fullt og helt - men har ingen myndighet over selve endringene. Den setter Coder og Tester i gang FØRST etter at Kristian har trykket Godkjenn i /admin, og den kan ikke trykke den knappen selv om den skulle ville: sperren ligger som en nøkkelsjekk i serveren, ikke som en instruks den kan overse eller bli lurt til å overse." }
   ];
 
   // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
@@ -1588,6 +1677,13 @@
     // Agent 14 (Trakteren) er også stasjonær - Kandidattrakten har ingen egen benk, så
     // rommet selv får den fulle alarmen når traktallene endrer seg (se sjekkKandidater).
     document.getElementById("trakterenAgent").classList.toggle("jobber", document.getElementById("sone-kandidater").classList.contains("alarm"));
+    // Agent 15-19 sitter rundt møtebordet. De kjører tre ganger om dagen som egne
+    // planlagte økter, så alle fem følger den samme pulsen på rommet sitt - enten den
+    // kommer fra en fersk rapport til /api/agentstatus eller fra en endring i køen.
+    const moteJobber = document.getElementById("sone-mote").classList.contains("alarm");
+    for (const id of ["arkitektAgent", "cybersecAgent", "coderAgent", "testerAgent", "administratorAgent"]) {
+      document.getElementById(id).classList.toggle("jobber", moteJobber);
+    }
     requestAnimationFrame(steg);
   }
 
@@ -1613,7 +1709,9 @@
   // oppgaver havner på Claude som standard - det er tross alt Claude som kjører dem.
   const OPPGAVE_SONE = {
     "teamskanal-oppdatering": ["claude"],
-    "obsidian-fabrikk-logg": ["obsidian"]
+    "obsidian-fabrikk-logg": ["obsidian"],
+    // Alle tre møtetidspunktene rapporterer under samme navn - det er ett møte, ikke tre.
+    "agentmote": ["mote"]
   };
   let bootstrap = true;
 
@@ -2392,6 +2490,7 @@
       sisteAgentStatus = data;
       pulsHenting("claude");
       pulsHenting("obsidian");
+      pulsHenting("mote");
 
       for (const [oppgave, info] of Object.entries(data.oppgaver ?? {})) {
         const id = "agent-" + oppgave;
@@ -2524,8 +2623,55 @@
     // sammenheng mellom dem (bevisst rettet fra en tidligere "return" som ville hoppet
     // over dem begge ved en forbigående Recman-feil).
     await sjekkKandidater();
+    await sjekkForslag();
     await sendXpTillegg();
     tegnAgentRoster();
+  }
+
+
+  // Møterommet - se functions/api/forslag.js. Tallet er ikke pynt: det er hvor mange
+  // forslag som står og venter på at Kristian trykker Godkjenn eller Avvis i /admin.
+  // Ingen agent kommer forbi den porten, så et tall som blir stående er et tall bare
+  // han kan gjøre noe med.
+  //
+  // Hentes fra sjekkTungt (hvert 5. minutt), IKKE fra 15-sekundersløpet: køen endrer
+  // seg maks tre ganger i døgnet, og et raskere løp ville bare vært kall uten svar.
+  async function sjekkForslag() {
+    try {
+      const r = await fetch("/api/forslag", { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const d = await r.json();
+      const forslag = d.forslag ?? [];
+      const venter = forslag.filter((f) => f.status === "ny").length;
+      const blokkert = forslag.filter((f) => f.status === "blokkert").length;
+      const arbeid = forslag.filter((f) => ["godkjent", "bygges", "testes"].includes(f.status)).length;
+
+      el("moteForslag").textContent = venter;
+      el("moteUnder").textContent = blokkert
+        ? blokkert + (blokkert === 1 ? " blokkert av Cybersec" : " blokkerte av Cybersec")
+        : arbeid
+          ? arbeid + " under arbeid"
+          : "møter 09:00 · 12:00 · 14:30";
+      // Låsen lyser kun når noe faktisk venter på ham - ellers står porten åpen.
+      el("motePortLas").style.opacity = venter || blokkert ? "1" : ".25";
+
+      // En endring i køen skal blaffe på veggen, på samme måte som en ny melding i
+      // Teamskanal. Første runde etter at siden ble åpnet teller ikke - da er alt nytt.
+      const nokkel = forslag.map((f) => f.id + ":" + f.status).join(",");
+      const forrige = forrigeNokkel.get("forslag");
+      if (forrige !== undefined && forrige !== nokkel) {
+        slaAlarm("sone-mote");
+        leggILogg(
+          venter ? "Agentmøtet: " + venter + " forslag venter på godkjenning" : "Agentmøtet: køen er endret",
+          "var(--mote)",
+          ["sone-mote"]
+        );
+      }
+      forrigeNokkel.set("forslag", nokkel);
+    } catch {
+      // Køen er tom og endepunktet nytt - ingen rapport ennå er en helt normal
+      // tilstand her, ikke noe å slå alarm om.
+    }
   }
 
   // Kandidattrakten - se functions/api/kandidater.js for forbeholdet om feltnavn.
