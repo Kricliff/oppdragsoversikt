@@ -940,7 +940,7 @@
       <ul class="forklaring to-spalter" id="robotListe"></ul>
 
       <h3>Lastene på banen</h3>
-      <p class="hint">De tre kassene er ikke pynt. Hver av dem er én navngitt datastrøm som faktisk går mellom kildene og tavlen, og den setter opp farten når nettopp den strømmen har trafikk.</p>
+      <p class="hint">Kassene er ikke pynt. Hver av dem er én navngitt datastrøm som faktisk går et sted - de fleste mellom kildene og tavlen, én kort mellom to naborom som deler kilde - og setter opp farten når nettopp den strømmen har trafikk.</p>
       <ul class="forklaring to-spalter" id="lastListe"></ul>
 
       <h3>Selve banen</h3>
@@ -1282,7 +1282,17 @@
     { navn: "livstegn", farge: "var(--teal)", varighet: 14, start: 0.34, utloser: ["sone-tavle", "benk-skjermer"],
       hva: "Skjermene på veggen melder seg levende hvert 15. sekund, så admin vet hvilke som er på nett." },
     { navn: "meldinger", farge: "var(--teamskanal)", varighet: 14, start: 0.67, utloser: ["sone-teamskanal"],
-      hva: "Teams-meldingene på vei til panelet på tavlen." }
+      hva: "Teams-meldingene på vei til panelet på tavlen." },
+    // Nyest (2026-09-16): Kandidattrakten (rommet rett over) og Recman deler samme
+    // datakilde - traktallene ER Recman sin jobApplication-liste, bare telt opp på en
+    // annen måte. I stedet for å finne på en agent som "går" mellom rommene (ekte
+    // bevegelse skal alltid bety en ekte tilstandsendring, se prinsippet ellers på
+    // kartet), får denne strømmen sin egen korte, lukkede bane rett gjennom veggen
+    // mellom de to rommene - en ekte kobling, ikke en fabrikert en. Egen (kortere)
+    // bane, derfor egen `bane`/`storrelse`/`skjulNavn` i stedet for delt BANE_TRACK.
+    { navn: "kandidatdata", farge: "var(--kandidat)", varighet: 5, start: 0, utloser: ["sone-kandidater"],
+      bane: "M 131 150 L 141 150 L 141 197 L 131 197 Z", storrelse: 10, skjulNavn: true,
+      hva: "Traktallene i Kandidattrakten er talt opp av nøyaktig samme Recman-liste som ligger rett under - denne korte streken markerer at de to rommene faktisk deler kilde." }
   ];
 
   const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1381,19 +1391,25 @@
     }
 
     const lastLag = el("laster");
-    const bane = lagBane(BANE_TRACK);
-    const lengde = bane.getTotalLength();
+    const delTrack = lagBane(BANE_TRACK);
+    const delLengde = delTrack.getTotalLength();
     for (const l of LASTER) {
+      // De fleste laster deler den samme Energiledningen (BANE_TRACK) - en kilde som
+      // heller har en egen, kort forbindelse til et bestemt naborom (se kandidatdata)
+      // kan overstyre med sin egen `bane`.
+      const bane = l.bane ? lagBane(l.bane) : delTrack;
+      const lengde = l.bane ? bane.getTotalLength() : delLengde;
+      const s = (l.storrelse ?? 20) / 2;
       const g = document.createElementNS(SVG_NS, "g");
       g.setAttribute("class", "last");
       g.innerHTML =
-        '<rect x="-10" y="-10" width="20" height="20" rx="2" fill="' + l.farge + '"/>' +
-        '<rect x="-10" y="-3" width="20" height="4" fill="#fff" opacity=".45"/>' +
-        '<text class="merkelapp" x="0" y="26" text-anchor="middle" font-size="8" font-weight="600">' + l.navn + "</text>";
+        '<rect x="-' + s + '" y="-' + s + '" width="' + s * 2 + '" height="' + s * 2 + '" rx="2" fill="' + l.farge + '"/>' +
+        '<rect x="-' + s + '" y="-' + s * 0.3 + '" width="' + s * 2 + '" height="' + s * 0.4 + '" fill="#fff" opacity=".45"/>' +
+        (l.skjulNavn ? "" : '<text class="merkelapp" x="0" y="' + (s + 16) + '" text-anchor="middle" font-size="8" font-weight="600">' + l.navn + "</text>");
       lastLag.append(g);
       aktorer.push({
         el: g, kropp: null, bane, lengde,
-        varighet: l.varighet, pos: l.start * lengde, fart: 0.5, aktivTil: 0, utloser: l.utloser
+        varighet: l.varighet, pos: (l.start ?? 0) * lengde, fart: 0.5, aktivTil: 0, utloser: l.utloser
       });
     }
   }
