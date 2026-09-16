@@ -61,6 +61,15 @@
     --advarsel: #f0b429;   /* noe har blitt stille - står til det er ferskt igjen */
     --ok: #39e07a;
     --gull: #f0b429;
+
+    /* Visuell oppgradering (2026-09-16): ekte glassmateriale for flytende HUD-lag
+       (infovindu, statuslinje) i stedet for en flat, ugjennomsiktig flate - se
+       .agent-tooltip og .pille. --glod-myk er en delt, dempet bloom-farge avledet av
+       --hendelse, brukt til filter: drop-shadow() på aktive rom/benker slik at glødet
+       faktisk sprer seg utover kanten i stedet for å være en ren tegnet strek. */
+    --glass: rgba(14, 19, 28, 0.55);
+    --glass-kant: rgba(255, 255, 255, 0.08);
+    --glod-myk: rgba(57, 224, 122, 0.55);
   }
   * { box-sizing: border-box; }
   h1, h2, h3, .tal, .merke, .klokke, button.pille { font-family: "Chakra Petch", sans-serif; }
@@ -91,7 +100,7 @@
   .tilbake { margin-left: auto; font-size: 0.8rem; color: var(--text-muted); text-decoration: none; }
   .tilbake:hover { color: var(--text); }
 
-  h1 { font-size: 1.7rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: 0.01em; }
+  h1 { font-size: 2.05rem; font-weight: 700; margin: 0.6rem 0 0.3rem; letter-spacing: -0.015em; line-height: 1.1; }
   .ingress { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1.4rem; max-width: 64ch; font-family: "Inter", sans-serif; }
 
   /* Tynn varselbanner helt øverst - vises kun når det faktisk finnes en aktiv, rød alarm,
@@ -110,7 +119,8 @@
   .statuslinje { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
   .pille {
     display: inline-flex; align-items: center; gap: 0.5rem;
-    border: 1px solid var(--border); background: var(--surface);
+    border: 1px solid var(--border); background: var(--glass);
+    backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%);
     border-radius: 999px; padding: 0.45rem 0.85rem; font-size: 0.78rem; font-weight: 500;
   }
   .pille .pip { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: pulse 1.8s ease-in-out infinite; }
@@ -143,9 +153,15 @@
   .robot:focus-visible { outline: 2px solid var(--aktiv); outline-offset: 3px; border-radius: 50%; }
   .agent-tooltip {
     position: absolute; z-index: 30; pointer-events: none; transform: translate(-50%, -100%);
-    background: var(--bg-0); border: 1px solid var(--border); border-radius: 8px;
+    background: var(--glass); backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid var(--glass-kant); border-top-color: rgba(255,255,255,0.16); border-radius: 8px;
     padding: 0.45rem 0.65rem; font-family: "Inter", sans-serif; font-size: 0.75rem; color: var(--text);
     white-space: nowrap; box-shadow: 0 10px 24px -10px rgba(0,0,0,0.6);
+  }
+  /* prefers-reduced-transparency: gjør materialet mer frostet/solid i stedet for å
+     droppe glasset helt - fortsatt et eget lag, bare uten selve gjennomsiktigheten. */
+  @media (prefers-reduced-transparency: reduce) {
+    .agent-tooltip, .pille { background: var(--surface) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   }
   .agent-tooltip b { font-family: "Chakra Petch", sans-serif; font-size: 0.72rem; }
   .agent-tooltip .kort { display: block; color: var(--text-muted); margin-top: 0.15rem; white-space: normal; max-width: 220px; }
@@ -189,7 +205,7 @@
   .maaler span { display: block; height: 100%; background: var(--ok); width: 0; transition: width 0.4s ease; box-shadow: 0 0 8px currentColor; }
   .maaler.nesten span { background: var(--advarsel); }
   .maaler.full span { background: var(--feil); }
-  .kvote-sum { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; font-family: "Chakra Petch", sans-serif; }
+  .kvote-sum { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; font-family: "Chakra Petch", sans-serif; letter-spacing: -0.02em; }
   .kvote-sum small { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); font-family: "Inter", sans-serif; }
   .kvote-rad { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.78rem; padding: 0.32rem 0; border-top: 1px solid var(--border); }
   .kvote-rad span:last-child { font-variant-numeric: tabular-nums; color: var(--text-muted); }
@@ -244,7 +260,7 @@
   .agent.nede .sist { color: #ff9b9b; }
   .agent .lvl {
     position: absolute; top: -6px; right: -6px; background: var(--bg-0); border: 1px solid var(--border);
-    border-radius: 999px; font-family: "Chakra Petch", sans-serif; font-size: 0.6rem; font-weight: 700;
+    border-radius: 999px; font-family: "Chakra Petch", sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: -0.02em;
     padding: 1px 6px; color: var(--gull);
   }
 
@@ -279,10 +295,28 @@
   /* trafikk: kortvarig, grønn puls - FULL styrke. Brukes på benken som faktisk endret
      seg, og på et helt rom KUN når rommet ikke har noen egen benk å peke på (Recman,
      Teamskanal, Slusen, Kandidattrakten). */
-  .sone.alarm .glo, .benk.alarm .glo { animation: gloPuls 0.85s ease-in-out infinite; stroke: var(--hendelse); }
+  .sone.alarm .glo, .benk.alarm .glo {
+    animation: gloPuls 0.85s ease-in-out infinite; stroke: var(--hendelse);
+    /* Ekte bloom i stedet for bare en tegnet strek - lyset spres faktisk utover kanten,
+       inn i mørket rundt boksen. */
+    filter: drop-shadow(0 0 8px var(--glod-myk));
+  }
   .sone.alarm .sonebar { animation: barPuls 0.85s ease-in-out infinite; }
   .alarmpil { opacity: 0; }
   .sone.alarm .alarmpil { animation: gloPuls 0.85s ease-in-out infinite; }
+  .sone.feil .glo, .benk.feil .glo { filter: drop-shadow(0 0 8px rgba(255, 92, 92, 0.55)); }
+  .sone.treg .glo, .benk.treg .glo { filter: drop-shadow(0 0 6px rgba(240, 180, 41, 0.45)); }
+  .sone.romblink .glo { filter: drop-shadow(0 0 6px var(--glod-myk)); }
+
+  /* Dybde: rom med benker inni (Functions, Recman, Eksterne kilder) skal lese som
+     TYNGRE, mer strukturelle flater enn rom uten (Slusen, Teamskanal) - samme prinsipp
+     som store, tunge materialer trenger en kraftigere skygge enn små brikker. Treffer
+     kun selve panel-rect'en (andre rect-barn av .sone), ikke .glo (som er reservert for
+     alarm/romblink-glødet over) og ikke rect'ene inni en .benk (de er ikke direkte
+     rect-barn av .sone, så :nth-of-type(2) blant .sone sine EGNE rect-barn treffer ikke
+     dem). :has() er støttet i alle nyere nettlesere som faktisk viser denne siden. */
+  .sone > rect:nth-of-type(2) { filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.4)); }
+  .sone:has(.benk) > rect:nth-of-type(2) { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.6)); }
 
   /* romblink: DEMPET signal om at "noe skjedde her inne" - brukes på hjemme-rommet til
      en kilde som OGSÅ har en egen benk (f.eks. Functions når notat.js endres). Rettet
@@ -396,8 +430,29 @@
   .vei-stripe { animation: kryp 1s linear infinite; filter: drop-shadow(0 0 3px var(--vei-stripe)); }
   @keyframes kryp { to { stroke-dashoffset: -26; } }
 
+  /* Oppstartssekvens (kjørOppstartssekvens(), kalt én gang ved sideload): stasjonen
+     "starter opp" i stedet for at alle 14 rommene bare popper opp ferdig tegnet med en
+     gang. Klassen settes/fjernes av JS - rommet er i sin vanlige, fullt synlige
+     CSS-tilstand hvis JS av en eller annen grunn ikke rekker å kjøre, så dette kan
+     aldri ende med et rom som blir stående usynlig. animation-delay kommer fra
+     --boot-delay, satt per rom ut fra rekkefølgen i DOM-en (venstre mot høyre). */
+  .sone.boot-kjor { animation: bootRomInn 0.5s ease-out both; animation-delay: var(--boot-delay, 0s); }
+  @keyframes bootRomInn {
+    from { opacity: 0; filter: blur(6px); transform: scale(0.97); }
+    to { opacity: 1; filter: blur(0); transform: scale(1); }
+  }
+  @keyframes bootRomFadeEnkel { from { opacity: 0; } to { opacity: 1; } }
+  .robot.boot-vekket .jobbring { opacity: 1; animation: bootVekket 0.5s ease-out; }
+  @keyframes bootVekket {
+    0% { opacity: 0; transform: scale(0.5); }
+    60% { opacity: 1; transform: scale(1.15); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .vei-stripe, .pille .pip, .kommandostrom, .sone.feil .statusdot { animation: none !important; }
+    .sone.boot-kjor { animation: bootRomFadeEnkel 0.3s ease-out both !important; animation-delay: 0s !important; }
+    .robot.boot-vekket .jobbring { animation: none !important; opacity: 1; transform: none; }
     .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil,
     .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
     .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
@@ -576,7 +631,7 @@
             </g>
           </g>
 
-          <text x="152" y="76" text-anchor="middle" font-size="18" font-weight="700" fill="var(--text)" id="kandidatTotalt">–</text>
+          <text x="152" y="76" text-anchor="middle" font-size="18" font-weight="700" letter-spacing="-0.02em" fill="var(--text)" id="kandidatTotalt">–</text>
           <text x="152" y="89" text-anchor="middle" font-size="8" fill="var(--text-muted)">søknader totalt</text>
           <g id="kandidatRader" font-size="8" fill="var(--text-muted)"></g>
 
@@ -703,7 +758,7 @@
           <circle cx="627" cy="268" r="5" fill="var(--aktiv)"/>
           <text x="627" y="362" text-anchor="middle" font-size="9" fill="var(--text-muted)">adminnøkkel</text>
           <text x="627" y="388" text-anchor="middle" font-size="9" fill="var(--text-muted)">Avvist</text>
-          <text x="627" y="408" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)" id="avvisteAntall">0</text>
+          <text x="627" y="408" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="-0.02em" fill="var(--text)" id="avvisteAntall">0</text>
           <circle class="statusdot" cx="590" cy="239" r="5"/>
           <g class="alarmpil"><circle cx="666" cy="239" r="6" fill="#fff"/><circle cx="666" cy="239" r="3.2" fill="var(--hendelse)"/></g>
         </g>
@@ -2512,6 +2567,27 @@
   // Pauser mens fanen er skjult - ellers står siden og tygger på kvoten hele døgnet
   // på en skjerm ingen ser på. Alle tre rundene kjøres straks den vises igjen.
   let timere = [];
+  // Oppstartssekvens - den ene bevisste "hero"-bevegelsen på siden (frontend-design-
+  // skillet: bruk frimodigheten ett sted, hold resten rolig). Rommene lyser opp ett og
+  // ett i DOM-rekkefølge (venstre mot høyre, se markup), agentene får et kort
+  // jobbring-blaff til slutt. Klassene fjernes igjen etterpå - ren engangs
+  // ankomstanimasjon, ikke en vedvarende tilstand å holde styr på.
+  function kjorOppstartssekvens() {
+    const rom = [...document.querySelectorAll(".sone")];
+    rom.forEach((r, i) => {
+      r.style.setProperty("--boot-delay", i * 45 + "ms");
+      r.classList.add("boot-kjor");
+    });
+    setTimeout(() => {
+      const agenter = [...document.querySelectorAll(".robot")];
+      agenter.forEach((a) => a.classList.add("boot-vekket"));
+      setTimeout(() => {
+        rom.forEach((r) => r.classList.remove("boot-kjor"));
+        agenter.forEach((a) => a.classList.remove("boot-vekket"));
+      }, 550);
+    }, rom.length * 45 + 150);
+  }
+
   function start() {
     stopp();
     sjekkHendelser(); sjekkHelse(); sjekkTungt();
@@ -2535,6 +2611,7 @@
   tegnKommandosenter();
   requestAnimationFrame(steg);
   hentXpTotal().then(tegnAgentRoster);
+  kjorOppstartssekvens();
   start();
 </script>
 </body>
