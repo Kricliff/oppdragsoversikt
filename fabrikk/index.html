@@ -932,7 +932,7 @@
         <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
-        <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Nyest: søknadstall fra Recman, gruppert på status (Trakteren). Sjekkes hver time, ikke sanntid som resten av kartet. Feltnavnene fra Recman er ikke bekreftet på ekte data ennå - viser "–" i stedet for å gjette hvis noe ikke stemmer.</span></div></li>
+        <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Søknadstall fra Recman, gruppert på status (Trakteren). Cachet i 6 timer - hele lista er paginert og for stor til å hentes i sanntid uten å sprenge Recman sin kall-kvote.</span></div></li>
       </ul>
 
       <h3>Robotene - hvem gjør hva</h3>
@@ -1265,12 +1265,14 @@
       kort: "Skriver dagens hendelser til Obsidian-hvelvet.",
       jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." },
     // Nyest (2026-09-16): sitter i ro ved traktene, samme mønster som Claude/Arkivaren -
-    // ingen bane, bare et fast punkt i sonen sin. /api/kandidater cachet en time, sjekkes
-    // hvert 5. min fra sjekkTungt() - IKKE på det vanlige 15-sekunders hendelsesløpet.
+    // ingen bane, bare et fast punkt i sonen sin. /api/kandidater cachet i 6 timer (hele
+    // jobApplication-lista er paginert - 14 sider, ~13 900 søknader ved verifisering),
+    // sjekkes hvert 5. min fra sjekkTungt() - IKKE på det vanlige 15-sekunders
+    // hendelsesløpet.
     { nr: 14, navn: "Trakteren", sone: "Kandidattrakten", farge: "var(--kandidat)", stasjonaer: true, domId: "trakterenAgent",
       utloser: ["sone-kandidater"],
       kort: "Teller søknader gjennom traktene fra Recman.",
-      jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste. Hentet én gang i timen, ikke sanntid." }
+      jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste (hele den pagineres). Cachet i 6 timer, ikke sanntid." }
   ];
 
   // Lastene på banen er ikke pynt: hver av dem står for én navngitt datastrøm som
