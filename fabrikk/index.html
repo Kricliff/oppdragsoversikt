@@ -285,10 +285,13 @@
      etter tilbakemelding: rommets FULLE alarm (tykk kant + blafrende tittelfelt +
      alarmpil, samme styrke som selve benken) gjorde at hele det store Functions-rommet
      så ut som om "alle boksene blinket", når det egentlig bare var én. Denne bruker kun
-     en svak, ett-gangs kant-glød på selve rommet, uendret sonebar/alarmpil - benken
-     inni er fortsatt det eneste som får den fulle, gjentagende pulsen. */
-  .sone.romblink .glo { animation: romBlink 1.4s ease-out; stroke: var(--hendelse); }
-  @keyframes romBlink { 0% { opacity: 0.55; } 100% { opacity: 0; } }
+     en kant-glød på selve rommet, uendret sonebar/alarmpil - benken inni er fortsatt det
+     eneste som får den fulle, gjentagende pulsen.
+     Rettet igjen etter tilbakemelding "boksen rundt rommet [bør lyse] også ved en
+     endring" - en enkelt rask 1.4s glød ble for utydelig til å legge merke til. Nå et
+     tydelig, men fortsatt ETT-GANGS (ikke uendelig som .alarm), dobbelt støt over 3s. */
+  .sone.romblink .glo { animation: romBlink 3s ease-in-out; stroke: var(--hendelse); }
+  @keyframes romBlink { 0%, 100% { opacity: 0; } 15%, 55% { opacity: 0.85; } 35%, 75% { opacity: 0.15; } }
 
   /* stillhet: står til det er ferskt igjen */
   .sone.treg .glo, .benk.treg .glo { opacity: 1; stroke: var(--advarsel); animation: none; }
@@ -1020,13 +1023,29 @@
     },
     {
       id: "innstillinger", url: "/api/innstillinger", navn: "Innstillinger",
-      // Eneste kilden som med vilje IKKE peker til Functions: brytertavlen i /admin (de
-      // sju bryterne, se legenden) ER selve stedet en innstilling ble endret, ikke bare
-      // der verdien lagres - derfor er Admin hjemme-rommet her, ikke Functions. Benken
-      // "innstillinger" ligger fortsatt fysisk i Functions-rommet, og lyser fortsatt
-      // fullt opp den også - det er nettopp KV-lagringen av den samme endringen.
-      soner: ["admin"], benker: ["innstillinger"], farge: "var(--aktiv)",
+      // Admin (de sju bryterne, se legenden) ER selve stedet en innstilling ble endret,
+      // ikke bare der verdien lagres - derfor er Admin hjemme-rommet (dempet), uansett
+      // hvilken bryter det gjelder.
+      //
+      // RETTET etter tilbakemelding: "innstillinger"-objektet har flere bryterfelt, og
+      // et par av dem har en EGEN, tematisk relevant benk et annet sted på kartet -
+      // "bursdager"-bryteren hører sammen med bursdagslisten (benk-bursdager i
+      // Functions), "kundenytt"-bryteren med kundenytt-benken (i Eksterne kilder). Da
+      // Kristian skrudde av bursdager-bryteren, lyste derfor bare "innstillinger"-benken
+      // opp - riktig etter forrige logikk, men ikke like gjenkjennelig som å se selve
+      // bursdager-benken reagere. Benken er derfor nå UTLEDET av HVILKET felt som
+      // faktisk endret seg, ikke alltid den samme faste "innstillinger"-benken. Felt
+      // uten noen egen benk (feiring, statAktive/statUtfort/statSignerte/statAvsluttet/
+      // statSalgsmoter, teamskanal) faller fortsatt tilbake til "innstillinger".
+      soner: ["admin"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d),
+      benker: (ny, gammel) => {
+        if (!gammel) return ["innstillinger"];
+        const SETTING_BENK = { bursdager: "bursdager", kundenytt: "kundenytt" };
+        const endret = Object.keys(ny).filter((k) => ny[k] !== gammel[k]);
+        const mappet = endret.map((k) => SETTING_BENK[k]).filter(Boolean);
+        return mappet.length ? mappet : ["innstillinger"];
+      },
       beskriv: (ny, gammel) => {
         const endret = Object.keys(ny).filter((k) => gammel && ny[k] !== gammel[k]);
         if (!endret.length) return "Innstillingene ble endret";
@@ -1589,7 +1608,7 @@
   // OGSÅ har en egen benk, slik at rommet ikke konkurrerer visuelt med (eller ser ut som
   // en samling av) den ene benken som faktisk endret seg. Agenten(e) knyttet til selve
   // rommet skal likevel bli fortere/få XP som normalt - kun det VISUELLE er dempet.
-  const ROMBLINK_MS = 1400;
+  const ROMBLINK_MS = 3000;
   const romblinkTimere = new Map();
   function pulsRom(sone, intensitet = 1) {
     aktiverAktorer("sone-" + sone, intensitet);
@@ -1607,7 +1626,7 @@
   // for at man må lete den opp i loggen nederst. Boblen legges som barn av selve
   // robot-elementet, så den følger agenten automatisk uansett hvor den er i banen sin -
   // ingen egen posisjonssporing nødvendig.
-  const TALEBOBLE_MS = 3800;
+  const TALEBOBLE_MS = 10000;
   function visTaleboble(robotDomId, tekst) {
     const robotEl = document.getElementById(robotDomId);
     if (!robotEl) return;
@@ -2101,19 +2120,22 @@
       if (bootstrap || gammelNokkel === undefined || nokkel === gammelNokkel) continue;
 
       const intensitet = k.intensitet ? k.intensitet(data, gammelData) : 1;
+      // benker kan enten være en fast liste, eller (for innstillinger) en funksjon som
+      // regner ut HVILKEN benk som er riktig ut fra hva som faktisk endret seg.
+      const benker = typeof k.benker === "function" ? k.benker(data, gammelData) : (k.benker ?? []);
       // Har kilden en egen benk, får ROMMET kun det dempede signalet (pulsRom) og
       // BENKEN den fulle alarmen - ellers (Recman/Teamskanal/Slusen/Kandidattrakten,
       // som ikke har noen finere boks å peke på) er rommet selv "boksen som endret seg"
       // og får den fulle alarmen. Se KOMMENTAR ved .romblink i CSS.
-      if ((k.benker ?? []).length) {
+      if (benker.length) {
         (k.soner ?? []).forEach((s) => pulsRom(s, intensitet));
-        k.benker.forEach((b) => slaAlarm("benk-" + b, intensitet));
+        benker.forEach((b) => slaAlarm("benk-" + b, intensitet));
       } else {
         (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s, intensitet));
       }
       const tekst = k.beskriv(data, gammelData);
-      leggILogg(tekst, k.farge, treffIder(k.soner, k.benker));
-      visTalebobleForTreff(treffIder(k.soner, k.benker), tekst);
+      leggILogg(tekst, k.farge, treffIder(k.soner, benker));
+      visTalebobleForTreff(treffIder(k.soner, benker), tekst);
     }
 
     oppdaterTall();
