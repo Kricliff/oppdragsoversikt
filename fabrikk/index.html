@@ -857,8 +857,9 @@
         </g>
 
         <!-- ============ OBSIDIAN-HVELVET ============ -->
-        <!-- Egen stasjon for den planlagte jobben obsidian-fabrikk-logg (hver kveld kl.
-             23:55) - den skriver dagens hendelser til Kristians lokale Obsidian-hvelv.
+        <!-- Egen stasjon for den planlagte jobben obsidian-fabrikk-logg (nå tre ganger i
+             døgnet: 08:00, 14:00, 23:00) - den friskner opp dagens notat med hendelser i
+             Kristians lokale Obsidian-hvelv ved hver kjøring.
              Ingen levende forbindelse hit heller (samme grunn som Claudes kontrollrom):
              stasjonen viser derfor kun det jobben SELV har rapportert til /api/agentstatus
              etter siste kjøring, ikke en sanntidsstatus for selve hvelvet. -->
@@ -878,7 +879,7 @@
 
           <text x="627" y="661" text-anchor="middle" font-size="9" fill="var(--text-muted)">Sist logg skrevet</text>
           <text x="627" y="678" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)" id="obsidianSistLogg">–</text>
-          <text x="627" y="690" text-anchor="middle" font-size="8" fill="var(--text-muted)">kl. 23:55 hver kveld</text>
+          <text x="627" y="690" text-anchor="middle" font-size="8" fill="var(--text-muted)">08:00, 14:00, 23:00</text>
 
           <circle class="statusdot" cx="590" cy="607" r="5"/>
           <g class="alarmpil"><circle cx="664" cy="607" r="6" fill="#fff"/><circle cx="664" cy="607" r="3.2" fill="var(--hendelse)"/></g>
@@ -1015,7 +1016,7 @@
         <li><span class="prikk" style="background: var(--teamskanal)"></span><div><b>Teamskanal</b><span class="tekst">Postrommet. Lyser når det kommer nye meldinger fra Teams. Jobben som henter dem kjører hvert 15. minutt på hverdager mellom 07 og 19 - går det mer enn 45 minutter i det vinduet, har jobben stoppet og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
-        <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) skriver dagens hendelser, avviste skrivinger og status fra andre planlagte jobber til Kristians lokale Obsidian-hvelv, hver kveld kl. 23:55 - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Ingen kjøring på over et døgn, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
+        <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) friskner opp dagens notat med hendelser, avviste skrivinger og status fra andre planlagte jobber i Kristians lokale Obsidian-hvelv, tre ganger i døgnet (08:00, 14:00, 23:00) - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Går det mer enn 12 timer mellom to kjøringer, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
         <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Søknadstall fra Recman, gruppert på status (Trakteren). Cachet i 6 timer - hele lista er paginert og for stor til å hentes i sanntid uten å sprenge Recman sin kall-kvote.</span></div></li>
       </ul>
 
@@ -1067,7 +1068,7 @@
   // varsling enn et gult felt som ulver hver gang en jobb er litt forsinket.
   const RECMAN_STILLE_MS = 45 * 60 * 1000;   // cachen er 20 min, så 45 betyr låst
   const TEAMS_STILLE_MS = 45 * 60 * 1000;    // jobben kjører hvert 15. min = 3 tapte kjøringer
-  const OBSIDIAN_STILLE_MS = 26 * 60 * 60 * 1000; // jobben kjører én gang i døgnet kl. 23:55
+  const OBSIDIAN_STILLE_MS = 12 * 60 * 60 * 1000; // jobben kjører tre ganger i døgnet (08/14/23) - lengste normale mellomrom er 9t natt til morgen, 12t gir litt margin
 
   // ---------- hendelseskilder (GET) ----------
   // RETTET (granulær varsling): hver kilde hadde tidligere 2 soner - typisk det fysiske
@@ -1347,7 +1348,7 @@
     { nr: 13, navn: "Arkivaren", sone: "Obsidian-hvelvet", farge: "var(--obsidian)", stasjonaer: true, domId: "arkivarAgent",
       utloser: ["sone-obsidian"],
       kort: "Skriver dagens hendelser til Obsidian-hvelvet.",
-      jobb: "Skriver dagens hendelser, avviste skrivinger og status fra planlagte jobber til Kristians Obsidian-hvelv, hver kveld kl. 23:55. En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." },
+      jobb: "Friskner opp dagens notat med hendelser, avviste skrivinger og status fra planlagte jobber i Kristians Obsidian-hvelv, tre ganger i døgnet (08:00, 14:00, 23:00). En egen planlagt jobb, uavhengig av om denne siden er åpen - melder fra til /api/agentstatus etter hver kjøring, akkurat som Teamskanal-jobben." },
     // Nyest (2026-09-16): sitter i ro ved traktene, samme mønster som Claude/Arkivaren -
     // ingen bane, bare et fast punkt i sonen sin. /api/kandidater cachet i 6 timer (hele
     // jobApplication-lista er paginert - 14 sider, ~13 900 søknader ved verifisering),
