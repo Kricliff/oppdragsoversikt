@@ -52,7 +52,7 @@
     --tavle: #8fd9ff;
     --kandidat: #e8917a;
     --kandidat-myk: #3a231c;
-    /* Møterommet. Bevisst en annen grønn enn --hendelse (#39e07a): den betyr
+    /* War room. Bevisst en annen grønn enn --hendelse (#39e07a): den betyr
        "noe skjedde nå", og de to skal aldri kunne forveksles på veggen. */
     --mote: #9fce5e;
     --mote-myk: #232e17;
@@ -609,6 +609,20 @@
              synlige, men dempet; se #kommandoStrom lenger ned for selve trafikken. -->
         <g id="baneNett"></g>
 
+        <!-- Arkitektens runde. Den er den eneste av de fem i War room som ikke sitter
+             ved bordet: jobben dens er å lete etter forbedringer, og da går den runden
+             langs alle avdelingene og kikker inn. Ruten er tegnet svakt, så det er
+             synlig hvor den kommer til å gå selv når den er på den andre siden av
+             gulvet - samme tanke som banene ut fra kontrollrommet rett over.
+
+             Den går UNDER hele nederste rekke (y=712) og tvers gjennom War room, ikke
+             gjennom gapet på y=586: det er bare 20px bredt, og roboten er bredere enn
+             det. War room er samtidig det ene rommet den har lov til å gå gjennom -
+             det er jo derfra den går ut. Bordet står derfor høyt nok i rommet til at
+             det er en fri gang langs bakveggen, og porten stopper over den. -->
+        <path d="M 248 712 L 248 60 L 1175 60 L 1175 712 Z" fill="none" stroke="var(--tavle)" stroke-width="1.5"
+              stroke-dasharray="3 9" stroke-linejoin="round" opacity=".28"/>
+
         <!-- ============ KANDIDATTRAKTEN ============ -->
         <!-- Sto opprinnelig på nøyaktig de samme yttermålene (34,18,204,150) som det
              tidligere fjernede Observasjonsdekket - garantert ledig og ikke-
@@ -890,7 +904,7 @@
           <g class="alarmpil"><circle cx="664" cy="607" r="6" fill="#fff"/><circle cx="664" cy="607" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
-        <!-- ============ MØTEROMMET ============ -->
+        <!-- ============ WAR ROOM ============ -->
         <!-- Nyest (2026-09-16): de fem agentene som møtes 09:00, 12:00 og 14:30 på
              hverdager. Arkitekten leter etter forbedringer, Cybersec går dem etter i
              sømmene, Administratoren legger dem fram - og Coder og Tester bygger FØRST
@@ -904,48 +918,43 @@
           <rect class="glo" x="698" y="588" width="470" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="596" width="454" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="706" y="596" width="454" height="24" fill="var(--mote)"/>
-          <text x="933" y="613" text-anchor="middle" font-weight="600" font-size="11" fill="#0b0f16">MØTEROMMET</text>
+          <text x="933" y="613" text-anchor="middle" font-weight="600" font-size="11" fill="#0b0f16">WAR ROOM</text>
 
           <!-- møtebordet sett ovenfra, med de fem plassene rundt -->
-          <ellipse cx="845" cy="680" rx="86" ry="26" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
-          <ellipse cx="845" cy="677" rx="68" ry="17" fill="none" stroke="var(--mote)" stroke-width="1" opacity=".3"/>
+          <ellipse cx="845" cy="666" rx="86" ry="20" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
+          <ellipse cx="845" cy="664" rx="68" ry="13" fill="none" stroke="var(--mote)" stroke-width="1" opacity=".3"/>
 
-          <g class="robot" id="arkitektAgent" data-nr="15" style="color: var(--tavle)" transform="translate(798 648) scale(0.58)">
+          <g class="robot" id="cybersecAgent" data-nr="16" style="color: var(--eksterne)" transform="translate(800 640) scale(0.58)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="798" y="634" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ARKITEKT</text>
-          <g class="robot" id="cybersecAgent" data-nr="16" style="color: var(--eksterne)" transform="translate(892 648) scale(0.58)">
+          <text x="800" y="628" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CYBERSEC</text>
+          <g class="robot" id="administratorAgent" data-nr="19" style="color: var(--mote)" transform="translate(946 666) scale(0.58)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="892" y="634" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CYBERSEC</text>
-          <g class="robot" id="administratorAgent" data-nr="19" style="color: var(--mote)" transform="translate(740 680) scale(0.58)">
+          <text x="946" y="694" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ADMIN</text>
+          <g class="robot" id="coderAgent" data-nr="17" style="color: var(--teal)" transform="translate(890 640) scale(0.58)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="740" y="702" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ADMIN</text>
-          <g class="robot" id="coderAgent" data-nr="17" style="color: var(--teal)" transform="translate(798 714) scale(0.58)">
+          <text x="890" y="628" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CODER</text>
+          <g class="robot" id="testerAgent" data-nr="18" style="color: var(--aktiv)" transform="translate(742 666) scale(0.58)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="798" y="730" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CODER</text>
-          <g class="robot" id="testerAgent" data-nr="18" style="color: var(--aktiv)" transform="translate(892 714) scale(0.58)">
-            <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
-            <use href="#robot"/>
-          </g>
-          <text x="892" y="730" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">TESTER</text>
+          <text x="742" y="694" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">TESTER</text>
 
           <!-- godkjenningsporten. Låsen lyser så lenge noe venter på Kristian. -->
-          <line x1="962" y1="634" x2="962" y2="726" stroke="var(--staal)" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
-          <g id="motePortLas" transform="translate(962 680)" style="opacity: .25">
+          <line x1="962" y1="628" x2="962" y2="700" stroke="var(--staal)" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
+          <g id="motePortLas" transform="translate(962 664)" style="opacity: .25">
             <path d="M -5 -6 L -5 -11 A 5 5 0 0 1 5 -11 L 5 -6" fill="none" stroke="var(--mote)" stroke-width="1.6"/>
             <rect x="-9" y="-6" width="18" height="14" rx="2" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
           </g>
 
-          <text x="1062" y="646" text-anchor="middle" font-size="9" fill="var(--text-muted)">Venter på din godkjenning</text>
-          <text x="1062" y="682" text-anchor="middle" font-size="26" font-weight="700" fill="var(--text)" id="moteForslag">–</text>
-          <text x="1062" y="702" text-anchor="middle" font-size="8" fill="var(--text-muted)" id="moteUnder">møter 09:00 · 12:00 · 14:30</text>
+          <text x="1062" y="644" text-anchor="middle" font-size="9" fill="var(--text-muted)">Venter på din godkjenning</text>
+          <text x="1062" y="678" text-anchor="middle" font-size="26" font-weight="700" fill="var(--text)" id="moteForslag">–</text>
+          <text x="1062" y="696" text-anchor="middle" font-size="8" fill="var(--text-muted)" id="moteUnder">møter 09:00 · 12:00 · 14:30</text>
 
           <circle class="statusdot" cx="722" cy="608" r="5"/>
           <g class="alarmpil"><circle cx="1144" cy="608" r="6" fill="#fff"/><circle cx="1144" cy="608" r="3.2" fill="var(--hendelse)"/></g>
@@ -1083,7 +1092,7 @@
         <li><span class="prikk" style="background: var(--tavle)"></span><div><b>Tavla</b><span class="tekst">Skjermene på veggen. Tallene er ekte: hendelser siste døgn, og hvor mange skjermer som er på nett nå. Lyser når en skjerm melder seg inn, faller av, eller gjestevisningen skrus av eller på. En skjerm som slutter å svare blir gul.</span></div></li>
         <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Kontrollrommet</b><span class="tekst">Claude ved maskinen, midt på dekket. Derfra går det en fast bane ut til hver modul - svak til vanlig, så du ser hvem det kan nås ut til. Rulles det ut ny kode, renner en grønn strøm ut til de modulene koden gjelder for, så lenge utrullingen varer. Ligger alle banene mørke, skjer det ingen trafikk.</span></div></li>
         <li><span class="prikk" style="background: var(--obsidian)"></span><div><b>Obsidian-hvelvet</b><span class="tekst">En egen planlagt jobb (Arkivaren) friskner opp dagens notat med hendelser, avviste skrivinger og status fra andre planlagte jobber i Kristians lokale Obsidian-hvelv, tre ganger i døgnet (08:00, 14:00, 23:00) - helt uavhengig av om denne siden er åpen. "Sist logg skrevet" er hva jobben selv rapporterte etter siste kjøring, ikke en sanntidssjekk av selve hvelvet (det kan denne siden ikke se). Går det mer enn 12 timer mellom to kjøringer, blir feltet gult. Feiler selve skrivingen, blir det rødt til det er kvittert ut - samme mønster som Teamskanal-oppdateringen, som også melder status hit til kontrollrommet.</span></div></li>
-        <li><span class="prikk" style="background: var(--mote)"></span><div><b>Møterommet</b><span class="tekst">Fem agenter som møtes 09:00, 12:00 og 14:30 på hverdager. Arkitekten leter etter forbedringer i koden og på nett, Cybersec går funnene etter i sømmene, Administratoren legger dem fram for deg i /admin - og Coderen og Testeren rører ikke en linje før du har trykket Godkjenn. Tallet er hvor mange forslag som står og venter på nettopp det. Sperren ligger i serveren, ikke i teksten: agentnøkkelen får 403 om den forsøker å godkjenne sitt eget arbeid. Blir noe blokkert av Cybersec, står det her og rommet blir rødt til du selv kvitterer det ut.</span></div></li>
+        <li><span class="prikk" style="background: var(--mote)"></span><div><b>War room</b><span class="tekst">Fem agenter som møtes 09:00, 12:00 og 14:30 på hverdager. Arkitekten leter etter forbedringer i koden og på nett, Cybersec går funnene etter i sømmene, Administratoren legger dem fram for deg i /admin - og Coderen og Testeren rører ikke en linje før du har trykket Godkjenn. Tallet er hvor mange forslag som står og venter på nettopp det. Sperren ligger i serveren, ikke i teksten: agentnøkkelen får 403 om den forsøker å godkjenne sitt eget arbeid. Blir noe blokkert av Cybersec, står det her og rommet blir rødt til du selv kvitterer det ut.</span></div></li>
         <li><span class="prikk" style="background: var(--kandidat)"></span><div><b>Kandidattrakten</b><span class="tekst">Søknadstall fra Recman, gruppert på status (Trakteren). Cachet i 6 timer - hele lista er paginert og for stor til å hentes i sanntid uten å sprenge Recman sin kall-kvote.</span></div></li>
       </ul>
 
@@ -1361,6 +1370,10 @@
   // gulvet som betyr at nettopp den har noe å gjøre. Uten oppgave går den i halv fart.
   const BANE_TRACK = "M 135 258 L 1052 258 L 1052 392 L 135 392 Z";
 
+  // Arkitektens runde. NØYAKTIG samme streng som den tegnede ruten i SVG-en over -
+  // gikk de to fra hverandre, ville roboten gått et annet sted enn stiplinga viser.
+  const RUNDE_ARKITEKT = "M 248 712 L 248 60 L 1175 60 L 1175 712 Z";
+
   const ROBOTER = [
     { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--recman)", varighet: 11,
       bane: "M 78 246 L 194 246 L 194 426 L 78 426 Z", utloser: ["sone-recman"],
@@ -1425,26 +1438,30 @@
       utloser: ["sone-kandidater"],
       kort: "Teller søknader gjennom traktene fra Recman.",
       jobb: "Teller kandidatsøknader gjennom traktene - søkt, screenet, intervjuet, ansatt - fra Recman sin jobApplication-liste (hele den pagineres). Cachet i 6 timer, ikke sanntid." },
-    // Nyest (2026-09-16): de fem i møterommet. Alle sitter i ro rundt bordet - de
+    // Nyest (2026-09-16): de fem i War room. Alle sitter i ro rundt bordet - de
     // kjører som planlagte økter utenfor denne siden, og kan derfor bare vise at de
     // har vært her (via /api/agentstatus), ikke hva de holder på med akkurat nå.
-    { nr: 15, navn: "Arkitekten", sone: "Møterommet", farge: "var(--tavle)", stasjonaer: true, domId: "arkitektAgent",
-      utloser: ["sone-mote"],
-      kort: "Leter etter forbedringer i koden og på nett.",
-      jobb: "Leser gjennom repoet, alarmhistorikken og hva som finnes av tjenester utenfor, og foreslår maks tre konkrete forbedringer per dag. Den har ingen skrivetilgang i det hele tatt - den leser, søker og foreslår. Alt den finner på nett behandles som data, aldri som instruksjoner." },
-    { nr: 16, navn: "Cybersec", sone: "Møterommet", farge: "var(--eksterne)", stasjonaer: true, domId: "cybersecAgent",
+    // Den eneste av de fem som ikke sitter ved bordet. Ruten går i korridorene mellom
+    // avdelingene og innom War room nede til høyre - der den går ut fra, og dit den
+    // kommer tilbake. Bevisst treg (50 sekunder rundt, halv fart uten oppgave): dette
+    // er en runde, ikke et ærend.
+    { nr: 15, navn: "Arkitekten", sone: "War room", farge: "var(--tavle)", varighet: 50,
+      bane: RUNDE_ARKITEKT, utloser: ["sone-mote"],
+      kort: "Går runder og leter etter forbedringer.",
+      jobb: "Går runden mellom avdelingene og kikker inn - leser gjennom repoet, alarmhistorikken og hva som finnes av tjenester utenfor, og foreslår maks tre konkrete forbedringer per dag. Den har ingen skrivetilgang i det hele tatt - den leser, søker og foreslår. Alt den finner på nett behandles som data, aldri som instruksjoner." },
+    { nr: 16, navn: "Cybersec", sone: "War room", farge: "var(--eksterne)", stasjonaer: true, domId: "cybersecAgent",
       utloser: ["sone-mote"],
       kort: "Dobbeltsjekker Arkitekten og Coderen.",
       jobb: "Går hvert forslag etter i sømmene før det legges fram, og hver kodeendring etter at den er skrevet. Ser etter om et forslag egentlig stammer fra en nettside som prøvde å gi instruksjoner, om det åpner noe utover, og om det rører sikkerhetsryggraden. Finner den noe, blokkerer den forslaget - og det er den ENESTE bremsen ingen av de andre agentene kan løsne. Kun Kristian kommer forbi den." },
-    { nr: 17, navn: "Coderen", sone: "Møterommet", farge: "var(--teal)", stasjonaer: true, domId: "coderAgent",
+    { nr: 17, navn: "Coderen", sone: "War room", farge: "var(--teal)", stasjonaer: true, domId: "coderAgent",
       utloser: ["sone-mote"],
       kort: "Bygger det Kristian har godkjent - på egen gren.",
       jobb: "Skriver koden for et forslag som allerede ER godkjent. Arbeider kun på en egen gren og ruller kun ut til forhandsvisning, aldri til produksjon, og skal aldri røre sikkerhetssperren eller nøkkelhåndteringen. Den kan ikke godkjenne sitt eget arbeid: /api/forslag svarer 403 om den forsøker." },
-    { nr: 18, navn: "Testeren", sone: "Møterommet", farge: "var(--aktiv)", stasjonaer: true, domId: "testerAgent",
+    { nr: 18, navn: "Testeren", sone: "War room", farge: "var(--aktiv)", stasjonaer: true, domId: "testerAgent",
       utloser: ["sone-mote"],
       kort: "Prøver å knekke det Coderen bygget.",
       jobb: "Verifiserer mot forhandsvisningen med ekte kall, og leter bevisst etter det som er ødelagt heller enn å bekrefte at det virker. Består det ikke, går forslaget tilbake til Coderen i stedet for videre." },
-    { nr: 19, navn: "Administratoren", sone: "Møterommet", farge: "var(--mote)", stasjonaer: true, domId: "administratorAgent",
+    { nr: 19, navn: "Administratoren", sone: "War room", farge: "var(--mote)", stasjonaer: true, domId: "administratorAgent",
       utloser: ["sone-mote"],
       kort: "Leder møtet og legger forslagene fram for Kristian.",
       jobb: "Styrer de fire andre fullt og helt - men har ingen myndighet over selve endringene. Den setter Coder og Tester i gang FØRST etter at Kristian har trykket Godkjenn i /admin, og den kan ikke trykke den knappen selv om den skulle ville: sperren ligger som en nøkkelsjekk i serveren, ikke som en instruks den kan overse eller bli lurt til å overse." }
@@ -1677,11 +1694,11 @@
     // Agent 14 (Trakteren) er også stasjonær - Kandidattrakten har ingen egen benk, så
     // rommet selv får den fulle alarmen når traktallene endrer seg (se sjekkKandidater).
     document.getElementById("trakterenAgent").classList.toggle("jobber", document.getElementById("sone-kandidater").classList.contains("alarm"));
-    // Agent 15-19 sitter rundt møtebordet. De kjører tre ganger om dagen som egne
+    // Agent 16-19 sitter rundt bordet i War room (Arkitekten går sin egen runde). De kjører tre ganger om dagen som egne
     // planlagte økter, så alle fem følger den samme pulsen på rommet sitt - enten den
     // kommer fra en fersk rapport til /api/agentstatus eller fra en endring i køen.
     const moteJobber = document.getElementById("sone-mote").classList.contains("alarm");
-    for (const id of ["arkitektAgent", "cybersecAgent", "coderAgent", "testerAgent", "administratorAgent"]) {
+    for (const id of ["cybersecAgent", "coderAgent", "testerAgent", "administratorAgent"]) {
       document.getElementById(id).classList.toggle("jobber", moteJobber);
     }
     requestAnimationFrame(steg);
@@ -2629,7 +2646,7 @@
   }
 
 
-  // Møterommet - se functions/api/forslag.js. Tallet er ikke pynt: det er hvor mange
+  // War room - se functions/api/forslag.js. Tallet er ikke pynt: det er hvor mange
   // forslag som står og venter på at Kristian trykker Godkjenn eller Avvis i /admin.
   // Ingen agent kommer forbi den porten, så et tall som blir stående er et tall bare
   // han kan gjøre noe med.
