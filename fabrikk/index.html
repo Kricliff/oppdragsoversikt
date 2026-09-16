@@ -137,6 +137,10 @@
   .scene { position: relative; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 8px; overflow: hidden; box-shadow: 0 0 0 1px #000 inset, 0 30px 60px -30px rgba(57, 224, 122, 0.12); }
   svg { display: block; width: 100%; height: auto; }
   .robot { cursor: pointer; }
+  /* UI/UX-refresh: synlig fokusring for tastaturbrukere (samme prinsipp som jobbring,
+     men alltid av samme grunn - fokus, ikke aktivitet). outline i stedet for stroke,
+     siden SVG-outline følger formen uten å forstyrre selve robot-tegningen. */
+  .robot:focus-visible { outline: 2px solid var(--aktiv); outline-offset: 3px; border-radius: 50%; }
   .agent-tooltip {
     position: absolute; z-index: 30; pointer-events: none; transform: translate(-50%, -100%);
     background: var(--bg-0); border: 1px solid var(--border); border-radius: 8px;
@@ -1378,11 +1382,21 @@
   // Nummeret sto tidligere fast over hver agent på selve kartet - erstattet med et
   // HUD-skilt som bare vises på hover, med nummer + kort beskrivelse. Den fulle
   // beskrivelsen (r.jobb) ligger fortsatt i Agentroster under, se tegnAgentRoster().
+  // UI/UX-refresh (ui-ux-pro-max): agent-infoen var rent hover-styrt - usynlig for
+  // tastatur- og skjermleserbrukere, og uten noen tilgjengelig navn på selve elementet.
+  // Gjør nå roboten fokuserbar (tabindex), gir den et beskrivende aria-label identisk
+  // med hover-teksten, og viser samme infovindu på fokus/blur som på mus inn/ut.
+  const agentAriaLabel = (r) => "Nr. " + r.nr + " - " + r.navn + ": " + r.kort;
   const agentTooltipEl = () => document.getElementById("agentTooltip");
   function koblAgentTooltip(elm, r) {
+    elm.setAttribute("tabindex", "0");
+    elm.setAttribute("role", "img");
+    elm.setAttribute("aria-label", agentAriaLabel(r));
     elm.addEventListener("mouseenter", () => visAgentTooltip(elm, r));
     elm.addEventListener("mousemove", () => visAgentTooltip(elm, r));
     elm.addEventListener("mouseleave", skjulAgentTooltip);
+    elm.addEventListener("focus", () => visAgentTooltip(elm, r));
+    elm.addEventListener("blur", skjulAgentTooltip);
   }
   // Rettet etter tilbakemelding: infovinduet ble plassert med senter rett over agenten
   // uten noen grense-sjekk, så .scene sin egen overflow:hidden klippet det bort for
