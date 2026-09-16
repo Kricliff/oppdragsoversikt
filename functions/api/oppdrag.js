@@ -213,34 +213,83 @@ async function merkNyeOppdrag(oppdrag, kv) {
 // på selve oppdraget. Bekreftet 2026-09-15: "FLO AS - Kommersiell Leder" og et
 // Cegal-oppdrag forsvant i nøyaktig samme sekund, og Cegal hadde vært innom samme
 // forsvinning og gjenkomst dagen før.
+//
+// RETTET (2026-09-16): å hente alle sidene fikk problemet til å skje sjeldnere, men
+// ikke til å forsvinne - bekreftet i den ekte endringsloggen at "Azets Insight AS -
+// INTERIM - Teamleder Regnskap (937)" flimret nytt/borte i perfekt synk med nettopp
+// Cegal- og FLO-oppdragene igjen, lenge etter denne fiksen. Årsaken satt igjen: sidene
+// ble hentet SEKVENSIELT, én om gangen, og det tar reell tid å hente opptil 20 sider -
+// nok tid til at noen rekker å redigere et ANNET prosjekt i Recman midt i vår egen
+// henting, som flytter prosjekter mellom sider Recman selv sorterer. Et prosjekt som
+// flytter seg fra en side vi ikke har hentet ennå til en side vi allerede har passert,
+// forsvinner sporløst for akkurat den oppfriskningen.
+//
+// Fasit: hent sidene i SAMTIDIGE bolker (SIDE_BATCH om gangen) i stedet for én og én -
+// det krymper tidsvinduet reordringen kan skje i med omtrent en faktor SIDE_BATCH,
+// uten å øke antall Recman-kall utover det som allerede var nødvendig for å finne
+// slutten av listen (se stopp-logikken under, uendret prinsipp: stopp ved første tomme
+// eller feilende side, i sidenes rekkefølge - selv om de ble hentet samtidig).
+// Hver enkelt side prøves også på nytt et par ganger ved en forbigående feil, i stedet
+// for å tolke en forbigående nettverksglipp som "her sluttet dataene".
 const MAKS_SIDER = 20;
+const SIDE_BATCH = 5;
+const SIDE_FORSOK = 3;
+
+async function hentSideMedForsok(apiKey, projectFields, side) {
+  let sisteFeil = null;
+  for (let forsok = 1; forsok <= SIDE_FORSOK; forsok++) {
+    try {
+      const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=${side}`;
+      const json = await fetch(url).then((r) => r.json());
+      if (json.success) return json;
+      sisteFeil = json.error;
+    } catch (err) {
+      sisteFeil = String(err.message ?? err);
+    }
+    if (forsok < SIDE_FORSOK) await new Promise((r) => setTimeout(r, 300 * forsok));
+  }
+  return { success: false, error: sisteFeil };
+}
 
 async function hentAlleProsjekter(apiKey, projectFields) {
   const alle = {};
   let sider = 0;
 
-  for (let side = 1; side <= MAKS_SIDER; side++) {
-    const url = `https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=${projectFields}&page=${side}`;
-    const json = await fetch(url).then((r) => r.json());
+  for (let batchStart = 1; batchStart <= MAKS_SIDER; batchStart += SIDE_BATCH) {
+    const sideNumre = [];
+    for (let s = batchStart; s < batchStart + SIDE_BATCH && s <= MAKS_SIDER; s++) sideNumre.push(s);
 
-    if (!json.success) {
-      // Feiler den aller første siden har vi ingenting å vise, og da skal det smelle.
-      // Feiler en senere side er et delvis resultat bedre enn å miste hele tavlen.
-      if (side === 1) throw new Error("Recman project-feil: " + JSON.stringify(json.error));
-      break;
+    const svar = await Promise.all(sideNumre.map((side) => hentSideMedForsok(apiKey, projectFields, side)));
+
+    let noeNytt = false;
+    let stoppEtterBatch = false;
+    for (let i = 0; i < svar.length; i++) {
+      const json = svar[i];
+      const side = sideNumre[i];
+
+      if (!json.success) {
+        // Feiler den aller første siden (etter SIDE_FORSOK forsøk) har vi ingenting å
+        // vise, og da skal det smelle. Feiler en senere side er et delvis resultat
+        // bedre enn å miste hele tavlen - men vi stopper HER (i sidenes rekkefølge),
+        // ikke bare hopper over den ene siden, for å unngå et hull midt i listen om en
+        // senere side i samme bolk skulle lykkes.
+        if (side === 1) throw new Error("Recman project-feil: " + JSON.stringify(json.error));
+        stoppEtterBatch = true;
+        break;
+      }
+
+      const rader = Object.values(json.data ?? {});
+      if (!rader.length) { stoppEtterBatch = true; break; }
+
+      const forAntall = Object.keys(alle).length;
+      for (const p of rader) alle[p.projectId] = p;
+      sider = side;
+      if (Object.keys(alle).length > forAntall) noeNytt = true;
+      // Se opprinnelig kommentar: skulle Recman ignorere page-parameteren og gi samme
+      // side om igjen, gir ikke det flere unike rader - fanges opp av noeNytt under.
     }
 
-    const rader = Object.values(json.data ?? {});
-    if (!rader.length) break;
-
-    const forAntall = Object.keys(alle).length;
-    for (const p of rader) alle[p.projectId] = p;
-    sider = side;
-
-    // Skulle Recman ignorere page-parameteren og gi samme side om igjen, stopper vi her
-    // i stedet for å hente det samme 20 ganger. Nøkling på projectId gjør at et slikt
-    // svar uansett ikke kan gi duplikater.
-    if (Object.keys(alle).length === forAntall) break;
+    if (stoppEtterBatch || !noeNytt) break;
   }
 
   return { prosjekter: Object.values(alle), sider };
