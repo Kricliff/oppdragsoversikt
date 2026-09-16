@@ -1599,35 +1599,6 @@
   }
   function skjulAgentTooltip() { agentTooltipEl().hidden = true; }
 
-  // Fullskjerm. Dette er et veggdisplay, så kartet skal kunne fylle skjermen uten
-  // rammen rundt. Nettleseren krever en ekte brukerhandling for å gå inn, så knappen
-  // (eller F) er eneste vei - Escape kommer ut igjen av seg selv.
-  const fullskjermKnapp = el("fullskjermKnapp");
-  const sceneEl = document.querySelector(".scene");
-  const erFullskjerm = () => document.fullscreenElement === sceneEl;
-  async function vekslFullskjerm() {
-    try {
-      if (erFullskjerm()) await document.exitFullscreen();
-      else await sceneEl.requestFullscreen();
-    } catch {
-      // Kan være blokkert, f.eks. i en innramming uten allow="fullscreen". Si det i
-      // knappen i stedet for å feile stille.
-      fullskjermKnapp.textContent = "Fullskjerm er ikke tillatt her";
-    }
-  }
-  fullskjermKnapp.addEventListener("click", vekslFullskjerm);
-  document.addEventListener("fullscreenchange", () => {
-    fullskjermKnapp.textContent = erFullskjerm() ? "⛶ Avslutt fullskjerm" : "⛶ Fullskjerm";
-    // Tooltipen plasseres mot scenen, som nettopp byttet størrelse - den ville blitt
-    // stående feil sted til neste mus-bevegelse.
-    skjulAgentTooltip();
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "f" && e.key !== "F") return;
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? "")) return;
-    vekslFullskjerm();
-  });
-
   function byggAktorer() {
     const robotLag = el("roboter");
     for (const r of ROBOTER) {
@@ -2826,6 +2797,35 @@
     timere = [];
   }
   document.addEventListener("visibilitychange", () => (document.hidden ? stopp() : start()));
+
+// Fullskjerm. Dette er et veggdisplay, så kartet skal kunne fylle skjermen uten
+  // rammen rundt. Nettleseren krever en ekte brukerhandling for å gå inn, så knappen
+  // (eller F) er eneste vei - Escape kommer ut igjen av seg selv.
+  const fullskjermKnapp = el("fullskjermKnapp");
+  const sceneEl = document.querySelector(".scene");
+  const erFullskjerm = () => document.fullscreenElement === sceneEl;
+  async function vekslFullskjerm() {
+    try {
+      if (erFullskjerm()) await document.exitFullscreen();
+      else await sceneEl.requestFullscreen();
+    } catch {
+      // Kan være blokkert, f.eks. i en innramming uten allow="fullscreen". Si det i
+      // knappen i stedet for å feile stille.
+      fullskjermKnapp.textContent = "Fullskjerm er ikke tillatt her";
+    }
+  }
+  fullskjermKnapp.addEventListener("click", vekslFullskjerm);
+  document.addEventListener("fullscreenchange", () => {
+    fullskjermKnapp.textContent = erFullskjerm() ? "⛶ Avslutt fullskjerm" : "⛶ Fullskjerm";
+    // Tooltipen plasseres mot scenen, som nettopp byttet størrelse - den ville blitt
+    // stående feil sted til neste mus-bevegelse.
+    skjulAgentTooltip();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "f" && e.key !== "F") return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? "")) return;
+    vekslFullskjerm();
+  });
 
   byggBaneNett();
   leggTilHudHjorner();
