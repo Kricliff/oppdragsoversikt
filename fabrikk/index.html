@@ -286,6 +286,18 @@
   @keyframes gloPuls { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
   @keyframes barPuls { 0%, 100% { fill: var(--hendelse); } 50% { fill: #4ade80; } }
 
+  /* Taleboble over agenten - samme tekst som logglinja, se visTaleboble(). Ligger som
+     barn av selve robot-elementet og arver dermed transformen (posisjon/rotasjon) uten
+     egen sporing. pointer-events:none så den aldri stjeler klikk fra agenten under. */
+  /* Kun opacity animeres her, bevisst - selve posisjonen (translate) settes som SVG-
+     attributt i visTaleboble(), og en KONKURRERENDE CSS transform på samme element
+     ville vunnet over attributtet i moderne nettlesere og kunnet gi uforutsigbar
+     plassering. */
+  .taleboble { pointer-events: none; opacity: 0; animation: bobleInn 0.15s ease-out forwards; }
+  .taleboble rect { fill: #0e131c; stroke: var(--border); stroke-width: 1; }
+  .taleboble text { font-size: 8px; font-family: "Inter", sans-serif; fill: var(--text); }
+  @keyframes bobleInn { to { opacity: 1; } }
+
   /* Robotene og lastene kjøres av requestAnimationFrame, ikke av SVG-animasjon, nettopp
      fordi farten skal kunne trappes jevnt opp og ned. Å endre varigheten på en SMIL-
      eller CSS-animasjon underveis gir et synlig hopp i stedet for en gradvis endring. */
@@ -352,6 +364,7 @@
     .sone.alarm .glo, .benk.alarm .glo, .sone.alarm .alarmpil,
     .sone.feil .glo, .benk.feil .glo { animation: none !important; opacity: 1; }
     .sone.alarm .sonebar { animation: none !important; fill: var(--hendelse); }
+    .taleboble { animation: none !important; opacity: 1; }
   }
   /* ---------- romstasjon-kulisser: jorden og droner utenfor skroget ---------- */
   .jorden {
@@ -789,17 +802,23 @@
   <div class="to-kolonner">
     <div class="kort">
       <h2>🤖 Agentroster</h2>
-      <p class="hint">13 agenter. Grønn puls = jobber akkurat nå. XP-baren fylles av faktiske hendelser i dag i denne nettleseren, og nullstilles ved midnatt - ikke pynt.</p>
+      <p class="hint">13 agenter. Grønn puls = jobber akkurat nå. Nivået er en varig sum av faktiske hendelser, lagret på tvers av dager og skjermer - ikke pynt. Teksten under viser i tillegg hva som har skjedd i dag.</p>
       <div class="roster" id="agentRoster"></div>
 
       <div class="badgerad" id="badgeRad"></div>
     </div>
 
     <div>
+      <!-- Slått sammen fra tidligere to kort (Trusselpanel + Helse) - de viste delvis
+           samme informasjon to steder (en feilende kilde dukket opp rødt i begge). Det
+           som faktisk krever et menneske står øverst med kvitteringsknappen uendret;
+           full status for alle kilder står rett under, ikke i et eget kort lenger. -->
       <div class="kort" style="margin-bottom: 1.2rem">
-        <h2>🚨 Trusselpanel</h2>
-        <p class="hint">Det som faktisk krever et menneske. Kvitteres med knappen øverst på siden.</p>
+        <h2>🚨 Status</h2>
+        <p class="hint">Øverst: det som faktisk krever et menneske, kvitteres med knappen øverst på siden. Under: alle datakildene tavlen er avhengig av - grønn svarer, rød er nede, gul har blitt stille.</p>
         <div id="trusselListe"></div>
+        <h3 style="margin-top: 1rem">Alle kilder</h3>
+        <ul class="helse" id="helseListe"></ul>
       </div>
 
       <div class="kort">
@@ -813,18 +832,23 @@
   <div class="under" style="margin-top: 1.2rem">
 
     <div class="kort">
-      <h2>⚙️ Helse</h2>
-      <p class="hint">Alle datakildene tavlen er avhengig av. Grønn betyr at kilden svarer, rød at den er nede, gul at den har blitt stille.</p>
-      <ul class="helse" id="helseListe"></ul>
-    </div>
-
-    <div class="kort">
       <h2>🖥️ Kontrollrommet</h2>
       <p class="hint">Claude sitter midt på gulvet med en bane ut til hver avdeling. Banene er svake til vanlig og lyser grønt når en kommando faktisk går der.</p>
       <div class="kvote-rad"><span>Sist utrulling</span><span id="claudeSistDeploy">–</span></div>
       <div class="kvote-rad"><span>Hva ble endret</span><span id="claudeSistHva">–</span></div>
       <div class="kvote-rad"><span>Kommandoer sendt i økten</span><span id="claudeKommandoer">0</span></div>
       <p class="hint" style="margin: 0.9rem 0 0">En kommando er en utrulling av ny kode. Endringer Kristian selv gjør i /admin lyser der, ikke her: de to ser helt like ut utenfra, så de kan ikke tilskrives noen.</p>
+    </div>
+
+    <!-- Kandidattrakten - traktall fra Recman sin jobApplication-scope, se
+         functions/api/kandidater.js. NB: feltnavnene i det kallet er ikke bekreftet
+         mot et ekte svar ennå, se advarselen der - panelet viser derfor bare "–" og
+         feilteksten hvis noe ikke stemmer, i stedet for å late som det virker. -->
+    <div class="kort">
+      <h2>🧑‍💼 Kandidattrakten</h2>
+      <p class="hint">Søknader fra Recman, gruppert på status. Nytt panel - kun timelig oppdatert (ikke sanntid), og markert utilgjengelig i stedet for å gjette hvis feltene fra Recman ikke stemmer.</p>
+      <div class="kvote-sum" id="kandidaterSum">– <small>søknader totalt</small></div>
+      <div id="kandidaterRader"></div>
     </div>
 
     <div class="kort">
@@ -917,11 +941,26 @@
   const OBSIDIAN_STILLE_MS = 26 * 60 * 60 * 1000; // jobben kjører én gang i døgnet kl. 23:55
 
   // ---------- hendelseskilder (GET) ----------
+  // RETTET (granulær varsling): hver kilde hadde tidligere 2 soner - typisk det fysiske
+  // hjemme-rommet PLUSS "functions" limt på fordi skrivingen til slutt går gjennom en
+  // Cloudflare Function, eller "admin" fordi endringen kom fra /admin-siden. Det gjorde
+  // at nesten ALT blinket i minst to rom samtidig (og ga XP til feil agent, siden
+  // beregnAgentXP bruker akkurat samme treffIder()-liste). Hver kilde har nå ETT fysisk
+  // hjemme-rom - benken blinker for seg selv (uendret), hjemme-rommet blinker svakt
+  // samtidig, og INGEN andre rom reagerer.
   const KILDER = [
     {
       id: "endringslogg", url: "/api/endringslogg", navn: "Endringslogg",
-      soner: ["recman", "functions"], farge: "var(--recman)",
+      soner: ["recman"], farge: "var(--recman)",
       nokkel: (d) => { const h = d.hendelser ?? []; return h.length + ":" + (h[0]?.tidspunkt ?? 0); },
+      // Antall FAKTISK nye hendelser siden forrige sjekk (nyere enn det som da var
+      // ferskest) - 3 eller flere på én gang holder agenten i full fart lenge, én
+      // enkelt hendelse gir bare et kort blaff. Se aktiverAktorer().
+      intensitet: (ny, gammel) => {
+        const forrigeSist = gammel?.hendelser?.[0]?.tidspunkt ?? 0;
+        const nye = (ny.hendelser ?? []).filter((h) => h.tidspunkt > forrigeSist).length;
+        return Math.min(1, nye / 3);
+      },
       beskriv: (d) => {
         const h = (d.hendelser ?? [])[0];
         if (!h) return "Endring i oppdragene fra Recman";
@@ -933,13 +972,13 @@
     },
     {
       id: "notat", url: "/api/notat", navn: "Post-it",
-      soner: ["admin", "functions"], benker: ["notat"], farge: "var(--aktiv)",
+      soner: ["functions"], benker: ["notat"], farge: "var(--aktiv)",
       nokkel: (d) => String(d.tekst ?? ""),
       beskriv: (d) => (d.tekst ? "Ny post-it-lapp på tavlen" : "Post-it-lappen ble tømt")
     },
     {
       id: "innstillinger", url: "/api/innstillinger", navn: "Innstillinger",
-      soner: ["admin", "functions"], benker: ["innstillinger"], farge: "var(--aktiv)",
+      soner: ["functions"], benker: ["innstillinger"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d),
       beskriv: (ny, gammel) => {
         const endret = Object.keys(ny).filter((k) => gammel && ny[k] !== gammel[k]);
@@ -949,7 +988,7 @@
     },
     {
       id: "skjulte", url: "/api/skjulte", navn: "Parkerte oppdrag",
-      soner: ["admin", "functions"], benker: ["skjulte"], farge: "var(--aktiv)",
+      soner: ["functions"], benker: ["skjulte"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d.skjulte ?? []),
       beskriv: (ny, gammel) => {
         const f = (gammel?.skjulte ?? []).length, n = (ny.skjulte ?? []).length;
@@ -960,19 +999,19 @@
     },
     {
       id: "bursdager", url: "/api/bursdager", navn: "Bursdager",
-      soner: ["admin", "functions"], benker: ["bursdager"], farge: "var(--aktiv)",
+      soner: ["functions"], benker: ["bursdager"], farge: "var(--aktiv)",
       nokkel: (d) => JSON.stringify(d.bursdager ?? []),
       beskriv: () => "Bursdagslisten ble endret"
     },
     {
       id: "bilde", url: "/api/bilde?status", navn: "Bilde-oppslag",
-      soner: ["admin", "functions"], benker: ["bilde"], farge: "var(--aktiv)",
+      soner: ["functions"], benker: ["bilde"], farge: "var(--aktiv)",
       nokkel: (d) => String(d.harBilde) + ":" + String(d.lagtUt ?? ""),
       beskriv: (d) => (d.harBilde ? "Nytt bilde-oppslag lagt ut på tavlen" : "Bilde-oppslaget ble fjernet")
     },
     {
       id: "teamskanal", url: "/api/teamskanal", navn: "Teamskanal",
-      soner: ["teamskanal", "functions"], farge: "var(--teamskanal)",
+      soner: ["teamskanal"], farge: "var(--teamskanal)",
       // sistOppdatert er BEVISST utelatt: jobben poster hvert 15. minutt uansett om det
       // finnes nye meldinger eller ei, så en nøkkel basert på den ville slått alarm fire
       // ganger i timen uten at noe faktisk hadde skjedd. Kun innholdet teller som hendelse -
@@ -987,7 +1026,9 @@
     },
     {
       id: "skjermer", url: "/api/skjermer", navn: "Skjermer",
-      soner: ["tavle", "functions"], benker: ["skjermer"], farge: "var(--tavle)",
+      // Selve skrivingen skjer i Functions (benk-skjermer der), men skjermlisten VISES i
+      // Tavla-rommet - den oppdaterer seg allerede stille der uten et eget alarm-blink.
+      soner: ["functions"], benker: ["skjermer"], farge: "var(--tavle)",
       // sistSett utelates - den bumpes ved hver heartbeat og ville fått alarmen til å
       // blinke konstant uten at det faktisk har skjedd noe.
       nokkel: (d) => (d.skjermer ?? []).map((s) => [s.id, s.navn, s.aktiv, s.gjestevisning].join("|")).sort().join(";"),
@@ -1289,9 +1330,13 @@
   const FART_JOBB = 1;
   let sisteBilde = 0;
 
-  function aktiverAktorer(velger) {
-    const til = Date.now() + ALARM_MS;
-    for (const a of aktorer) if (a.utloser.includes(velger)) a.aktivTil = til;
+  // intensitet (0-1) lar en hendelse med reell "mengde" bak seg (f.eks. tre nye
+  // oppdrag i samme runde, ikke bare ett) holde agenten i full fart lenger enn en
+  // enkelthendelse - se KILDER sin valgfrie intensitet()-funksjon. Standard er 1 (full
+  // varighet, som før) for kilder som ikke har noe naturlig mengdebegrep.
+  function aktiverAktorer(velger, intensitet = 1) {
+    const til = Date.now() + ALARM_MS * (0.6 + 0.4 * Math.max(0, Math.min(1, intensitet)));
+    for (const a of aktorer) if (a.utloser.includes(velger)) a.aktivTil = Math.max(a.aktivTil, til);
   }
 
   // Bilde-løkken står stille mens fanen er skjult (nettleseren kjører ikke
@@ -1473,13 +1518,54 @@
     hentTimere.set(sone, setTimeout(() => node.classList.remove("henter"), HENT_PULS_MS));
   }
 
-  function slaAlarm(velger) {
-    aktiverAktorer(velger);
+  function slaAlarm(velger, intensitet = 1) {
+    aktiverAktorer(velger, intensitet);
     const node = document.getElementById(velger);
     if (!node) return;
     node.classList.add("alarm");
     clearTimeout(alarmTimere.get(velger));
     alarmTimere.set(velger, setTimeout(() => node.classList.remove("alarm"), ALARM_MS));
+  }
+
+  // Talebobler - gjenbruker EKSAKT samme tekst som allerede regnes ut til loggen
+  // (k.beskriv), bare vist som en kort boble over agenten som faktisk gjelder i stedet
+  // for at man må lete den opp i loggen nederst. Boblen legges som barn av selve
+  // robot-elementet, så den følger agenten automatisk uansett hvor den er i banen sin -
+  // ingen egen posisjonssporing nødvendig.
+  const TALEBOBLE_MS = 3800;
+  function visTaleboble(robotDomId, tekst) {
+    const robotEl = document.getElementById(robotDomId);
+    if (!robotEl) return;
+    robotEl.querySelector(":scope > .taleboble")?.remove();
+
+    const kort = tekst.length > 34 ? tekst.slice(0, 33) + "…" : tekst;
+    const bredde = Math.min(170, Math.max(40, kort.length * 5.2 + 12));
+    const g = document.createElementNS(SVG_NS, "g");
+    g.setAttribute("class", "taleboble");
+    g.setAttribute("transform", "translate(0,-30)");
+    const boks = document.createElementNS(SVG_NS, "rect");
+    boks.setAttribute("x", -bredde / 2);
+    boks.setAttribute("y", -16);
+    boks.setAttribute("width", bredde);
+    boks.setAttribute("height", 20);
+    boks.setAttribute("rx", 6);
+    const tekstEl = document.createElementNS(SVG_NS, "text");
+    tekstEl.setAttribute("x", 0);
+    tekstEl.setAttribute("y", -2);
+    tekstEl.setAttribute("text-anchor", "middle");
+    tekstEl.textContent = kort;
+    g.append(boks, tekstEl);
+    robotEl.appendChild(g);
+    setTimeout(() => g.remove(), TALEBOBLE_MS);
+  }
+
+  // Finner FØRSTE agent hvis utloser-liste faktisk treffer denne hendelsen, og lar
+  // akkurat den si ifra - flere agenter kan dele en sone/benk, men bare den som mest
+  // presist eier hendelsen skal snakke, ikke alle på én gang.
+  function visTalebobleForTreff(treffer, tekst) {
+    const robot = ROBOTER.find((r) => (r.utloser ?? []).some((u) => treffer.includes(u)));
+    if (!robot) return;
+    visTaleboble(robot.stasjonaer ? robot.domId : "robot-" + robot.nr, tekst);
   }
 
   // Stillhet regnes ut på nytt fra grunnen hver runde og slukker av seg selv - det er en
@@ -1611,11 +1697,18 @@
   }
 
   // ---------- kommandosenteret (agentroster, XP, trusselpanel, HUD-målere) ----------
-  // Alt her er avledet av data vi uansett allerede henter og av loggen som allerede
-  // lagres i nettleseren - ingen ny lagring på baksiden, slik Kristian ba om at det
-  // startet som. "XP" er derfor "aktivitet i dag i DENNE nettleseren", ikke en varig
-  // poengsum - den nullstilles naturlig hver gang datoen i loggen ikke lenger er i dag.
+  // "Dagens XP" regnes fortsatt helt klient-side fra loggen (uendret) - men nivået på
+  // roster-kortet er nå SAMLET XP: en varig sum lagret server-side (/api/agentxp),
+  // pluss det som har skjedd i dag men ikke er sendt inn ennå. Dermed består nivået på
+  // tvers av dager og skjermer, i stedet for å nullstilles hver midnatt/enhet.
+  //
+  // Skriver BEVISST sjelden (kun fra sjekkTungt(), hvert 5. minutt, og kun differansen
+  // siden forrige sending) - KV-skriving er den knappe ressursen (1000/døgn for HELE
+  // sida), og XP er ikke viktig nok til å rettferdiggjøre en skriving per hendelse.
   const XP_PER_NIVA = 6;
+  let xpTotal = {}; // { [robotNr]: samlet XP før i dag, hentet fra /api/agentxp }
+  const xpSendtIdag = new Map(); // robotNr -> hvor mye av DAGENS xp som allerede er sendt inn
+  let xpSendtDato = null;
 
   function dagensDato() { return new Date().toDateString(); }
 
@@ -1629,11 +1722,57 @@
     return xp;
   }
 
+  // Total XP å vise = det som allerede er lagret varig + dagens ferske hendelser som
+  // ennå ikke har rukket å bli sendt inn (viser seg altså med en gang, ikke først etter
+  // neste 5-minutters flush).
+  function beregnSamletXP(robot) {
+    return (xpTotal[robot.nr] ?? 0) + beregnAgentXP(robot);
+  }
+
+  async function hentXpTotal() {
+    try {
+      const r = await fetch("/api/agentxp", { cache: "no-store" });
+      const d = await r.json();
+      xpTotal = d.xp ?? {};
+    } catch (err) {
+      console.warn("Fikk ikke hentet varig agent-XP:", err);
+    }
+  }
+
+  async function sendXpTillegg() {
+    const iDag = dagensDato();
+    if (xpSendtDato !== iDag) { xpSendtIdag.clear(); xpSendtDato = iDag; }
+
+    const tillegg = {};
+    for (const r of ROBOTER) {
+      const dagensXp = beregnAgentXP(r);
+      const alleredeSendt = xpSendtIdag.get(r.nr) ?? 0;
+      const pending = dagensXp - alleredeSendt;
+      if (pending > 0) tillegg[r.nr] = pending;
+    }
+    if (Object.keys(tillegg).length === 0) return;
+
+    try {
+      const r = await fetch("/api/agentxp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tillegg })
+      });
+      if (!r.ok) return; // prøver igjen ved neste sjekkTungt - ingenting går tapt
+      const d = await r.json();
+      xpTotal = d.xp ?? xpTotal;
+      for (const nr of Object.keys(tillegg)) xpSendtIdag.set(Number(nr), beregnAgentXP(ROBOTER.find((r) => r.nr === Number(nr))));
+    } catch (err) {
+      console.warn("Fikk ikke sendt agent-XP:", err);
+    }
+  }
+
   function tegnAgentRoster() {
     const rot = el("agentRoster");
     rot.innerHTML = "";
     for (const r of ROBOTER) {
-      const xp = beregnAgentXP(r);
+      const xp = beregnSamletXP(r);
+      const dagensXp = beregnAgentXP(r);
       const niva = 1 + Math.floor(xp / XP_PER_NIVA);
       const prosent = Math.round(((xp % XP_PER_NIVA) / XP_PER_NIVA) * 100);
 
@@ -1683,7 +1822,7 @@
 
       const sist = document.createElement("div");
       sist.className = "sist";
-      sist.textContent = nede ? "Trenger tilsyn" : jobber ? "Jobber akkurat nå" : xp > 0 ? xp + " hendelser i dag" : "Venter på oppgave";
+      sist.textContent = nede ? "Trenger tilsyn" : jobber ? "Jobber akkurat nå" : dagensXp > 0 ? dagensXp + " hendelser i dag" : "Venter på oppgave";
 
       info.append(navnrad, rolle, beskrivelse, xpbar, sist);
       div.append(lvl, avatar, info);
@@ -1886,9 +2025,12 @@
 
       if (bootstrap || gammelNokkel === undefined || nokkel === gammelNokkel) continue;
 
-      (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s));
-      (k.benker ?? []).forEach((b) => slaAlarm("benk-" + b));
-      leggILogg(k.beskriv(data, gammelData), k.farge, treffIder(k.soner, k.benker));
+      const intensitet = k.intensitet ? k.intensitet(data, gammelData) : 1;
+      (k.soner ?? []).forEach((s) => slaAlarm("sone-" + s, intensitet));
+      (k.benker ?? []).forEach((b) => slaAlarm("benk-" + b, intensitet));
+      const tekst = k.beskriv(data, gammelData);
+      leggILogg(tekst, k.farge, treffIder(k.soner, k.benker));
+      visTalebobleForTreff(treffIder(k.soner, k.benker), tekst);
     }
 
     oppdaterTall();
@@ -2111,12 +2253,49 @@
   async function sjekkTungt() {
     try {
       const r = await fetch("/api/oppdrag", { cache: "no-store" });
-      if (!r.ok) return;
-      const d = await r.json();
-      forrigeData.set("oppdrag-tung", d);
-      el("recmanAntall").textContent = (d.oppdrag ?? []).length;
-      el("recmanHentet").textContent = d.hentet ? siden(d.hentet) : "ukjent";
+      if (r.ok) {
+        const d = await r.json();
+        forrigeData.set("oppdrag-tung", d);
+        el("recmanAntall").textContent = (d.oppdrag ?? []).length;
+        el("recmanHentet").textContent = d.hentet ? siden(d.hentet) : "ukjent";
+      }
     } catch { /* helsesjekken fanger opp at den er nede */ }
+    // Disse to skal kjøre uansett om oppdrag-kallet over lyktes - ingen logisk
+    // sammenheng mellom dem (bevisst rettet fra en tidligere "return" som ville hoppet
+    // over dem begge ved en forbigående Recman-feil).
+    await sjekkKandidater();
+    await sendXpTillegg();
+    tegnAgentRoster();
+  }
+
+  // Kandidattrakten - se functions/api/kandidater.js for forbeholdet om feltnavn.
+  // Viser bare "–" og feilteksten om noe ikke stemmer, i stedet for å gjette.
+  async function sjekkKandidater() {
+    try {
+      const r = await fetch("/api/kandidater", { cache: "no-store" });
+      const d = await r.json();
+      if (!d.tilgjengelig) {
+        el("kandidaterSum").innerHTML = "– <small>" + (d.grunn ?? "utilgjengelig") + "</small>";
+        el("kandidaterRader").innerHTML = "";
+        return;
+      }
+      el("kandidaterSum").innerHTML = d.totalt + " <small>søknader totalt</small>";
+      const rader = el("kandidaterRader");
+      rader.innerHTML = "";
+      for (const [status, antall] of Object.entries(d.traktall ?? {}).sort((a, b) => b[1] - a[1])) {
+        const rad = document.createElement("div");
+        rad.className = "kvote-rad";
+        const navn = document.createElement("span");
+        navn.textContent = status;
+        const verdi = document.createElement("span");
+        verdi.textContent = String(antall);
+        rad.append(navn, verdi);
+        rader.append(rad);
+      }
+    } catch (err) {
+      el("kandidaterSum").innerHTML = "– <small>utilgjengelig</small>";
+      console.warn("Fikk ikke hentet kandidattrakten:", err);
+    }
   }
 
   // Pauser mens fanen er skjult - ellers står siden og tygger på kvoten hele døgnet
@@ -2144,6 +2323,7 @@
   tegnRobotliste();
   tegnKommandosenter();
   requestAnimationFrame(steg);
+  hentXpTotal().then(tegnAgentRoster);
   start();
 </script>
 </body>
