@@ -149,6 +149,14 @@
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
 
   .scene { position: relative; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 8px; overflow: hidden; box-shadow: 0 0 0 1px #000 inset, 0 30px 60px -30px rgba(57, 224, 122, 0.12); }
+  /* Fullskjerm: rammen er der for å skille kartet fra resten av siden, og i fullskjerm
+     er det ingenting å skille det fra - da skal den bort. Lerretet er 16:9 (1352x760),
+     så kartet fyller en vanlig skjerm helt ut i stedet for å stå med svarte kanter. */
+  .scene:fullscreen, .scene:-webkit-full-screen {
+    padding: 0; border: 0; border-radius: 0; box-shadow: none;
+    background: var(--bg-0); display: grid; place-items: center; width: 100vw; height: 100vh;
+  }
+  .scene:fullscreen > svg, .scene:-webkit-full-screen > svg { width: 100%; height: 100%; }
   svg { display: block; width: 100%; height: auto; }
   .robot { cursor: pointer; }
   /* UI/UX-refresh: synlig fokusring for tastaturbrukere (samme prinsipp som jobbring,
@@ -550,11 +558,12 @@
     <span class="pille" id="versjonPille">Versjon: leser…</span>
     <button type="button" class="pille" id="kvitterKnapp" disabled>Ingen alarmer</button>
     <span class="pille" id="blokkertPille" hidden></span>
+    <button type="button" class="pille" id="fullskjermKnapp">⛶ Fullskjerm</button>
   </div>
 
   <div class="scene">
     <div class="agent-tooltip" id="agentTooltip" hidden></div>
-    <svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Romstasjonens dekk-kart, sett ovenfra">
+    <svg viewBox="0 0 1352 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Romstasjonens dekk-kart, sett ovenfra">
       <defs>
         <!-- Avfaset dekkplating i stedet for et enkelt rutenett - hvert panel har hjørnene
              kuttet, slik at sømmene danner et lite fasettert mønster mellom platene, som
@@ -564,7 +573,7 @@
           <rect width="52" height="52" fill="var(--gulv)"/>
           <path d="M8,0 H44 L52,8 V44 L44,52 H8 L0,44 V8 Z" fill="none" stroke="var(--gulv-rute)" stroke-width="1"/>
         </pattern>
-        <clipPath id="gulvClip"><rect x="0" y="0" width="1200" height="760"/></clipPath>
+        <clipPath id="gulvClip"><rect x="0" y="0" width="1352" height="760"/></clipPath>
         <!-- Svevende dronedroide i stedet for en hjulet fabrikkrobot: glødende
              skyggeellipse under (antyder svevehøyde), en tynn gyro-ring rundt kroppen,
              en liten sensorantenne, og det samme sensor-"øyet" som før (bevisst beholdt -
@@ -583,25 +592,25 @@
       </defs>
 
       <g clip-path="url(#gulvClip)">
-        <rect x="0" y="0" width="1200" height="760" fill="url(#fliser)"/>
+        <rect x="0" y="0" width="1352" height="760" fill="url(#fliser)"/>
 
         <!-- Skrogomriss - en dobbel kant innenfor selve lerretet, som antyder tykkelsen
              på stasjonens ytterskall. Ren dekor, tegnet bak alt annet. -->
-        <rect x="10" y="10" width="1180" height="740" rx="18" fill="none" stroke="var(--staal-mork)" stroke-width="7"/>
-        <rect x="10" y="10" width="1180" height="740" rx="18" fill="none" stroke="var(--vei-stripe)" stroke-width="1" opacity=".3"/>
+        <rect x="10" y="10" width="1332" height="740" rx="18" fill="none" stroke="var(--staal-mork)" stroke-width="7"/>
+        <rect x="10" y="10" width="1332" height="740" rx="18" fill="none" stroke="var(--vei-stripe)" stroke-width="1" opacity=".3"/>
 
         <!-- Energiledningen er samtidig stasjonens strukturelle "ryggrad" mellom de to
              dekkene - derfor en tykkere, nøytral ytterkasse med nagler, ikke bare et rør. -->
-        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei)" stroke-width="18" stroke-linejoin="round"/>
+        <path d="M 159 258 L 1180 258 L 1180 392 L 159 392 Z" fill="none" stroke="var(--vei)" stroke-width="18" stroke-linejoin="round"/>
         <g fill="var(--staal-mork)">
-          <circle cx="135" cy="258" r="3"/><circle cx="350" cy="258" r="3"/><circle cx="565" cy="258" r="3"/><circle cx="780" cy="258" r="3"/><circle cx="995" cy="258" r="3"/><circle cx="1052" cy="258" r="3"/>
-          <circle cx="135" cy="392" r="3"/><circle cx="350" cy="392" r="3"/><circle cx="565" cy="392" r="3"/><circle cx="780" cy="392" r="3"/><circle cx="995" cy="392" r="3"/><circle cx="1052" cy="392" r="3"/>
+          <circle cx="159" cy="258" r="3"/><circle cx="363" cy="258" r="3"/><circle cx="567" cy="258" r="3"/><circle cx="771" cy="258" r="3"/><circle cx="976" cy="258" r="3"/><circle cx="1180" cy="258" r="3"/>
+          <circle cx="159" cy="392" r="3"/><circle cx="363" cy="392" r="3"/><circle cx="567" cy="392" r="3"/><circle cx="771" cy="392" r="3"/><circle cx="976" cy="392" r="3"/><circle cx="1180" cy="392" r="3"/>
         </g>
         <!-- Støttebjelker fra ryggraden ut til skroget i hver ende, som knytter dekkene
              sammen visuelt. -->
-        <path d="M 135 258 L 60 200 M 135 392 L 60 450 M 1052 258 L 1130 200 M 1052 392 L 1130 450"
+        <path d="M 159 258 L 78 200 M 159 392 L 78 450 M 1180 258 L 1264 200 M 1180 392 L 1264 450"
               stroke="var(--staal-mork)" stroke-width="4" stroke-linecap="round" opacity=".6"/>
-        <path d="M 135 258 L 1052 258 L 1052 392 L 135 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="2" stroke-dasharray="8 10" stroke-linejoin="round" class="vei-stripe"/>
+        <path d="M 159 258 L 1180 258 L 1180 392 L 159 392 Z" fill="none" stroke="var(--vei-stripe)" stroke-width="2" stroke-dasharray="8 10" stroke-linejoin="round" class="vei-stripe"/>
 
         <!-- Banene fra kontrollrommet ut til hver avdeling. Tegnet HER, altså bak alle
              avdelingsboksene i DOM-rekkefølgen, slik at de forsvinner inn under boksene i
@@ -620,7 +629,7 @@
              det. War room er samtidig det ene rommet den har lov til å gå gjennom -
              det er jo derfra den går ut. Bordet står derfor høyt nok i rommet til at
              det er en fri gang langs bakveggen, og porten stopper over den. -->
-        <path d="M 248 712 L 248 60 L 1175 60 L 1175 712 Z" fill="none" stroke="var(--tavle)" stroke-width="1.5"
+        <path d="M 282 712 L 282 56 L 1315 56 L 1315 712 Z" fill="none" stroke="var(--tavle)" stroke-width="1.5"
               stroke-dasharray="3 9" stroke-linejoin="round" opacity=".28"/>
 
         <!-- ============ KANDIDATTRAKTEN ============ -->
@@ -632,7 +641,7 @@
              var 20px) - se kandidatdata-lasten i LASTER, som er flyttet tilsvarende.
              Traktall fra Recman sin jobApplication-scope, se functions/api/kandidater.js
              (paginert, verifisert mot ekte data 2026-09-16). -->
-        <g class="sone" id="sone-kandidater">
+        <g transform="translate(24 0)"><g class="sone" id="sone-kandidater">
           <rect class="glo" x="34" y="18" width="204" height="164" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="26" width="188" height="148" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="42" y="26" width="188" height="24" fill="var(--kandidat)"/>
@@ -656,10 +665,10 @@
 
           <circle class="statusdot" cx="58" cy="37" r="5"/>
           <g class="alarmpil"><circle cx="214" cy="37" r="6" fill="#fff"/><circle cx="214" cy="37" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ RECMAN ============ -->
-        <g class="sone" id="sone-recman">
+        <g transform="translate(24 0)"><g class="sone" id="sone-recman">
           <rect class="glo" x="34" y="188" width="204" height="266" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="196" width="188" height="250" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="42" y="196" width="188" height="26" fill="var(--recman)"/>
@@ -676,10 +685,10 @@
           <text x="136" y="440" text-anchor="middle" font-size="9" fill="var(--text-muted)"><tspan id="recmanAntall">–</tspan> oppdrag på tavlen</text>
           <circle class="statusdot" cx="58" cy="209" r="5"/>
           <g class="alarmpil"><circle cx="216" cy="209" r="6" fill="#fff"/><circle cx="216" cy="209" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ EKSTERNE KILDER ============ -->
-        <g class="sone" id="sone-eksterne">
+        <g transform="translate(24 0)"><g class="sone" id="sone-eksterne">
           <rect class="glo" x="34" y="462" width="204" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="42" y="470" width="188" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="42" y="470" width="188" height="26" fill="var(--eksterne)"/>
@@ -710,10 +719,10 @@
           </g>
           <circle class="statusdot" cx="58" cy="483" r="5"/>
           <g class="alarmpil"><circle cx="216" cy="483" r="6" fill="#fff"/><circle cx="216" cy="483" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ CLOUDFLARE FUNCTIONS ============ -->
-        <g class="sone" id="sone-functions">
+        <g transform="translate(44 0)"><g class="sone" id="sone-functions">
           <rect class="glo" x="258" y="68" width="292" height="516" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="266" y="76" width="276" height="500" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="266" y="76" width="276" height="26" fill="var(--teal)"/>
@@ -765,10 +774,10 @@
 
           <circle class="statusdot" cx="282" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="528" cy="89" r="6" fill="#fff"/><circle cx="528" cy="89" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ SLUSEN ============ -->
-        <g class="sone" id="sone-sluse">
+        <g transform="translate(68 -150)"><g class="sone" id="sone-sluse">
           <rect class="glo" x="566" y="218" width="122" height="214" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="574" y="226" width="106" height="198" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="574" y="226" width="106" height="26" fill="var(--staal-mork)"/>
@@ -780,10 +789,10 @@
           <text x="627" y="408" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="-0.02em" fill="var(--text)" id="avvisteAntall">0</text>
           <circle class="statusdot" cx="590" cy="239" r="5"/>
           <g class="alarmpil"><circle cx="666" cy="239" r="6" fill="#fff"/><circle cx="666" cy="239" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ ADMIN ============ -->
-        <g class="sone" id="sone-admin">
+        <g transform="translate(98 0)"><g class="sone" id="sone-admin">
           <rect class="glo" x="698" y="68" width="224" height="166" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="76" width="208" height="150" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="706" y="76" width="208" height="26" fill="var(--aktiv)"/>
@@ -801,10 +810,10 @@
           <text x="810" y="202" text-anchor="middle" font-size="9" fill="var(--text-muted)">brytere for tavlen</text>
           <circle class="statusdot" cx="722" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="898" cy="89" r="6" fill="#fff"/><circle cx="898" cy="89" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ TEAMSKANAL ============ -->
-        <g class="sone" id="sone-teamskanal">
+        <g transform="translate(98 0)"><g class="sone" id="sone-teamskanal">
           <rect class="glo" x="698" y="416" width="224" height="168" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="706" y="424" width="208" height="152" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="706" y="424" width="208" height="26" fill="var(--teamskanal)"/>
@@ -817,10 +826,10 @@
           <text x="810" y="560" text-anchor="middle" font-size="9" fill="var(--text-muted)">hvert 15. min, hverdag 07-19</text>
           <circle class="statusdot" cx="722" cy="437" r="5"/>
           <g class="alarmpil"><circle cx="898" cy="437" r="6" fill="#fff"/><circle cx="898" cy="437" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ TAVLA ============ -->
-        <g class="sone" id="sone-tavle">
+        <g transform="translate(128 0)"><g class="sone" id="sone-tavle">
           <rect class="glo" x="932" y="68" width="236" height="516" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="940" y="76" width="220" height="500" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="940" y="76" width="220" height="26" fill="var(--staal-mork)"/>
@@ -846,10 +855,10 @@
           <text x="1050" y="522" text-anchor="middle" font-size="8" fill="var(--text-muted)">skrus på manuelt</text>
           <circle class="statusdot" cx="956" cy="89" r="5"/>
           <g class="alarmpil"><circle cx="1144" cy="89" r="6" fill="#fff"/><circle cx="1144" cy="89" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ KONTROLLROMMET (CLAUDE) ============ -->
-        <g class="sone" id="sone-claude">
+        <g transform="translate(68 -150)"><g class="sone" id="sone-claude">
           <rect class="glo" x="566" y="424" width="122" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="574" y="432" width="106" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="574" y="432" width="106" height="24" fill="var(--staal-mork)"/>
@@ -873,7 +882,7 @@
 
           <circle class="statusdot" cx="590" cy="444" r="5"/>
           <g class="alarmpil"><circle cx="664" cy="444" r="6" fill="#fff"/><circle cx="664" cy="444" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ OBSIDIAN-HVELVET ============ -->
         <!-- Egen stasjon for den planlagte jobben obsidian-fabrikk-logg (nå tre ganger i
@@ -882,7 +891,7 @@
              Ingen levende forbindelse hit heller (samme grunn som Claudes kontrollrom):
              stasjonen viser derfor kun det jobben SELV har rapportert til /api/agentstatus
              etter siste kjøring, ikke en sanntidsstatus for selve hvelvet. -->
-        <g class="sone" id="sone-obsidian">
+        <g transform="translate(68 -150)"><g class="sone" id="sone-obsidian">
           <rect class="glo" x="566" y="588" width="122" height="112" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
           <rect x="574" y="596" width="106" height="96" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
           <rect class="sonebar" x="574" y="596" width="106" height="22" fill="var(--obsidian)"/>
@@ -891,7 +900,7 @@
           <!-- den fasetterte "edelstenen" - Obsidian sitt eget formspråk - pluss agenten -->
           <path d="M 610 630 L 618 622 L 626 630 L 618 640 Z" fill="var(--obsidian-myk)" stroke="var(--obsidian)" stroke-width="1.5"/>
 
-          <g class="robot" id="arkivarAgent" data-nr="13" style="color: var(--obsidian)" transform="translate(650 632) scale(0.82)">
+          <g class="robot" id="arkivarAgent" data-nr="13" style="color: var(--obsidian)" transform="translate(652 637)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
@@ -902,7 +911,7 @@
 
           <circle class="statusdot" cx="590" cy="607" r="5"/>
           <g class="alarmpil"><circle cx="664" cy="607" r="6" fill="#fff"/><circle cx="664" cy="607" r="3.2" fill="var(--hendelse)"/></g>
-        </g>
+        </g></g>
 
         <!-- ============ WAR ROOM ============ -->
         <!-- Nyest (2026-09-16): de fem agentene som møtes 09:00, 12:00 og 14:30 på
@@ -915,49 +924,48 @@
              høyre er forslag ingen andre enn Kristian kan flytte på. Blir det stående,
              er det han som er køen - ikke agentene. -->
         <g class="sone" id="sone-mote">
-          <rect class="glo" x="698" y="588" width="470" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
-          <rect x="706" y="596" width="454" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="706" y="596" width="454" height="24" fill="var(--mote)"/>
-          <text x="933" y="613" text-anchor="middle" font-weight="600" font-size="11" fill="#0b0f16">WAR ROOM</text>
+          <rect class="glo" x="796" y="588" width="500" height="156" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
+          <rect x="804" y="596" width="484" height="140" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
+          <rect class="sonebar" x="804" y="596" width="484" height="24" fill="var(--mote)"/>
+          <text x="1046" y="613" text-anchor="middle" font-weight="600" font-size="12" fill="#0b0f16">WAR ROOM</text>
 
-          <!-- møtebordet sett ovenfra, med de fem plassene rundt -->
-          <ellipse cx="845" cy="666" rx="86" ry="20" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
-          <ellipse cx="845" cy="664" rx="68" ry="13" fill="none" stroke="var(--mote)" stroke-width="1" opacity=".3"/>
+          <!-- Bordet med de fire som sitter. Arkitekten er ute på runde, og kommer
+               tilbake langs gangen nederst i rommet - derfor står bordet høyt nok til
+               at den gangen er fri. -->
+          <ellipse cx="942" cy="668" rx="120" ry="14" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
+          <ellipse cx="942" cy="667" rx="98" ry="8" fill="none" stroke="var(--mote)" stroke-width="1" opacity=".3"/>
 
-          <g class="robot" id="cybersecAgent" data-nr="16" style="color: var(--eksterne)" transform="translate(800 640) scale(0.58)">
+          <g class="robot" id="testerAgent" data-nr="18" style="color: var(--aktiv)" transform="translate(846 640)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="800" y="628" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CYBERSEC</text>
-          <g class="robot" id="administratorAgent" data-nr="19" style="color: var(--mote)" transform="translate(946 666) scale(0.58)">
+          <g class="robot" id="cybersecAgent" data-nr="16" style="color: var(--eksterne)" transform="translate(910 640)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="946" y="694" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">ADMIN</text>
-          <g class="robot" id="coderAgent" data-nr="17" style="color: var(--teal)" transform="translate(890 640) scale(0.58)">
+          <g class="robot" id="coderAgent" data-nr="17" style="color: var(--teal)" transform="translate(974 640)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="890" y="628" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">CODER</text>
-          <g class="robot" id="testerAgent" data-nr="18" style="color: var(--aktiv)" transform="translate(742 666) scale(0.58)">
+          <g class="robot" id="administratorAgent" data-nr="19" style="color: var(--mote)" transform="translate(1038 640)">
             <circle class="jobbring" cx="0" cy="0" r="16" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0"/>
             <use href="#robot"/>
           </g>
-          <text x="742" y="694" text-anchor="middle" font-size="7" font-weight="600" fill="var(--text-muted)">TESTER</text>
 
-          <!-- godkjenningsporten. Låsen lyser så lenge noe venter på Kristian. -->
-          <line x1="962" y1="628" x2="962" y2="700" stroke="var(--staal)" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
-          <g id="motePortLas" transform="translate(962 664)" style="opacity: .25">
+          <!-- Godkjenningsporten. Låsen lyser så lenge noe venter på Kristian, og
+               porten stopper over gangen: Arkitekten går under den, ikke gjennom. -->
+          <line x1="1080" y1="628" x2="1080" y2="694" stroke="var(--staal)" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
+          <g id="motePortLas" transform="translate(1080 661)" style="opacity: .25">
             <path d="M -5 -6 L -5 -11 A 5 5 0 0 1 5 -11 L 5 -6" fill="none" stroke="var(--mote)" stroke-width="1.6"/>
             <rect x="-9" y="-6" width="18" height="14" rx="2" fill="var(--mote-myk)" stroke="var(--mote)" stroke-width="1.5"/>
           </g>
 
-          <text x="1062" y="644" text-anchor="middle" font-size="9" fill="var(--text-muted)">Venter på din godkjenning</text>
-          <text x="1062" y="678" text-anchor="middle" font-size="26" font-weight="700" fill="var(--text)" id="moteForslag">–</text>
-          <text x="1062" y="696" text-anchor="middle" font-size="8" fill="var(--text-muted)" id="moteUnder">møter 09:00 · 12:00 · 14:30</text>
+          <text x="1184" y="642" text-anchor="middle" font-size="10" fill="var(--text-muted)">Venter på din godkjenning</text>
+          <text x="1184" y="676" text-anchor="middle" font-size="28" font-weight="700" fill="var(--text)" id="moteForslag">–</text>
+          <text x="1184" y="692" text-anchor="middle" font-size="9" fill="var(--text-muted)" id="moteUnder">møter 09:00 · 12:00 · 14:30</text>
 
-          <circle class="statusdot" cx="722" cy="608" r="5"/>
-          <g class="alarmpil"><circle cx="1144" cy="608" r="6" fill="#fff"/><circle cx="1144" cy="608" r="3.2" fill="var(--hendelse)"/></g>
+          <circle class="statusdot" cx="820" cy="608" r="5"/>
+          <g class="alarmpil"><circle cx="1272" cy="608" r="6" fill="#fff"/><circle cx="1272" cy="608" r="3.2" fill="var(--hendelse)"/></g>
         </g>
 
         <!-- Banene robotene og lastene går på. Usynlige - de finnes kun for at koden
@@ -1299,15 +1307,15 @@
   // tiden, dempet, så det alltid er synlig hvem kontrollrommet kan nå. Selve trafikken
   // vises i stedet som en egen, kontinuerlig strøm (#kommandoStrom, tegnet HELT øverst)
   // som varer så lenge kommandoen regnes som aktiv - se sendKommando.
-  const KOMMANDO_START = { x: 627, y: 546 };
+  const KOMMANDO_START = { x: 695, y: 396 };
   const SONE_ANKER = {
-    recman: { x: 176, y: 380 },
-    eksterne: { x: 176, y: 520 },
-    functions: { x: 480, y: 460 },
-    sluse: { x: 627, y: 400 },
-    admin: { x: 800, y: 200 },
-    teamskanal: { x: 780, y: 520 },
-    tavle: { x: 1010, y: 430 }
+    recman: { x: 200, y: 380 },
+    eksterne: { x: 200, y: 520 },
+    functions: { x: 524, y: 460 },
+    sluse: { x: 695, y: 250 },
+    admin: { x: 898, y: 200 },
+    teamskanal: { x: 878, y: 520 },
+    tavle: { x: 1138, y: 430 }
   };
   const baneD = new Map();
   const stromElementer = new Map();
@@ -1368,55 +1376,55 @@
   // ---------- robotene og lastene ----------
   // Hver robot svarer til en faktisk jobb i systemet, og "utloser" sier hvilke felt på
   // gulvet som betyr at nettopp den har noe å gjøre. Uten oppgave går den i halv fart.
-  const BANE_TRACK = "M 135 258 L 1052 258 L 1052 392 L 135 392 Z";
+  const BANE_TRACK = "M 159 258 L 1180 258 L 1180 392 L 159 392 Z";
 
   // Arkitektens runde. NØYAKTIG samme streng som den tegnede ruten i SVG-en over -
   // gikk de to fra hverandre, ville roboten gått et annet sted enn stiplinga viser.
-  const RUNDE_ARKITEKT = "M 248 712 L 248 60 L 1175 60 L 1175 712 Z";
+  const RUNDE_ARKITEKT = "M 282 712 L 282 56 L 1315 56 L 1315 712 Z";
 
   const ROBOTER = [
     { nr: 1, navn: "Uthenteren", sone: "Recman", farge: "var(--recman)", varighet: 11,
-      bane: "M 78 246 L 194 246 L 194 426 L 78 426 Z", utloser: ["sone-recman"],
+      bane: "M 102 246 L 218 246 L 218 426 L 102 426 Z", utloser: ["sone-recman"],
       kort: "Henter oppdrag og kandidater fra Recman.",
       jobb: "Henter oppdrag og kandidater fra Recman. Dataen mellomlagres i 20 minutter, så den går ikke tur-retur oftere enn det." },
     { nr: 2, navn: "Budbringeren", sone: "Eksterne kilder", farge: "var(--eksterne)", varighet: 10,
-      bane: "M 66 504 L 210 504 L 210 592 L 66 592 Z", utloser: ["sone-eksterne"],
+      bane: "M 90 504 L 234 504 L 234 592 L 90 592 Z", utloser: ["sone-eksterne"],
       kort: "Henter vær, busstider, NRK og kundenytt utenfra.",
       jobb: "Henter vær, busstider, NRK-saker og kundenytt utenfra. Faller én av dem, lyser boksen hans rødt." },
     { nr: 3, navn: "Oppslagsvakten", sone: "Functions", farge: "var(--teal)", varighet: 9,
-      bane: "M 300 110 L 508 110 L 508 162 L 300 162 Z", utloser: ["benk-notat", "benk-bilde"],
+      bane: "M 344 110 L 552 110 L 552 162 L 344 162 Z", utloser: ["benk-notat", "benk-bilde"],
       kort: "Passer post-it-lappen og bilde-oppslaget.",
       jobb: "Passer post-it-lappen og bilde-oppslaget. Går for full maskin når noen legger ut eller fjerner noe fra admin." },
     { nr: 4, navn: "Listeføreren", sone: "Functions", farge: "var(--teal)", varighet: 10.5,
-      bane: "M 300 166 L 508 166 L 508 218 L 300 218 Z", utloser: ["benk-bursdager", "benk-skjulte"],
+      bane: "M 344 166 L 552 166 L 552 218 L 344 218 Z", utloser: ["benk-bursdager", "benk-skjulte"],
       kort: "Holder styr på bursdager og parkerte oppdrag.",
       jobb: "Holder styr på bursdagslisten og hvilke oppdrag som er parkert bort fra tavlen." },
     { nr: 5, navn: "Bryterbetjenten", sone: "Functions", farge: "var(--teal)", varighet: 12,
-      bane: "M 300 222 L 508 222 L 508 274 L 300 274 Z", utloser: ["benk-innstillinger", "benk-skjermer"],
+      bane: "M 344 222 L 552 222 L 552 274 L 344 274 Z", utloser: ["benk-innstillinger", "benk-skjermer"],
       kort: "Tar imot bryterendringer fra admin.",
       jobb: "Tar imot bryterendringer fra admin og holder skjermregisteret oppdatert." },
     { nr: 6, navn: "Lagerarbeideren", sone: "Functions", farge: "var(--teal)", varighet: 13,
-      bane: "M 300 300 L 508 300 L 508 370 L 300 370 Z", utloser: ["sone-functions"],
+      bane: "M 344 300 L 552 300 L 552 370 L 344 370 Z", utloser: ["sone-functions"],
       kort: "Gjør selve lagerarbeidet i KV.",
       jobb: "Selve lagerarbeidet i KV. Han rører på seg ved enhver lagring, uansett hvilken benk den kom fra." },
     { nr: 7, navn: "Vakten", sone: "Slusen", farge: "var(--staal-mork)", varighet: 7,
-      bane: "M 600 262 L 654 262 L 654 344 L 600 344 Z", utloser: ["sone-sluse"],
+      bane: "M 668 112 L 722 112 L 722 194 L 668 194 Z", utloser: ["sone-sluse"],
       kort: "Sjekker adminnøkkelen på hver skriving.",
       jobb: "Sjekker adminnøkkelen på hver eneste skriving. Setter opp farten når noen blir avvist." },
     { nr: 8, navn: "Operatøren", sone: "/admin", farge: "var(--aktiv)", varighet: 8.5,
-      bane: "M 730 190 L 890 190 L 890 212 L 730 212 Z", utloser: ["sone-admin"],
+      bane: "M 828 190 L 988 190 L 988 212 L 828 212 Z", utloser: ["sone-admin"],
       kort: "Står ved kontrollpulten i /admin.",
       jobb: "Står ved kontrollpulten. Rører på seg hver gang noen endrer noe fra admin-siden." },
     { nr: 9, navn: "Postbudet", sone: "Teamskanal", farge: "var(--teamskanal)", varighet: 9.5,
-      bane: "M 730 458 L 890 458 L 890 496 L 730 496 Z", utloser: ["sone-teamskanal"],
+      bane: "M 828 458 L 988 458 L 988 496 L 828 496 Z", utloser: ["sone-teamskanal"],
       kort: "Henter Teams-meldinger hvert 15. minutt.",
       jobb: "Henter meldinger fra Teams hvert 15. minutt på hverdager. Blir han gående i halv fart i arbeidstiden, har jobben stoppet." },
     { nr: 10, navn: "Skjermpasseren", sone: "Tavla", farge: "var(--aktiv)", varighet: 13,
-      bane: "M 962 268 L 1138 268 L 1138 452 L 962 452 Z", utloser: ["sone-tavle"],
+      bane: "M 1090 268 L 1266 268 L 1266 452 L 1090 452 Z", utloser: ["sone-tavle"],
       kort: "Holder storskjermen oppdatert.",
       jobb: "Holder storskjermen på veggen oppdatert og følger med på at skjermene svarer." },
     { nr: 11, navn: "Gjesteverten", sone: "Tavla", farge: "var(--tavle)", varighet: 10,
-      bane: "M 956 462 L 1144 462 L 1144 558 L 956 558 Z", utloser: ["sone-tavle"],
+      bane: "M 1084 462 L 1272 462 L 1272 558 L 1084 558 Z", utloser: ["sone-tavle"],
       kort: "Passer gjestevisningen.",
       jobb: "Passer gjestevisningen - den kundevendte siden som skrus på manuelt." },
     // Sitter i ro ved maskinen og har derfor ingen rute å gå. Tegnet direkte i kartet,
@@ -1485,7 +1493,7 @@
     // mellom de to rommene - en ekte kobling, ikke en fabrikert en. Egen (kortere)
     // bane, derfor egen `bane`/`storrelse`/`skjulNavn` i stedet for delt BANE_TRACK.
     { navn: "kandidatdata", farge: "var(--kandidat)", varighet: 5, start: 0, utloser: ["sone-kandidater"],
-      bane: "M 131 172 L 141 172 L 141 197 L 131 197 Z", storrelse: 10, skjulNavn: true,
+      bane: "M 155 172 L 165 172 L 165 197 L 155 197 Z", storrelse: 10, skjulNavn: true,
       hva: "Traktallene i Kandidattrakten er talt opp av nøyaktig samme Recman-liste som ligger rett under - denne korte streken markerer at de to rommene faktisk deler kilde." }
   ];
 
@@ -1590,6 +1598,35 @@
     tip.style.top = bunnY + "px";
   }
   function skjulAgentTooltip() { agentTooltipEl().hidden = true; }
+
+  // Fullskjerm. Dette er et veggdisplay, så kartet skal kunne fylle skjermen uten
+  // rammen rundt. Nettleseren krever en ekte brukerhandling for å gå inn, så knappen
+  // (eller F) er eneste vei - Escape kommer ut igjen av seg selv.
+  const fullskjermKnapp = el("fullskjermKnapp");
+  const sceneEl = document.querySelector(".scene");
+  const erFullskjerm = () => document.fullscreenElement === sceneEl;
+  async function vekslFullskjerm() {
+    try {
+      if (erFullskjerm()) await document.exitFullscreen();
+      else await sceneEl.requestFullscreen();
+    } catch {
+      // Kan være blokkert, f.eks. i en innramming uten allow="fullscreen". Si det i
+      // knappen i stedet for å feile stille.
+      fullskjermKnapp.textContent = "Fullskjerm er ikke tillatt her";
+    }
+  }
+  fullskjermKnapp.addEventListener("click", vekslFullskjerm);
+  document.addEventListener("fullscreenchange", () => {
+    fullskjermKnapp.textContent = erFullskjerm() ? "⛶ Avslutt fullskjerm" : "⛶ Fullskjerm";
+    // Tooltipen plasseres mot scenen, som nettopp byttet størrelse - den ville blitt
+    // stående feil sted til neste mus-bevegelse.
+    skjulAgentTooltip();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "f" && e.key !== "F") return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? "")) return;
+    vekslFullskjerm();
+  });
 
   function byggAktorer() {
     const robotLag = el("roboter");
