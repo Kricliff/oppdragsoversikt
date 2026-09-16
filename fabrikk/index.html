@@ -498,44 +498,6 @@
              synlige, men dempet; se #kommandoStrom lenger ned for selve trafikken. -->
         <g id="baneNett"></g>
 
-        <!-- ============ OBSERVASJONSDEKKET ============ -->
-        <!-- Ren atmosfære-stasjon, ikke en overvåket kilde - ingen statusprikk/alarm her,
-             for den overvåker ingenting nytt. Væren er den samme ekte dataen som
-             "vær"-benken i Eksterne kilder, bare med et faktisk tall i stedet for bare en
-             helsesjekk (se sjekkVaer). -->
-        <g class="sone" id="sone-observasjon">
-          <rect class="glo" x="34" y="18" width="204" height="150" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7" opacity="0"/>
-          <rect x="42" y="26" width="188" height="134" rx="2" fill="var(--sone)" stroke="var(--sone-kant)" stroke-width="2"/>
-          <rect class="sonebar" x="42" y="26" width="188" height="24" fill="var(--staal-mork)"/>
-          <text x="136" y="42" text-anchor="middle" font-weight="600" font-size="10" fill="#fff">OBSERVASJONSDEKKET</text>
-
-          <!-- porthullet - jorden alltid synlig, uansett hvor mye skjermbredde man har -->
-          <clipPath id="porthull"><circle cx="80" cy="92" r="26"/></clipPath>
-          <circle cx="80" cy="92" r="28" fill="var(--staal-mork)"/>
-          <g clip-path="url(#porthull)">
-            <rect x="52" y="64" width="56" height="56" fill="#050810"/>
-            <circle cx="66" cy="74" r="0.8" fill="#fff" opacity=".8"/>
-            <circle cx="95" cy="70" r="0.6" fill="#fff" opacity=".6"/>
-            <circle cx="100" cy="90" r="0.7" fill="#fff" opacity=".7"/>
-            <circle cx="60" cy="105" r="0.6" fill="#fff" opacity=".6"/>
-            <circle cx="88" cy="110" r="80" fill="#1c3f78"/>
-            <circle cx="88" cy="110" r="80" fill="#5a9bd8" opacity=".5"/>
-            <path d="M 60 90 Q 75 82 92 92 T 120 96" stroke="#9fd9a0" stroke-width="10" fill="none" opacity=".55"/>
-          </g>
-          <circle cx="80" cy="92" r="26" fill="none" stroke="var(--staal)" stroke-width="2"/>
-          <circle cx="80" cy="92" r="29" fill="none" stroke="var(--staal-mork)" stroke-width="2"/>
-
-          <!-- liten dekorativ plante - flid, ikke funksjon -->
-          <path d="M 200 152 V 138 M 200 138 Q 194 130 188 134 M 200 138 Q 206 128 213 133 M 200 142 Q 195 136 190 140"
-                stroke="#3f8f52" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-          <rect x="193" y="150" width="14" height="10" rx="1.5" fill="var(--staal)"/>
-
-          <text x="160" y="76" text-anchor="middle" font-size="9" fill="var(--text-muted)">Utenfor skroget</text>
-          <text x="160" y="98" text-anchor="middle" font-size="20" font-weight="700" fill="var(--tavle)" id="obsVaerTemp">–°</text>
-          <text x="160" y="115" text-anchor="middle" font-size="9" fill="var(--text-muted)" id="obsVaerTekst">henter data …</text>
-          <text x="160" y="132" text-anchor="middle" font-size="8" fill="var(--advarsel)" id="obsVaerParaply"></text>
-        </g>
-
         <!-- ============ RECMAN ============ -->
         <g class="sone" id="sone-recman">
           <rect class="glo" x="34" y="188" width="204" height="266" rx="4" fill="none" stroke="var(--hendelse)" stroke-width="7"/>
@@ -893,7 +855,6 @@
 
       <h3>Modulene</h3>
       <ul class="forklaring to-spalter">
-        <li><span class="prikk" style="background: var(--staal-mork)"></span><div><b>Observasjonsdekket</b><span class="tekst">Ren atmosfære, ikke overvåking - derfor ingen statusprikk her. Porthullet viser jorden og stjernene uansett skjermbredde. Temperaturen er ekte værdata, samme kilde som "vær"-benken i Eksterne kilder, bare hentet med selve verdien i stedet for kun en helsesjekk.</span></div></li>
         <li><span class="prikk" style="background: var(--recman)"></span><div><b>Recman</b><span class="tekst">Kilden til oppdragene. De tre sirklene er datasiloer, rektanglene under er oppdrag og kandidater. Blinker ved nytt oppdrag, oppdrag som forsvinner eller statusendring. Viser når dataen sist ble hentet - står den mer enn 45 minutter, er oppfriskingen låst og feltet blir gult.</span></div></li>
         <li><span class="prikk" style="background: var(--eksterne)"></span><div><b>Eksterne kilder</b><span class="tekst">De fire tjenestene tavlen henter fra utenfra: vær, busstider, NRK og kundenytt. Hver modul lyser rødt for seg hvis akkurat den kilden faller ut, så du ser hvilken.</span></div></li>
         <li><span class="prikk" style="background: var(--teal)"></span><div><b>Cloudflare Functions</b><span class="tekst">Maskinrommet. De seks benkene er de seks funksjonene som lagrer noe. Hele rommet lyser ved enhver lagring, og den enkelte benken lyser for akkurat sin funksjon - så du ser hva slags endring det var. KV-LAGER er den delte lagringen, og måleren under viser skrivekvoten.</span></div></li>
@@ -2013,7 +1974,6 @@
     tegnVedvarende();
     tegnHelse();
     await sjekkKvforbruk();
-    await sjekkVaerVerdi();
     await sjekkDeploy();
   }
 
@@ -2078,30 +2038,6 @@
       forrigeData.set("kvforbruk", { tilgjengelig: false, grunn: "ikke tilgjengelig" });
     }
     tegnKvote();
-  }
-
-  // Observasjonsdekket - samme kilde som "vær"-benken i Eksterne kilder allerede
-  // helsesjekker, men denne henter faktisk INNHOLDET (temperatur, symbol) i stedet for
-  // bare å sjekke at den svarer. Rent informativt, ingen alarm er koblet til dette.
-  const VAERSYMBOL = [
-    [/regn|rain/i, "🌧️"], [/sn(ø|o)|snow/i, "❄️"], [/torden|thunder/i, "⛈️"],
-    [/skyet|cloudy/i, "☁️"], [/delvis|partly/i, "⛅"], [/klar|fair|sun|clear/i, "☀️"], [/tåke|fog/i, "🌫️"]
-  ];
-  function vaerSymbol(kode) {
-    const treff = VAERSYMBOL.find(([m]) => m.test(kode ?? ""));
-    return treff ? treff[1] : "🌡️";
-  }
-  async function sjekkVaerVerdi() {
-    try {
-      const r = await fetch("/api/vaer", { cache: "no-store" });
-      const data = await r.json();
-      pulsHenting("observasjon");
-      el("obsVaerTemp").textContent = Math.round(data.temperatur) + "°";
-      el("obsVaerTekst").textContent = vaerSymbol(data.symbolKode) + " Oslo, akkurat nå";
-      el("obsVaerParaply").textContent = data.taMedParaply ? "☂ Ta med paraply i dag" : "";
-    } catch {
-      el("obsVaerTekst").textContent = "Værdata utilgjengelig";
-    }
   }
 
   // ---------- deploy = kommandoene fra kontrollrommet ----------
