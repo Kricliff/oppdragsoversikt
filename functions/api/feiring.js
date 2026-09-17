@@ -45,6 +45,12 @@ const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før
 //   opp igjen senere), men feires ikke.
 // - MAKS_AKTIVE: uansett årsak skal aldri mer enn dette ligge i banneret samtidig.
 const MAKS_NYE_PER_RUNDE = 5;
+// Samme flimring som i endringsloggen: et oppdrag kan mangle i én henting og være
+// tilbake i neste fordi Recman sorterer lista mens vi paginerer. Slapp vi det ut av
+// kjenteAktiveOppdrag med én gang, ville gjenkomsten blitt feiret som et NYTT
+// oppdrag - tavlen ville gratulert med noe som aldri var nytt. Derfor blir en id
+// stående til den har manglet BORTE_BEKREFTELSER ganger på rad.
+const BORTE_BEKREFTELSER = 2;
 const MAKS_AKTIVE = 12;
 
 function massendringsvakt(nye, hva) {
@@ -210,13 +216,30 @@ async function hentAktiveFeiringer(apiKey, kv) {
   // skriving forhindret responsen i å bli edge-cachet i det hele tatt (se catch i
   // onRequestGet), som igjen gjør at HVERT minuttpoll treffer origin på nytt og prøver
   // (og feiler) en ny skriving - en selvforsterkende spiral rett når kvoten er brukt opp.
+  // Hold på id-er som nettopp forsvant. De slippes først når fraværet er bekreftet,
+  // slik at en forbigående glipp ikke gjør et gammelt oppdrag til et nytt.
+  const naaIder = aktiveOppdrag.map((o) => o.id);
+  const erDerNaa = new Set(naaIder);
+  const mistenktBorte = tilstand.mistenktBorteOppdrag ?? {};
+  const fortsattMistenkt = {};
+  const kjenteAktiveOppdrag = [...naaIder];
+  for (const id of tilstand.kjenteAktiveOppdrag ?? []) {
+    if (erDerNaa.has(id)) continue;
+    const runder = (mistenktBorte[id] ?? 0) + 1;
+    if (runder < BORTE_BEKREFTELSER) {
+      fortsattMistenkt[id] = runder;
+      kjenteAktiveOppdrag.push(id);
+    }
+  }
+
   try {
     await kv.put(
       KV_KEY,
       JSON.stringify({
         kjenteHired: hired.map((h) => h.id),
         kjenteKunder: nyeKunder.map((k) => k.id),
-        kjenteAktiveOppdrag: aktiveOppdrag.map((o) => o.id),
+        kjenteAktiveOppdrag,
+        mistenktBorteOppdrag: fortsattMistenkt,
         aktive
       })
     );
