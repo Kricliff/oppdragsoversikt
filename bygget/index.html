@@ -1,0 +1,1774 @@
+<title>Bygget - Oppdragsoversikt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --natt: #16111f; --panel: #1e1729; --kant: #33273f;
+    --tekst: #e7edf6; --svak: #8b8199; --hendelse: #39e07a;
+    --skilt: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  }
+  body { background: var(--natt); color: var(--tekst); font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif; padding-block: 26px; padding-left: 20px; padding-right: 20px; }
+  .ark { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-family: var(--skilt); font-size: 26px; font-weight: 700; letter-spacing: -0.015em; margin: 0; line-height: 1.1; }
+  .ingress { color: var(--svak); font-size: 14px; line-height: 1.6; margin: 0; max-width: 62ch; }
+  .faner { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ramme { border: 1px solid var(--kant); border-radius: 12px; background: #120d1a; overflow: hidden; }
+  svg.scene { display: block; width: 100%; height: auto; }
+  .benk-treff { cursor: pointer; }
+  .benk-treff:focus-visible { outline: 2px solid #9fe8e0; outline-offset: 2px; }
+  button { font-family: var(--skilt); font-size: 13px; font-weight: 600; color: var(--tekst); background: var(--panel); border: 1px solid var(--kant); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+  button:hover { border-color: #4d3c5e; }
+  button:focus-visible { outline: 2px solid #9fe8e0; outline-offset: 2px; }
+  button.valgt { background: #2c2140; border-color: #6a5385; }
+  .styring { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .maalere { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pille { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; border: 1px solid var(--kant); border-radius: 999px; padding: 7px 12px; font-variant-numeric: tabular-nums; color: var(--svak); }
+  .pille b { font-family: var(--skilt); font-weight: 600; color: var(--tekst); letter-spacing: -0.01em; }
+  .fot { color: var(--svak); font-size: 12.5px; line-height: 1.6; margin: 0; }
+  .fot b { color: var(--tekst); font-weight: 500; }
+  .topplinje { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .topplinje img { height: 22px; width: auto; }
+  .merkelapp { font-family: var(--skilt); font-size: 12px; color: var(--svak); letter-spacing: 0.04em; }
+  .tilbake { margin-left: auto; font-size: 12.5px; color: var(--svak); text-decoration: none; border-bottom: 1px solid var(--kant); }
+  .tilbake:hover { color: var(--tekst); }
+  @media (max-width: 560px) { h1 { font-size: 21px; } }
+</style>
+
+<div class="ark">
+  <div class="topplinje">
+    <img src="../assets/great-people-white-logo.png" alt="GreatPeople">
+    <span class="merkelapp">AI Ops · Bygget</span>
+    <a class="tilbake" href="../fabrikk/">&larr; Til kommandosenteret</a>
+  </div>
+  <div>
+    <h1>Bygget</h1>
+    <p class="ingress">Hele kommandosenteret samlet i ett bygg. <b>Skiltet over hvert rom viser ekte tall</b>, hentet fra de samme endepunktene som kommandosenteret bruker — oppdrag på tavlen, skrivekvoten for døgnet, avviste skriveforsoek, forslag som venter på deg. Knappene under rommene er derimot demonstrasjoner: de utløser hendelsen slik den ville sett ut. Bygget er tegnet rett fra siden, som et tverrsnitt: to etasjer, en kjeller, og en heis i enden som binder dem sammen. War room ligger alene nederst, i full bredde, så alle som sitter der synes. Hvert rom viser hva det heter, hva det gjør og hvem som står der. Første etasje er der data kommer inn utenfra, andre er der det styres, og trappa i enden binder dem sammen. Klikk et rom i bygget — eller bruk fanene — for å se det i detalj under. Hvert rom har sine egne installasjoner, og de fleste kan trykkes på - 21 utløsere til sammen. Agenten forlater runden sin og går bort til stedet der det faktisk skjedde, jobber der, og finner så veien tilbake.</p>
+  </div>
+
+  <div class="ramme">
+    <svg class="scene" viewBox="0 0 760 342" id="bygg" role="img" aria-label="Bygget sett rett fra siden: kjeller, to etasjer og en heis mellom dem">
+      <rect x="0" y="0" width="760" height="342" fill="#16111f"/>
+      <g id="byggverden"></g>
+    </svg>
+  </div>
+
+  <div class="styring">
+    <button type="button" id="moteknapp">Administratoren kaller inn til møte</button>
+    <span class="pille" id="arkstatus">Arkitekten <b>går runden</b></span>
+    <span class="pille" id="livepille">Ekte tall <b>henter…</b></span>
+  </div>
+
+  <div class="faner" id="faner"></div>
+
+  <div class="ramme">
+    <svg class="scene" viewBox="0 0 680 510" role="img" id="scene" aria-label="Isometrisk pikselrom fra kommandosenteret">
+      <rect x="0" y="0" width="680" height="510" fill="#16111f"/>
+      <g transform="translate(0,30)" id="verden"></g>
+    </svg>
+  </div>
+
+  <div class="styring" id="knapper"></div>
+  <div class="maalere" id="maalere"></div>
+
+  <p class="fot"><b>Samme regelsett som i dag:</b> en kilde med egen benk lyser opp benken og gir rommet en dempet puls; en kilde uten benk gir hele rommet full alarm. Agenten som eier hendelsen går dit, jobber, og finner så veien tilbake. <b>Nytt:</b> Claude, Arkivaren og Trakteren beveger seg nå også. Claude går til utrullingskonsollen, og kommandostrømmene renner ut først når han faktisk står der — samme kobling som <code>stromElementer</code> har i dagens kart. Arkivaren gjør to stopp: skriver dagens logg ved pulten, bærer den så til hvelvet, som åpner seg mens han står der. Trakteren går til den trakten som faktisk endret seg — de fire traktene er de fire statusene Recman svarer med.
+ <b>War room:</b> fem agenter rundt étt bord. Arkitekten er den eneste som går runde — den leter, og fester funnet på tavla.
+ Den går bort til Administratoren og legger det fram — til en person, ikke til en tavle.
+ Cybersec går til skanneren og leser forslaget gjennom før det legges fram.
+ Coderen og Testeren deler én pult: Coderen skriver koden der, og Testeren kjører den på samme maskin.
+ Skjermen viser hvem som bruker den — kodelinjer mens det bygges, en testrute som fyller seg mens det verifiseres.
+ <b>Bygget:</b> Arkitekten hører ikke til ett rom lenger. Den går runden gjennom alle åtte, langs gangen og opp trappa,
+ og dukker opp i detaljvisningen når den faktisk er i rommet du ser på. Slusen står mellom heisen og resten av andre etasje: skal du opp hit, må du forbi den — ikke fordi koden sier det, men fordi den står i veien. Nøyaktig det <code>_middleware.js</code> gjør i den ekte løsningen. Trykker du <i>Administratoren kaller inn til
+ møte</i>, forlater den runden der og da, går til War room — og går rett bort til Administratoren når den kommer inn.</p>
+ Porten er den viktige: låsen svinger bare opp mens Administratoren står der og legger forslaget fram for deg, og kortene i
+ <i>venter</i>-kolonnen lyser så lenge det står på deg. Coderen og Testeren rører seg først etter det — samme rekkefølge som
+ <code>/api/forslag</code> håndhever i serveren, der agentnøkkelen får 403 om den forsøker å godkjenne sitt eget arbeid.</p>
+</div>
+
+<script>
+(function () {
+  var SVG = "http://www.w3.org/2000/svg";
+  var ALARM_MS = 15000, TALEBOBLE_MS = 10000, ROMBLINK_MS = 3000;
+  var FART_HVILE = 0.5, FART_JOBB = 1, GANGFART = 62;
+  var VEGG = 0.047;
+  var rolig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function gulv(u, v) { return { x: 250 * u - 250 * v + 340, y: 150 * u + 150 * v + 160 }; }
+  function foran(u, v, vegg, d) {
+    d = d || 0.10;
+    return vegg === "h" ? gulv(u, v + d) : gulv(u + d, v);
+  }
+  function r(x, y, w, h, f) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + f + '"/>'; }
+  function poly(p, f) { return '<polygon points="' + p + '" fill="' + f + '"/>'; }
+
+  function veggPunkt(vegg, p, q) {
+    return vegg === "h"
+      ? { x: 250 * p + 340, y: 150 * p - 150 * q + 160 }
+      : { x: -250 * p + 340, y: 150 * p - 150 * q + 160 };
+  }
+  function veggMatrise(vegg) {
+    return vegg === "h" ? "matrix(250,150,0,-150,332,165)" : "matrix(-250,150,0,-150,348,165)";
+  }
+  // Forsiden forskyves ALLTID inn i rommet. Hoyre vegg ligger ved v=0, sa rommet er
+  // i +v; venstre vegg ved u=0, sa rommet er i +u. Gjor man dette motsatt, ser
+  // panelet ut som en fordypning i veggen i stedet for en boks som henger utover.
+  function veggFlater(vegg, p0, p1, q0, q1) {
+    var o = vegg === "h" ? { x: -8, y: 5 } : { x: 8, y: 5 };
+    var A = veggPunkt(vegg, p0, q1), B = veggPunkt(vegg, p1, q1), C = veggPunkt(vegg, p1, q0);
+    var f = function (pt) { return (pt.x + o.x) + "," + (pt.y + o.y); };
+    var pkt = function (pt) { return pt.x + "," + pt.y; };
+    return poly(pkt(A) + " " + pkt(B) + " " + f(B) + " " + f(A), vegg === "h" ? "#2b323b" : "#3d2c1b")
+         + poly(pkt(B) + " " + pkt(C) + " " + f(C) + " " + f(B), vegg === "h" ? "#161b21" : "#2a1c10");
+  }
+
+  function isoBoks(pt, hw, hh, hoyde, farger, opts) {
+    opts = opts || {};
+    var x = pt.x, y = pt.y, t = y - hoyde, s = "";
+    s += poly((x - hw) + "," + t + " " + x + "," + (t + hh) + " " + x + "," + (y + hh) + " " + (x - hw) + "," + y, farger[0]);
+    s += poly((x + hw) + "," + t + " " + x + "," + (t + hh) + " " + x + "," + (y + hh) + " " + (x + hw) + "," + y, farger[1]);
+    if (opts.stripe) s += r(x - hw + 5, y - hoyde + hh + 4, 2, Math.max(6, hoyde - hh - 8), opts.stripe);
+    if (opts.led) { s += r(x + 6, y - hoyde + hh + 6, 3, 3, opts.led); s += r(x + 12, y - hoyde + hh + 10, 3, 3, "#f0b429"); }
+    s += poly(x + "," + (t - hh) + " " + (x + hw) + "," + t + " " + x + "," + (t + hh) + " " + (x - hw) + "," + t, farger[2]);
+    if (opts.innfelt) {
+      var iw = hw * 0.55, ih = hh * 0.55;
+      s += poly(x + "," + (t - ih) + " " + (x + iw) + "," + t + " " + x + "," + (t + ih) + " " + (x - iw) + "," + t, opts.innfelt);
+    }
+    if (opts.kant) s += '<polyline points="' + (x - hw) + "," + t + " " + x + "," + (t + hh) + " " + (x + hw) + "," + t + '" fill="none" stroke="' + opts.kant + '" stroke-width="1.5" opacity="0.85"/>';
+    return s;
+  }
+  function boksGlod(pt, hw, hh, hoyde) {
+    var x = pt.x, y = pt.y, t = y - hoyde;
+    return x + "," + (t - hh) + " " + (x + hw) + "," + t + " " + (x + hw) + "," + y + " " + x + "," + (y + hh) + " " + (x - hw) + "," + y + " " + (x - hw) + "," + t;
+  }
+
+  // Trakt: bred topp som smalner ned mot en hals. Brukes i Kandidattrakten, der hver
+  // trakt er én ekte status fra Recman (untreated / pipeline / declined / hired).
+  function trakt(pt, hw, hh, hoyde, farger, aksent) {
+    var x = pt.x, y = pt.y, t = y - hoyde, n = y - 12, hw2 = 7, hh2 = 4, s = "";
+    s += poly((x - hw) + "," + t + " " + x + "," + (t + hh) + " " + x + "," + (n + hh2) + " " + (x - hw2) + "," + n, farger[0]);
+    s += poly((x + hw) + "," + t + " " + x + "," + (t + hh) + " " + x + "," + (n + hh2) + " " + (x + hw2) + "," + n, farger[1]);
+    s += poly(x + "," + (t - hh) + " " + (x + hw) + "," + t + " " + x + "," + (t + hh) + " " + (x - hw) + "," + t, farger[2]);
+    s += poly(x + "," + (t - hh + 3) + " " + (x + hw - 5) + "," + t + " " + x + "," + (t + hh - 3) + " " + (x - hw + 5) + "," + t, "#1a1118");
+    s += poly((x - hw2) + "," + n + " " + x + "," + (n + hh2) + " " + x + "," + (y + hh2) + " " + (x - hw2) + "," + y, farger[0]);
+    s += poly((x + hw2) + "," + n + " " + x + "," + (n + hh2) + " " + x + "," + (y + hh2) + " " + (x + hw2) + "," + y, farger[1]);
+    s += '<polyline points="' + (x - hw) + "," + t + " " + x + "," + (t + hh) + " " + (x + hw) + "," + t + '" fill="none" stroke="' + aksent + '" stroke-width="1.5" opacity="0.9"/>';
+    return s;
+  }
+  function traktGlod(pt, hw, hh, hoyde) {
+    var x = pt.x, y = pt.y, t = y - hoyde;
+    return x + "," + (t - hh) + " " + (x + hw) + "," + t + " " + (x + 7) + "," + (y - 12) + " " + (x + 7) + "," + y + " " + (x - 7) + "," + y + " " + (x - 7) + "," + (y - 12) + " " + (x - hw) + "," + t;
+  }
+
+  // Motebordet. Ligger langs u-aksen, sa de fire kan sta pa nersiden uten a havne
+  // bak plata - alt som tegnes for agentene ligger BAK dem i DOM-rekkefolgen.
+  function bordTegn(pt) {
+    var x = pt.x, y = pt.y, h = 22;
+    var A = { x: x - 32.5, y: y - 40.5 }, B = { x: x + 67.5, y: y + 19.5 };
+    var C = { x: x + 32.5, y: y + 40.5 }, D = { x: x - 67.5, y: y - 19.5 };
+    var t = function (q) { return q.x + "," + (q.y - h); }, g = function (q) { return q.x + "," + q.y; };
+    var s = poly(t(D) + " " + t(C) + " " + g(C) + " " + g(D), "#2f3f22");
+    s += poly(t(C) + " " + t(B) + " " + g(B) + " " + g(C), "#232e19");
+    s += poly(t(A) + " " + t(B) + " " + t(C) + " " + t(D), "#4f6b2e");
+    s += poly((A.x) + "," + (A.y - h + 6) + " " + (B.x - 10) + "," + (B.y - h) + " " + (C.x) + "," + (C.y - h - 6) + " " + (D.x + 10) + "," + (D.y - h), "#5c7d37");
+    // fire papirbunker og en kaffekopp - ett sted per plass ved bordet
+    s += r(x - 46, y - h - 24, 13, 8, "#f4ead8") + r(x - 46, y - h - 24, 13, 2, "#d8c8a8");
+    s += r(x - 14, y - h - 12, 13, 8, "#f4ead8") + r(x - 14, y - h - 12, 13, 2, "#d8c8a8");
+    s += r(x + 18, y - h - 1, 13, 8, "#f4ead8") + r(x + 18, y - h - 1, 13, 2, "#d8c8a8");
+    s += r(x + 2, y - h - 20, 7, 8, "#d8dde6") + r(x + 2, y - h - 21, 7, 2, "#9aa4b2");
+    return s;
+  }
+
+  // Arbeidsstasjonen: pult, tarn, tastatur og en skjerm som faktisk viser hva som
+  // skjer. Coderen skriver koden her, og Testeren kjorer den PA SAMME MASKIN - det
+  // er hele poenget med at det er én pult og ikke to.
+  function pcTegn(pt) {
+    var x = pt.x, y = pt.y, t = y - 24, s = "";
+    s += isoBoks(pt, 27, 16, 24, ["#1e2620", "#2a352c", "#3a4a3c"], { kant: "#9fce5e" });
+    // tarnet star pa pulten til hoyre, med en driftslampe
+    s += r(x + 13, t - 20, 11, 22, "#232c25") + r(x + 13, t - 20, 11, 3, "#3a4a3c");
+    s += '<rect id="pclampe" x="' + (x + 16) + '" y="' + (t - 15) + '" width="4" height="3" fill="#2f4a2c"/>';
+    s += r(x + 16, t - 9, 5, 2, "#4a5a4c");
+    // skjermen: fot, stamme, ramme, flate
+    s += r(x - 12, t - 7, 15, 3, "#3a4a3c") + r(x - 6, t - 21, 3, 14, "#4a5a4c");
+    s += r(x - 23, t - 48, 34, 28, "#161c17");
+    s += '<rect id="pcskjerm" x="' + (x - 21) + '" y="' + (t - 46) + '" width="30" height="24" fill="#16351f"/>';
+    s += '<g id="pckode">'
+       + r(x - 19, t - 43, 14, 2, "#9fce5e") + r(x - 19, t - 39, 21, 2, "#5f8f3e")
+       + r(x - 19, t - 35, 10, 2, "#9fce5e") + r(x - 19, t - 31, 18, 2, "#5f8f3e")
+       + r(x - 19, t - 27, 13, 2, "#9fce5e") + "</g>";
+    // testruta: tre linjer som hakes av nar Testeren kjorer den
+    s += '<g id="pctest" opacity="0">'
+       + r(x - 19, t - 43, 3, 3, "#39e07a") + r(x - 14, t - 42, 16, 2, "#6f8f72")
+       + r(x - 19, t - 37, 3, 3, "#39e07a") + r(x - 14, t - 36, 12, 2, "#6f8f72")
+       + r(x - 19, t - 31, 3, 3, "#f0b429") + r(x - 14, t - 30, 18, 2, "#6f8f72")
+       + r(x - 19, t - 26, 26, 3, "#243a28")
+       + '<rect id="pcbar" x="' + (x - 19) + '" y="' + (t - 26) + '" width="0" height="3" fill="#39e07a"/>' + "</g>";
+    // tastaturet foran, pa nersiden av pulten
+    s += r(x - 14, t + 4, 24, 7, "#2a352c") + r(x - 12, t + 5, 20, 4, "#3f5142");
+    return s;
+  }
+  function pcGlod(pt) {
+    var x = pt.x, y = pt.y, t = y - 24;
+    return (x - 27) + "," + y + " " + (x - 27) + "," + (t - 48) + " " + (x + 13) + "," + (t - 48) + " " + (x + 27) + "," + (t) + " " + (x + 27) + "," + (y + 16) + " " + (x - 27) + "," + (y + 16);
+  }
+
+  // Sirenen på stang. Den snurrer bare mens noe faktisk er nede - står den stille,
+  // er alt friskmeldt.
+  function sirene(pt) {
+    var x = pt.x, y = pt.y, s = "";
+    s += isoBoks(pt, 9, 5, 10, ["#2a2410", "#3a3116", "#4a3f1d"], { kant: "#f0b429" });
+    s += r(x - 2, y - 46, 4, 36, "#4a3f1d");
+    s += '<g id="sirenelys">' + r(x - 9, y - 60, 18, 14, "#8a1f1f")
+       + r(x - 9, y - 60, 18, 4, "#b02c2c") + r(x - 11, y - 47, 22, 3, "#39434f") + "</g>";
+    return s;
+  }
+
+  // Slusens port: to solide stolper med en bom over, og en lampe som står på grønt
+  // til noen banker på uten nøkkel. Dette er huset sin eneste vei mellom etasjene.
+  function slusePort(pt) {
+    var x = pt.x, y = pt.y, h = 54, f = ["#1a1f26", "#242c36", "#39434f"], s = "";
+    var a = { x: x - 16, y: y - 10 }, b = { x: x + 16, y: y + 10 };
+    s += isoBoks(a, 7, 4, h, f, { kant: "#8f99a8" }) + isoBoks(b, 7, 4, h, f, { kant: "#8f99a8" });
+    s += poly(a.x + "," + (a.y - h + 2) + " " + b.x + "," + (b.y - h + 2) + " " + b.x + "," + (b.y - h + 13) + " " + a.x + "," + (a.y - h + 13), "#39434f");
+    s += r(x - 3, y - h + 4, 6, 6, "#39e07a");
+    return s;
+  }
+  function slusePortGlod(pt) {
+    var x = pt.x, y = pt.y, h = 54;
+    return (x - 23) + "," + (y - 14) + " " + (x - 23) + "," + (y - h - 14) + " " + (x + 23) + "," + (y - h + 14) + " " + (x + 23) + "," + (y + 14);
+  }
+
+  // Godkjenningsporten. Bommen star pa tvers av veien inn til panelet, og lasen
+  // henger midt pa den. Den svinger opp mens Administratoren star der og legger
+  // forslaget fram - og bare da: ingen agent apner den selv.
+  function portTegn(pt) {
+    var x = pt.x, y = pt.y, h = 46;
+    var a = { x: x - 13, y: y - 8 }, b = { x: x + 13, y: y + 8 };
+    var f = ["#1e2620", "#2a352c", "#3a4a3c"];
+    var s = isoBoks(a, 5, 3, h, f, { kant: "#9fce5e" }) + isoBoks(b, 5, 3, h, f, { kant: "#9fce5e" });
+    s += poly(a.x + "," + (a.y - h + 4) + " " + b.x + "," + (b.y - h + 4) + " " + b.x + "," + (b.y - h + 12) + " " + a.x + "," + (a.y - h + 12), "#4f6b2e");
+    s += '<g id="portlas">' + r(x - 5, y - h + 14, 10, 9, "#2a352c")
+       + '<path d="M ' + (x - 3) + " " + (y - h + 14) + " L " + (x - 3) + " " + (y - h + 9)
+       + " A 3 3 0 0 1 " + (x + 3) + " " + (y - h + 9) + " L " + (x + 3) + " " + (y - h + 14)
+       + '" fill="none" stroke="#9fce5e" stroke-width="1.6"/>'
+       + r(x - 1, y - h + 17, 2, 3, "#9fce5e") + "</g>";
+    return s;
+  }
+  function portGlod(pt) {
+    var x = pt.x, y = pt.y, h = 46;
+    return (x - 19) + "," + (y - 11) + " " + (x - 19) + "," + (y - h - 11) + " " + (x + 19) + "," + (y - h + 11) + " " + (x + 19) + "," + (y + 11);
+  }
+
+  function plante(pt, sk) {
+    sk = sk || 1;
+    var x = pt.x, y = pt.y, s = "";
+    var bl = [[0, -55, 6, 13, "#6fb875"], [-9, -43, 7, 16, "#5fa368"], [10, -45, 7, 15, "#3f7a4c"],
+              [-17, -19, 8, 19, "#3f7a4c"], [17, -21, 8, 20, "#5fa368"], [0, -31, 10, 24, "#4f8f5c"]];
+    for (var i = 0; i < bl.length; i++) {
+      s += '<ellipse cx="' + (x + bl[i][0] * sk) + '" cy="' + (y + bl[i][1] * sk) + '" rx="' + (bl[i][2] * sk) + '" ry="' + (bl[i][3] * sk) + '" fill="' + bl[i][4] + '"/>';
+    }
+    s += r(x - 18 * sk, y - 7 * sk, 36 * sk, 7 * sk, "#c97a55");
+    s += poly((x - 14 * sk) + "," + y + " " + (x + 14 * sk) + "," + y + " " + (x + 9 * sk) + "," + (y + 23 * sk) + " " + (x - 9 * sk) + "," + (y + 23 * sk), "#b5603f");
+    return s;
+  }
+
+  function skjermTegn(pt) {
+    var x = pt.x, y = pt.y;
+    return isoBoks(pt, 16, 10, 16, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#8fd9ff" })
+      + r(x - 3, y - 40, 6, 24, "#3c4a59")
+      + r(x - 17, y - 66, 34, 27, "#141a22") + r(x - 13, y - 62, 26, 19, "#16293e")
+      + r(x - 9, y - 57, 18, 3, "#5fa8cc") + r(x - 9, y - 51, 12, 3, "#5fa8cc");
+  }
+  function skjermGlod(pt) {
+    var x = pt.x, y = pt.y;
+    return (x - 18) + "," + (y - 68) + " " + (x + 18) + "," + (y - 68) + " " + (x + 18) + "," + (y - 38)
+      + " " + (x + 17) + "," + (y - 38) + " " + (x + 17) + "," + y + " " + (x - 17) + "," + y
+      + " " + (x - 17) + "," + (y - 38) + " " + (x - 18) + "," + (y - 38);
+  }
+  function sjaktTegn(farge) {
+    return function (pt) {
+      var x = pt.x, y = pt.y;
+      return poly((x - 8) + "," + (y - 24) + " " + (x + 8) + "," + (y - 24) + " " + (x + 32) + "," + (y - 62) + " " + (x + 16) + "," + (y - 62), "#2b3743")
+        + poly((x + 16) + "," + (y - 62) + " " + (x + 32) + "," + (y - 62) + " " + (x + 32) + "," + (y - 69) + " " + (x + 16) + "," + (y - 69), farge)
+        + isoBoks(pt, 18, 11, 24, ["#1e2831", "#2b3743", "#3c4a59"], { innfelt: "#222d38", kant: farge });
+    };
+  }
+  function sjaktGlod(pt) { return boksGlod(pt, 18, 11, 24); }
+
+  var ROM = [
+    {
+      id: "recman", navn: "Recman", aksent: "#4f86d8",
+      vegg: [
+        { v: "h", p0: 0.12, p1: 0.46, q0: 0.46, q1: 0.74, flate: "#1c2836", innhold: [
+          [0.16, 0.64, 0.24, 0.03, "#39e07a"], [0.16, 0.58, 0.18, 0.03, "#4f86d8"],
+          [0.16, 0.52, 0.22, 0.03, "#ff5c5c"], [0.41, 0.50, 0.03, 0.18, "#31628f"]] },
+        { v: "v", p0: 0.26, p1: 0.54, q0: 0.48, q1: 0.70, flate: "#231a2e", innhold: [
+          [0.30, 0.60, 0.05, 0.05, "#4f86d8"], [0.37, 0.60, 0.05, 0.05, "#4f86d8"],
+          [0.44, 0.60, 0.05, 0.05, "#39e07a"], [0.30, 0.53, 0.19, 0.025, "#5a6472"]] }
+      ],
+      gulv: [
+        { t: "boks", u: VEGG, v: 0.30, hw: 17, hh: 10, h: 56, f: ["#1e2831", "#2b3743", "#3c4a59"], stripe: "#2f6bb0", kant: "#4f86d8" },
+        { t: "boks", u: VEGG, v: 0.52, hw: 17, hh: 10, h: 56, f: ["#1e2831", "#2b3743", "#3c4a59"], stripe: "#2f6bb0", kant: "#4f86d8" },
+        { t: "boks", u: VEGG, v: 0.74, hw: 17, hh: 10, h: 56, f: ["#1e2831", "#2b3743", "#3c4a59"], stripe: "#2f6bb0", kant: "#4f86d8" },
+        { t: "plante", u: VEGG, v: 0.92, sk: 1 }
+      ],
+      benker: [
+        { id: "nytt", navn: "nytt oppdrag", u: 0.30, v: VEGG, vegg: "h", tegn: sjaktTegn("#39e07a"), glo: sjaktGlod },
+        { id: "borte", navn: "borte fra tavlen", u: 0.54, v: VEGG, vegg: "h", tegn: sjaktTegn("#ff5c5c"), glo: sjaktGlod },
+        { id: "status", navn: "statusendring", u: 0.78, v: VEGG, vegg: "h", tegn: sjaktTegn("#f0b429"), glo: sjaktGlod }
+      ],
+      agenter: [{ navn: "Uthenteren", rute: [[0.26, 0.34], [0.40, 0.34], [0.40, 0.80], [0.26, 0.80]], varighet: 11,
+        eier: ["nytt", "borte", "status"],
+        hud: "#e0a878", hudM: "#c78f63", haar: "#3a2a1c", hat: "#2f4d78", p: "kasse", drakt: "#4f86d8", draktM: "#31628f" }]
+    },
+    {
+      id: "eksterne", navn: "Eksterne kilder", aksent: "#a06fe0",
+      vegg: [
+        { v: "h", p0: 0.10, p1: 0.38, q0: 0.52, q1: 0.76, flate: "#241a38", innhold: [
+          [0.14, 0.66, 0.20, 0.04, "#a06fe0"], [0.14, 0.59, 0.09, 0.03, "#7a4fb5"], [0.26, 0.59, 0.08, 0.03, "#f0b429"]] },
+        { v: "v", p0: 0.24, p1: 0.52, q0: 0.52, q1: 0.72, flate: "#1c2836", innhold: [
+          [0.28, 0.63, 0.20, 0.03, "#8fd9ff"], [0.28, 0.58, 0.13, 0.03, "#5fa8cc"], [0.28, 0.53, 0.17, 0.03, "#5fa8cc"]] }
+      ],
+      gulv: [{ t: "plante", u: VEGG, v: 0.92, sk: 1.05 }],
+      benker: [
+        { id: "vaer", navn: "vær", u: VEGG, v: 0.26, vegg: "v",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return r(x - 2, y - 74, 4, 52, "#8f99a8")
+              + '<circle cx="' + (x - 11) + '" cy="' + (y - 78) + '" r="5" fill="#9fe1cb"/>'
+              + '<circle cx="' + (x + 11) + '" cy="' + (y - 78) + '" r="5" fill="#9fe1cb"/>'
+              + '<circle cx="' + x + '" cy="' + (y - 88) + '" r="5" fill="#9fe1cb"/>'
+              + r(x - 12, y - 80, 24, 3, "#5a6472")
+              + isoBoks(pt, 17, 10, 24, ["#1e2831", "#2b3743", "#3c4a59"], { innfelt: "#16293e", kant: "#8fd9ff" });
+          },
+          glo: function (pt) { return boksGlod(pt, 17, 10, 24); } },
+        { id: "avganger", navn: "buss", u: VEGG, v: 0.58, vegg: "v",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return r(x - 3, y - 58, 6, 58, "#5a6472")
+              + r(x - 26, y - 92, 52, 36, "#1a1f26") + r(x - 22, y - 88, 44, 28, "#0d1a2e")
+              + r(x - 18, y - 84, 20, 4, "#f0b429") + r(x + 6, y - 84, 12, 4, "#f0b429")
+              + r(x - 18, y - 76, 24, 4, "#5fd4ff") + r(x + 8, y - 76, 10, 4, "#5fd4ff")
+              + r(x - 18, y - 68, 16, 4, "#5a6472");
+          },
+          glo: function (pt) {
+            var x = pt.x, y = pt.y;
+            return (x - 27) + "," + (y - 93) + " " + (x + 27) + "," + (y - 93) + " " + (x + 27) + "," + (y - 55)
+              + " " + (x + 4) + "," + (y - 55) + " " + (x + 4) + "," + y + " " + (x - 4) + "," + y
+              + " " + (x - 4) + "," + (y - 55) + " " + (x - 27) + "," + (y - 55);
+          } },
+        { id: "nrk", navn: "NRK", u: 0.32, v: VEGG, vegg: "h",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return r(x - 2, y - 56, 4, 24, "#8f99a8")
+              + '<ellipse cx="' + x + '" cy="' + (y - 64) + '" rx="20" ry="11" fill="#3c4a59"/>'
+              + '<ellipse cx="' + x + '" cy="' + (y - 66) + '" rx="15" ry="8" fill="#5a6472"/>'
+              + '<circle cx="' + x + '" cy="' + (y - 66) + '" r="3" fill="#a06fe0"/>'
+              + isoBoks(pt, 18, 11, 32, ["#1e2831", "#2b3743", "#3c4a59"], { led: "#a06fe0", kant: "#a06fe0" });
+          },
+          glo: function (pt) { return boksGlod(pt, 18, 11, 32); } },
+        { id: "kundenytt", navn: "kundenytt", u: 0.62, v: VEGG, vegg: "h",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return isoBoks(pt, 22, 13, 20, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#a06fe0" })
+              + poly((x - 12) + "," + (y - 26) + " " + (x + 6) + "," + (y - 36) + " " + (x + 16) + "," + (y - 30) + " " + (x - 2) + "," + (y - 20), "#f4ead8")
+              + poly((x - 10) + "," + (y - 29) + " " + (x + 2) + "," + (y - 36) + " " + (x + 8) + "," + (y - 32) + " " + (x - 4) + "," + (y - 25), "#d8c8a8");
+          },
+          glo: function (pt) { return boksGlod(pt, 22, 13, 20); } }
+      ],
+      agenter: [{ navn: "Budbringeren", rute: [[0.26, 0.32], [0.56, 0.32], [0.56, 0.46], [0.26, 0.46]], varighet: 10,
+        eier: ["vaer", "avganger", "nrk", "kundenytt"],
+        hud: "#8d5524", hudM: "#70431c", haar: "#2a1c14", hat: "#5c3a8f", p: "brev", sekk: 1, drakt: "#a06fe0", draktM: "#7a4fb5" }]
+    },
+    {
+      id: "teamskanal", navn: "Teamskanal", aksent: "#e0699f",
+      vegg: [
+        { v: "v", p0: 0.18, p1: 0.56, q0: 0.42, q1: 0.76, flate: "#c9946b", ramme: "#4a3620", innhold: [] },
+        { v: "h", p0: 0.56, p1: 0.84, q0: 0.50, q1: 0.74, flate: "#2a2033", innhold: [
+          [0.60, 0.64, 0.20, 0.035, "#e0699f"], [0.60, 0.58, 0.13, 0.03, "#b54a7c"], [0.60, 0.54, 0.08, 0.025, "#b54a7c"]] }
+      ],
+      gulv: [
+        { t: "egen", u: 0.34, v: VEGG, tegn: function (pt) {
+          var x = pt.x, y = pt.y, s = isoBoks(pt, 30, 17, 50, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#e0699f" }), i, j;
+          for (i = 0; i < 3; i++) for (j = 0; j < 2; j++) s += r(x + 5 + i * 8, y - 42 + j * 13, 6, 9, "#141a22");
+          for (i = 0; i < 3; i++) for (j = 0; j < 2; j++) s += r(x - 25 + i * 8, y - 34 + j * 13, 6, 9, "#141a22");
+          return s;
+        } },
+        { t: "egen", u: 0.66, v: 0.80, tegn: function (pt) {
+          var x = pt.x, y = pt.y;
+          return isoBoks(pt, 18, 11, 16, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#e0699f" })
+            + r(x - 10, y - 26, 20, 10, "#f4ead8") + r(x - 10, y - 26, 20, 3, "#d8c8a8");
+        } },
+        { t: "plante", u: VEGG, v: 0.86, sk: 1 }
+      ],
+      benker: [
+        { id: "rorpost", navn: "ny melding", u: 0.80, v: VEGG, vegg: "h",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return r(x - 9, y - 96, 18, 74, "#2b3743") + r(x - 6, y - 96, 12, 74, "#151b22")
+              + r(x - 11, y - 98, 22, 5, "#4a5462") + r(x - 11, y - 26, 22, 5, "#4a5462")
+              + '<rect id="kapsel" x="' + (x - 4) + '" y="' + (y - 92) + '" width="8" height="12" rx="3" fill="#e0699f" opacity="0.3"/>'
+              + isoBoks(pt, 16, 10, 22, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#e0699f" });
+          },
+          glo: function (pt) {
+            var x = pt.x, y = pt.y;
+            return (x - 12) + "," + (y - 100) + " " + (x + 12) + "," + (y - 100) + " " + (x + 12) + "," + (y - 22)
+              + " " + (x + 16) + "," + (y - 22) + " " + (x + 16) + "," + y + " " + (x - 16) + "," + y
+              + " " + (x - 16) + "," + (y - 22) + " " + (x - 12) + "," + (y - 22);
+          } }
+      ],
+      animer: function (ctx) {
+        var k = document.getElementById("kapsel");
+        if (!k) return;
+        var topp = parseFloat(k.getAttribute("data-topp") || k.getAttribute("y"));
+        k.setAttribute("data-topp", topp);
+        var g = 1;
+        if (this._fallTil && ctx.tid < this._fallTil) g = 1 - (this._fallTil - ctx.tid) / 1800;
+        k.setAttribute("y", (topp + Math.max(0, Math.min(1, g)) * 58).toFixed(1));
+        k.setAttribute("opacity", this._fallTil && ctx.tid < this._fallTil + 2500 ? 1 : 0.28);
+        var n = document.getElementById("notater");
+        if (n && this._notater !== undefined && n.childElementCount !== this._notater) {
+          var farger = ["#f0d264", "#9fe1cb", "#e8917a", "#8fd9ff"], ut = "", i;
+          for (i = 0; i < this._notater; i++) {
+            ut += '<rect x="' + (0.24 + (i % 2) * 0.13) + '" y="' + (0.60 - Math.floor(i / 2) * 0.10) + '" width="0.09" height="0.07" fill="' + farger[i % 4] + '"/>';
+          }
+          n.innerHTML = ut;
+        }
+      },
+      ved: function () { this._fallTil = Date.now() + 1800; this._notater = Math.min(4, (this._notater || 0) + 1); },
+      agenter: [{ navn: "Postbudet", rute: [[0.30, 0.38], [0.64, 0.38], [0.64, 0.56], [0.30, 0.56]], varighet: 9.5,
+        eier: ["rorpost"],
+        lagOppdrag: function () {
+          return [stopp(0.80, 0.16, [0.80, VEGG], 4000, "ror"),
+                  stopp(0.34, 0.18, [0.34, VEGG], 4500, "sorterer"),
+                  stopp(0.16, 0.42, [VEGG, 0.42], 4500, "tavle")];
+        },
+        hud: "#f0c8a0", hudM: "#d2a87e", haar: "#5a3a2a", hat: "#9c3f6b", p: "brev", sekk: 1, drakt: "#e0699f", draktM: "#b54a7c" }]
+    },
+    {
+      id: "tavle", navn: "Tavla", aksent: "#8fd9ff",
+      vegg: [
+        { v: "h", p0: 0.10, p1: 0.60, q0: 0.46, q1: 0.82, flate: "#101820", ramme: "#2b323b", innhold: [
+          [0.15, 0.70, 0.17, 0.05, "#8fd9ff"], [0.35, 0.70, 0.17, 0.05, "#8fd9ff"],
+          [0.15, 0.60, 0.37, 0.03, "#3a4f5e"], [0.15, 0.54, 0.28, 0.03, "#3a4f5e"], [0.15, 0.48, 0.32, 0.03, "#3a4f5e"]] },
+        { v: "v", p0: 0.64, p1: 0.86, q0: 0.54, q1: 0.70, flate: "#f4ead8", ramme: "#4a3620", innhold: [
+          [0.68, 0.63, 0.14, 0.03, "#8d5524"], [0.68, 0.58, 0.10, 0.03, "#8d5524"]] }
+      ],
+      gulv: [
+        { t: "plante", u: VEGG, v: 0.86, sk: 1.05 },
+        { t: "boks", u: 0.80, v: 0.78, hw: 22, hh: 13, h: 14, f: ["#1e2831", "#2b3743", "#3c4a59"], kant: "#8fd9ff" }
+      ],
+      benker: [
+        { id: "skjerm1", navn: "skjerm 1", u: 0.20, v: VEGG, vegg: "h", tegn: skjermTegn, glo: skjermGlod },
+        { id: "skjerm2", navn: "skjerm 2", u: 0.40, v: VEGG, vegg: "h", tegn: skjermTegn, glo: skjermGlod },
+        { id: "skjerm3", navn: "skjerm 3", u: 0.60, v: VEGG, vegg: "h", tegn: skjermTegn, glo: skjermGlod },
+        { id: "skjerm4", navn: "skjerm 4", u: 0.80, v: VEGG, vegg: "h", tegn: skjermTegn, glo: skjermGlod },
+        { id: "gjest", navn: "gjestevisning", u: VEGG, v: 0.44, vegg: "v",
+          tegn: function (pt) {
+            var x = pt.x, y = pt.y;
+            return isoBoks(pt, 18, 11, 18, ["#1e2831", "#2b3743", "#3c4a59"], { kant: "#8fd9ff" })
+              + r(x - 3, y - 48, 6, 30, "#3c4a59")
+              + r(x - 20, y - 78, 40, 32, "#141a22")
+              + '<rect id="gjestlys" x="' + (x - 16) + '" y="' + (y - 74) + '" width="32" height="24" fill="#16293e"/>'
+              + r(x - 11, y - 68, 22, 4, "#5fa8cc") + r(x - 11, y - 60, 14, 4, "#5fa8cc");
+          },
+          glo: function (pt) {
+            var x = pt.x, y = pt.y;
+            return (x - 21) + "," + (y - 80) + " " + (x + 21) + "," + (y - 80) + " " + (x + 21) + "," + (y - 44)
+              + " " + (x + 19) + "," + (y - 44) + " " + (x + 19) + "," + y + " " + (x - 19) + "," + y
+              + " " + (x - 19) + "," + (y - 44) + " " + (x - 21) + "," + (y - 44);
+          } }
+      ],
+      animer: function () {
+        var l = document.getElementById("gjestlys");
+        if (l) l.setAttribute("fill", this._gjest ? "#2f6bb0" : "#16293e");
+      },
+      ved: function (b) { if (b && b.id === "gjest") this._gjest = !this._gjest; },
+      agenter: [
+        { navn: "Skjermpasseren", rute: [[0.24, 0.30], [0.72, 0.30], [0.72, 0.42], [0.24, 0.42]], varighet: 13,
+          eier: ["skjerm1", "skjerm2", "skjerm3", "skjerm4"],
+          hud: "#e8b48c", hudM: "#d49a72", haar: "#7a5330", p: "klut", drakt: "#f0b429", draktM: "#c8901c" },
+        { navn: "Gjesteverten", rute: [[0.22, 0.60], [0.48, 0.60], [0.48, 0.78], [0.22, 0.78]], varighet: 10,
+          eier: ["gjest"],
+          hud: "#c68642", hudM: "#a06a32", haar: "#2a1c14", sloyfe: "#b4483f", p: "skilt", drakt: "#8fd9ff", draktM: "#5fa8cc" }
+      ]
+    },
+    {
+      id: "kontroll", navn: "Kontrollrommet", aksent: "#5fd4ff",
+      vegg: [
+        { v: "h", p0: 0.12, p1: 0.52, q0: 0.50, q1: 0.78, flate: "#0d1f14", ramme: "#14120f", innhold: [
+          [0.16, 0.68, 0.16, 0.025, "#39e07a"], [0.16, 0.63, 0.24, 0.025, "#2fb864"],
+          [0.16, 0.58, 0.10, 0.025, "#39e07a"], [0.16, 0.53, 0.20, 0.025, "#2fb864"]] },
+        { v: "v", p0: 0.24, p1: 0.52, q0: 0.52, q1: 0.70, flate: "#161d28", innhold: [
+          [0.28, 0.62, 0.035, 0.035, "#39e07a"], [0.325, 0.62, 0.035, 0.035, "#39e07a"],
+          [0.37, 0.62, 0.035, 0.035, "#5fd4ff"], [0.415, 0.62, 0.035, 0.035, "#f0b429"],
+          [0.28, 0.56, 0.035, 0.035, "#1e4d33", "modul1"], [0.325, 0.56, 0.035, 0.035, "#1e4d33", "modul2"],
+          [0.37, 0.56, 0.035, 0.035, "#1e4d33", "modul3"], [0.415, 0.56, 0.035, 0.035, "#1e4d33", "modul4"]] }
+      ],
+      animer: function (ctx) {
+        var paa = ctx.gjor("konsoll");
+        for (var i = 1; i <= 4; i++) {
+          var l = document.getElementById("modul" + i);
+          if (!l) continue;
+          var lys = paa && (rolig || Math.sin(ctx.tid / 220 + i * 0.9) > -0.4);
+          l.setAttribute("fill", lys ? "#39e07a" : "#1e4d33");
+        }
+      },
+      gulv: [
+        { t: "boks", u: 0.34, v: VEGG, hw: 28, hh: 16, h: 26, f: ["#1e2831", "#2b3743", "#3c4a59"], innfelt: "#0d1f14", stripe: "#1b6b64", kant: "#5fd4ff" },
+        { t: "boks", u: VEGG, v: 0.34, hw: 20, hh: 12, h: 58, f: ["#181f27", "#242d38", "#333e4b"], led: "#39e07a", stripe: "#1b6b64" },
+        { t: "boks", u: 0.82, v: 0.74, hw: 16, hh: 10, h: 18, f: ["#181f27", "#242d38", "#333e4b"], kant: "#5fd4ff" },
+        { t: "plante", u: VEGG, v: 0.84, sk: 0.95 }
+      ],
+      fokus: { u: 0.34, v: 0.16 },
+      // En strom per lampe i modulrekka - samme tanke som sendKommando(), der hver
+      // utrulling sender en strom ut til hver avdeling koden gjelder for.
+      strom: { fra: [0.34, 0.20], til: [["v", 0.2975, 0.5775], ["v", 0.3425, 0.5775], ["v", 0.3875, 0.5775], ["v", 0.4325, 0.5775]] },
+      agenter: [{ navn: "Claude", rute: [[0.30, 0.34], [0.70, 0.34], [0.70, 0.62], [0.30, 0.62]], varighet: 12,
+        lagOppdrag: function () { return [stopp(0.34, 0.20, [0.34, VEGG], 11000, "konsoll")]; },
+        hud: "#e0a878", hudM: "#c78f63", haar: "#3a2a1c", hette: "#3a4450", p: "nettbrett", drakt: "#2a323f", draktM: "#1c222c" }]
+    },
+    {
+      id: "obsidian", navn: "Obsidian-hvelvet", aksent: "#6c5fd8",
+      vegg: [
+        { v: "v", p0: 0.14, p1: 0.54, q0: 0.42, q1: 0.80, flate: "#2a2440", ramme: "#1d1930", innhold: [
+          [0.18, 0.70, 0.032, 0.07, "#6c5fd8"], [0.22, 0.70, 0.032, 0.062, "#8f84e8"], [0.26, 0.70, 0.032, 0.075, "#4d43a5"],
+          [0.32, 0.70, 0.032, 0.065, "#6c5fd8"], [0.36, 0.70, 0.032, 0.072, "#8f84e8"],
+          [0.18, 0.56, 0.032, 0.068, "#4d43a5"], [0.22, 0.56, 0.032, 0.075, "#6c5fd8"], [0.26, 0.56, 0.032, 0.06, "#8f84e8"],
+          [0.32, 0.56, 0.032, 0.07, "#4d43a5"], [0.36, 0.56, 0.032, 0.066, "#6c5fd8"],
+          [0.17, 0.675, 0.30, 0.02, "#1d1930"], [0.17, 0.535, 0.30, 0.02, "#1d1930"]] },
+        { v: "h", p0: 0.46, p1: 0.84, q0: 0.28, q1: 0.82, flate: "#2a3039", ramme: "#1a1f26", hvelv: true, innhold: [] }
+      ],
+      gulv: [
+        { t: "boks", u: 0.28, v: 0.60, hw: 26, hh: 15, h: 26, f: ["#241f38", "#312a4d", "#3f3760"], innfelt: "#1d1930", kant: "#6c5fd8", led: "#8f84e8" },
+        { t: "egen", u: 0.60, v: 0.82, tegn: function (pt) {
+          var x = pt.x, y = pt.y;
+          return isoBoks(pt, 20, 12, 16, ["#241f38", "#312a4d", "#3f3760"], { kant: "#6c5fd8" })
+            + r(x - 12, y - 30, 9, 14, "#6c5fd8") + r(x - 1, y - 32, 9, 16, "#8f84e8") + r(x + 9, y - 28, 8, 12, "#4d43a5");
+        } },
+        { t: "boks", u: 0.86, v: 0.62, hw: 15, hh: 9, h: 30, f: ["#241f38", "#312a4d", "#3f3760"], stripe: "#4d43a5", kant: "#6c5fd8" },
+        { t: "plante", u: 0.86, v: VEGG, sk: 0.95 }
+      ],
+      fokus: { u: 0.28, v: 0.48 }, gjest: { u: 0.56, v: 0.36 },
+      agenter: [{ navn: "Arkivaren", rute: [[0.20, 0.36], [0.44, 0.36], [0.44, 0.86], [0.20, 0.86]], varighet: 12,
+        lagOppdrag: function () {
+          return [stopp(0.28, 0.74, [0.28, 0.60], 5000, "skriver"),
+                  stopp(0.65, 0.18, [0.65, VEGG], 6000, "hvelv")];
+        },
+        hud: "#f0c8a0", hudM: "#d2a87e", haar: "#c8c0d8", hette: "#544aab", briller: 1, p: "bok", drakt: "#6c5fd8", draktM: "#4d43a5" }]
+    },
+    {
+      id: "kandidater", navn: "Kandidattrakten", aksent: "#e8917a",
+      vegg: [
+        { v: "h", p0: 0.10, p1: 0.48, q0: 0.48, q1: 0.78, flate: "#33211b", innhold: [
+          [0.14, 0.68, 0.30, 0.035, "#e8917a"], [0.16, 0.62, 0.26, 0.035, "#c26e58"],
+          [0.19, 0.56, 0.20, 0.035, "#c26e58"], [0.23, 0.50, 0.12, 0.035, "#39e07a"]] },
+        { v: "v", p0: 0.24, p1: 0.48, q0: 0.52, q1: 0.72, flate: "#2a2033", innhold: [
+          [0.28, 0.64, 0.14, 0.03, "#e8917a"], [0.28, 0.59, 0.09, 0.03, "#8b7a6a"], [0.28, 0.54, 0.11, 0.03, "#8b7a6a"]] }
+      ],
+      gulv: [
+        { t: "egen", u: 0.30, v: 0.78, tegn: function (pt) {
+          var x = pt.x, y = pt.y;
+          return isoBoks(pt, 26, 15, 22, ["#2e2129", "#3d2c36", "#4d3a44"], { innfelt: "#241a20", kant: "#e8917a" })
+            + r(x - 16, y - 32, 13, 10, "#f4ead8") + r(x - 2, y - 34, 13, 12, "#e8d9b8") + r(x + 12, y - 30, 10, 8, "#f4ead8");
+        } },
+        { t: "boks", u: VEGG, v: 0.56, hw: 16, hh: 10, h: 20, f: ["#2e2129", "#3d2c36", "#4d3a44"], kant: "#e8917a" },
+        { t: "plante", u: VEGG, v: 0.88, sk: 1 }
+      ],
+      gjest: { u: 0.62, v: 0.62 },
+      benker: [
+        { id: "untreated", navn: "ubehandlet 990", u: 0.20, v: VEGG, vegg: "h", trakt: 1, h: 46 },
+        { id: "pipeline", navn: "i prosess 5351", u: 0.42, v: VEGG, vegg: "h", trakt: 1, h: 40 },
+        { id: "declined", navn: "avslått 7362", u: 0.64, v: VEGG, vegg: "h", trakt: 1, h: 34 },
+        { id: "hired", navn: "ansatt 114", u: 0.86, v: VEGG, vegg: "h", trakt: 1, h: 28, aksent: "#39e07a" }
+      ],
+      agenter: [{ navn: "Trakteren", rute: [[0.24, 0.32], [0.70, 0.32], [0.70, 0.52], [0.24, 0.52]], varighet: 11,
+        eier: ["untreated", "pipeline", "declined", "hired"],
+        hud: "#8d5524", hudM: "#70431c", haar: "#2a1c14", forkle: "#c26e58", p: "trakt", drakt: "#e8917a", draktM: "#c26e58" }]
+    },
+    {
+      id: "functions", navn: "Cloudflare Functions", aksent: "#2fd4c4",
+      vegg: [
+        // Modulrekka: seks lamper, én per funksjon som lagrer noe.
+        { v: "h", p0: 0.10, p1: 0.58, q0: 0.42, q1: 0.76, flate: "#0f2e2c", ramme: "#0a1f1e", innhold: [
+          [0.14, 0.64, 0.40, 0.03, "#2fd4c4"],
+          [0.14, 0.54, 0.05, 0.05, "#1b6b64"], [0.21, 0.54, 0.05, 0.05, "#1b6b64"], [0.28, 0.54, 0.05, 0.05, "#1b6b64"],
+          [0.35, 0.54, 0.05, 0.05, "#1b6b64"], [0.42, 0.54, 0.05, 0.05, "#1b6b64"], [0.49, 0.54, 0.05, 0.05, "#1b6b64"]] },
+        // Skrivekvoten - måleren som viser hvor mye av døgnets 1000 skrivinger som er brukt.
+        { v: "v", p0: 0.22, p1: 0.56, q0: 0.46, q1: 0.72, flate: "#12232b", ramme: "#0c171d", innhold: [
+          [0.26, 0.62, 0.26, 0.035, "#5a6472"], [0.26, 0.62, 0.09, 0.035, "#39e07a"],
+          [0.26, 0.54, 0.16, 0.025, "#2fd4c4"], [0.26, 0.49, 0.22, 0.025, "#1b6b64"]] }
+      ],
+      gulv: [
+        // KV-reolen: selve lageret. Alt som lagres, havner her.
+        { t: "boks", u: 0.64, v: 0.60, hw: 26, hh: 15, h: 46, f: ["#13222a", "#1c303a", "#28434f"], innfelt: "#0d1f14", stripe: "#1b6b64", led: "#39e07a", kant: "#2fd4c4" },
+        { t: "plante", u: 0.90, v: 0.28, sk: 0.95 }
+      ],
+      fokus: { u: 0.64, v: 0.44 }, gjest: { u: 0.26, v: 0.66 },
+      benker: [
+        { id: "notat", navn: "notat.js", u: 0.18, v: VEGG, vegg: "h", prop: "lapp" },
+        { id: "bilde", navn: "bilde.js", u: 0.44, v: VEGG, vegg: "h", prop: "bilde" },
+        { id: "bursdager", navn: "bursdager.js", u: 0.70, v: VEGG, vegg: "h", prop: "kake" },
+        { id: "skjulte", navn: "skjulte.js", u: VEGG, v: 0.22, vegg: "v", prop: "boks" },
+        { id: "innstillinger", navn: "innstillinger", u: VEGG, v: 0.48, vegg: "v", prop: "bryter" },
+        { id: "skjermer", navn: "skjermer.js", u: VEGG, v: 0.74, vegg: "v", prop: "skjerm" }
+      ],
+      agenter: [
+        { navn: "Oppslagsvakten", rute: [[0.16, 0.16], [0.46, 0.16], [0.46, 0.32], [0.16, 0.32]], varighet: 9,
+          eier: ["notat", "bilde"],
+          hud: "#e0a878", hudM: "#c78f63", haar: "#3a2a1c", p: "lapp", drakt: "#2fd4c4", draktM: "#1b6b64", ring: "#2fd4c4" },
+        { navn: "Listeføreren", rute: [[0.58, 0.16], [0.88, 0.16], [0.88, 0.32], [0.58, 0.32]], varighet: 10.5,
+          eier: ["bursdager", "skjulte"],
+          hud: "#f0c8a0", hudM: "#d2a87e", haar: "#8a3b2a", briller: 1, p: "perm", drakt: "#5fd4ff", draktM: "#2f7f9c", ring: "#5fd4ff" },
+        { navn: "Bryterbetjenten", rute: [[0.16, 0.44], [0.38, 0.44], [0.38, 0.86], [0.16, 0.86]], varighet: 12,
+          eier: ["innstillinger", "skjermer"],
+          hud: "#8d5524", hudM: "#70431c", haar: "#2a1c14", hat: "#1b6b64", p: "nettbrett", drakt: "#3f5142", draktM: "#2a3830", ring: "#39e07a" },
+        // Lagerarbeideren eier ingen enkelt benk: enhver lagring ER lagerarbeid, så den
+        // går til KV-reolen uansett hvilken funksjon som skrev.
+        { navn: "Lagerarbeideren", rute: [[0.52, 0.80], [0.90, 0.80], [0.90, 0.94], [0.52, 0.94]], varighet: 13,
+          eier: [],
+          lagOppdrag: function () { return [stopp(0.64, 0.78, [0.64, 0.60], 6500, "lagrer")]; },
+          hud: "#c68642", hudM: "#a06a32", haar: "#3a2a1c", forkle: "#1b6b64", p: "kasse", drakt: "#2a3830", draktM: "#1d2722", ring: "#39e07a" }
+      ]
+    },
+    {
+      id: "sluse", navn: "Slusen", aksent: "#8f99a8",
+      vegg: [
+        // Tre overvåkningsskjermer, slik Slusen har dem i dag.
+        { v: "h", p0: 0.10, p1: 0.62, q0: 0.46, q1: 0.74, flate: "#151a20", ramme: "#0d1116", innhold: [
+          [0.14, 0.52, 0.14, 0.18, "#1c2836"], [0.32, 0.52, 0.14, 0.18, "#1c2836"], [0.50, 0.52, 0.08, 0.18, "#2e1a1a"],
+          [0.16, 0.66, 0.10, 0.022, "#5fd4ff"], [0.16, 0.61, 0.07, 0.022, "#39434f"],
+          [0.34, 0.66, 0.10, 0.022, "#5fd4ff"], [0.34, 0.61, 0.08, 0.022, "#39434f"],
+          [0.52, 0.66, 0.04, 0.022, "#ff5c5c"]] },
+        // Loggen over avviste skriveforsoek. Den er hele grunnen til at rommet finnes.
+        { v: "v", p0: 0.24, p1: 0.54, q0: 0.46, q1: 0.74, flate: "#1f1417", ramme: "#140c0e", innhold: [
+          [0.28, 0.66, 0.22, 0.026, "#ff5c5c"], [0.28, 0.605, 0.15, 0.022, "#8f5560"],
+          [0.28, 0.555, 0.19, 0.022, "#8f5560"], [0.28, 0.505, 0.11, 0.022, "#8f5560"]] }
+      ],
+      gulv: [
+        { t: "egen", u: 0.52, v: 0.46, tegn: slusePort },
+        { t: "boks", u: 0.22, v: 0.74, hw: 24, hh: 14, h: 22, f: ["#1a1f26", "#242c36", "#39434f"], innfelt: "#12161b", kant: "#8f99a8" },
+        { t: "plante", u: 0.90, v: 0.86, sk: 0.95 }
+      ],
+      fokus: { u: 0.52, v: 0.30 }, gjest: { u: 0.20, v: 0.34 },
+      benker: [
+        { id: "avvist", navn: "Avvist skriveforsoek", u: 0.86, v: VEGG, vegg: "h", prop: "skjerm" }
+      ],
+      agenter: [
+        { navn: "Vakten", rute: [[0.30, 0.16], [0.76, 0.16], [0.76, 0.34], [0.30, 0.34]], varighet: 7,
+          eier: ["avvist"],
+          hud: "#8d5524", hudM: "#70431c", haar: "#2a1c14", hat: "#39434f", p: "skilt", drakt: "#39434f", draktM: "#242c36", ring: "#ff5c5c" }
+      ]
+    },
+    {
+      id: "alarm", navn: "Alarmsentralen", aksent: "#f0b429",
+      vegg: [
+        // Lampeveggen: én lampe per helsesjekk. De står grønne til noe slutter å svare.
+        { v: "h", p0: 0.10, p1: 0.62, q0: 0.42, q1: 0.78, flate: "#2a2410", ramme: "#1a1609", innhold: [
+          [0.14, 0.70, 0.44, 0.026, "#f0b429"],
+          [0.14, 0.60, 0.055, 0.055, "#1e4d33", "lampe1"], [0.22, 0.60, 0.055, 0.055, "#1e4d33", "lampe2"],
+          [0.30, 0.60, 0.055, 0.055, "#1e4d33", "lampe3"], [0.38, 0.60, 0.055, 0.055, "#1e4d33", "lampe4"],
+          [0.46, 0.60, 0.055, 0.055, "#1e4d33", "lampe5"],
+          [0.14, 0.50, 0.055, 0.055, "#1e4d33", "lampe6"], [0.22, 0.50, 0.055, 0.055, "#1e4d33", "lampe7"],
+          [0.30, 0.50, 0.055, 0.055, "#1e4d33", "lampe8"], [0.38, 0.50, 0.055, 0.055, "#1e4d33", "lampe9"],
+          [0.46, 0.50, 0.055, 0.055, "#1e4d33", "lampe10"]] },
+        // Kvitteringsloggen: hva som har vært nede, og når det ble kvittert ut.
+        { v: "v", p0: 0.24, p1: 0.54, q0: 0.46, q1: 0.74, flate: "#101821", ramme: "#0a1016", innhold: [
+          [0.28, 0.66, 0.22, 0.026, "#8fd9ff"], [0.28, 0.610, 0.15, 0.022, "#3d5a70"],
+          [0.28, 0.560, 0.19, 0.022, "#3d5a70"], [0.28, 0.510, 0.12, 0.022, "#3d5a70"]] }
+      ],
+      animer: function (ctx) {
+        // Lampene slår om til rødt mens noe er nede, og står rødt til det faktisk
+        // kvitteres ut - samme regel som alarmen har i dag: den slukker seg ikke selv.
+        var nede = ctx.gjor("varsler"), kvitt = ctx.gjor("kvitterer");
+        if (nede) alarmNede = true;
+        if (kvitt) alarmNede = false;
+        for (var i = 1; i <= 10; i++) {
+          var l = document.getElementById("lampe" + i);
+          if (!l) continue;
+          var roed = alarmNede && i <= 3;
+          l.setAttribute("fill", roed
+            ? (rolig || Math.sin(ctx.tid / 190 + i) > 0 ? "#ff5c5c" : "#5a1f1f")
+            : "#39e07a");
+        }
+        var sl = document.getElementById("sirenelys");
+        if (sl) sl.setAttribute("fill-opacity", alarmNede ? (rolig ? 1 : (0.5 + 0.5 * Math.abs(Math.sin(ctx.tid / 260))).toFixed(2)) : 0.35);
+      },
+      gulv: [
+        { t: "egen", u: 0.62, v: 0.30, tegn: sirene },
+        { t: "boks", u: 0.28, v: 0.72, hw: 26, hh: 15, h: 24, f: ["#2a2410", "#3a3116", "#4a3f1d"], innfelt: "#1a1609", kant: "#f0b429", led: "#39e07a" },
+        { t: "plante", u: 0.90, v: 0.88, sk: 0.95 }
+      ],
+      fokus: { u: 0.62, v: 0.44 }, gjest: { u: 0.62, v: 0.66 },
+      benker: [
+        { id: "helse", navn: "En kilde svarer ikke", u: 0.24, v: VEGG, vegg: "h", prop: "skjerm" },
+        { id: "kvitter", navn: "Kristian kvitterer ut", u: VEGG, v: 0.30, vegg: "v", prop: "bryter" }
+      ],
+      agenter: [
+        { navn: "Varsleren", rute: [[0.20, 0.18], [0.54, 0.18], [0.54, 0.40], [0.20, 0.40]], varighet: 8.5,
+          eier: ["helse", "kvitter"],
+          lagOppdrag: function (b) {
+            return b && b.id === "kvitter"
+              ? [stopp(0.147, 0.30, [VEGG, 0.30], 5000, "kvitterer")]
+              : [stopp(0.24, 0.16, [0.24, VEGG], 6500, "varsler")];
+          },
+          hud: "#c68642", hudM: "#a06a32", haar: "#3a2a1c", hat: "#b8860b", p: "nettbrett",
+          drakt: "#f0b429", draktM: "#b8860b", ring: "#f0b429" }
+      ]
+    },
+    {
+      id: "war", navn: "War room", aksent: "#9fce5e",
+      vegg: [
+        // Forslagstavla: venter - bygges - ferdig. Kortene i første kolonne er de eneste
+        // ingen agent kan flytte; de står til Kristian selv trykker Godkjenn.
+        { v: "h", p0: 0.10, p1: 0.64, q0: 0.38, q1: 0.84, flate: "#1b2318", ramme: "#141a12", innhold: [
+          [0.135, 0.775, 0.145, 0.022, "#9fce5e"], [0.315, 0.775, 0.145, 0.022, "#5fd4ff"], [0.495, 0.775, 0.115, 0.022, "#39e07a"],
+          [0.125, 0.757, 0.50, 0.008, "#141a12"],
+          [0.135, 0.670, 0.145, 0.062, "#2f3a26", "kort1"], [0.135, 0.585, 0.145, 0.062, "#2f3a26", "kort2"],
+          [0.135, 0.500, 0.145, 0.062, "#2f3a26", "kort3"],
+          [0.315, 0.670, 0.145, 0.062, "#1d3340"], [0.315, 0.585, 0.145, 0.062, "#1d3340"],
+          [0.495, 0.670, 0.115, 0.062, "#16351f"], [0.495, 0.585, 0.115, 0.062, "#16351f"]] },
+        // Cybersec sin skanner. Stripa leser seg nedover panelet mens den faktisk sjekker.
+        { v: "v", p0: 0.24, p1: 0.56, q0: 0.44, q1: 0.78, flate: "#241a38", ramme: "#1a1228", innhold: [
+          [0.28, 0.690, 0.24, 0.028, "#a06fe0"], [0.28, 0.635, 0.17, 0.028, "#7a4fb5"],
+          [0.28, 0.580, 0.21, 0.028, "#7a4fb5"], [0.28, 0.525, 0.13, 0.028, "#7a4fb5"],
+          [0.265, 0.470, 0.27, 0.010, "#39e07a", "skann"]] }
+      ],
+      animer: function (ctx) {
+        // Kortene som venter lyser mens Administratoren legger dem fram, og låsen på
+        // porten svinger opp - men bare så lenge den faktisk står der.
+        var apen = ctx.gjor("porten"), sjekker = ctx.gjor("skanner");
+        var koder = ctx.gjor("koder"), tester = ctx.gjor("tester"), melder = ctx.gjor("melder");
+        // Skjermen på pulten viser hva maskinen faktisk brukes til akkurat nå:
+        // kodelinjer mens Coderen skriver, en testrute som fyller seg mens Testeren
+        // kjører den. Samme pult, to forskjellige jobber.
+        var skjerm = document.getElementById("pcskjerm");
+        if (skjerm) skjerm.setAttribute("fill", tester ? "#2a2412" : koder ? "#1d4a28" : "#16351f");
+        var kode = document.getElementById("pckode");
+        if (kode) kode.setAttribute("opacity", tester ? 0 : koder ? 1 : 0.4);
+        var test = document.getElementById("pctest");
+        if (test) test.setAttribute("opacity", tester ? 1 : 0);
+        var bar = document.getElementById("pcbar");
+        if (bar) {
+          if (!tester) bar.setAttribute("width", 0);
+          else if (rolig) bar.setAttribute("width", 26);
+          else bar.setAttribute("width", (26 * (0.5 + 0.5 * Math.sin(ctx.tid / 700 - Math.PI / 2))).toFixed(1));
+        }
+        var lampe = document.getElementById("pclampe");
+        if (lampe) lampe.setAttribute("fill", koder || tester ? "#39e07a" : "#2f4a2c");
+        for (var i = 1; i <= 3; i++) {
+          var k = document.getElementById("kort" + i);
+          if (k) k.setAttribute("fill", apen ? "#4f6b2e" : melder && i === 1 ? "#3f5130" : "#2f3a26");
+        }
+        var las = document.getElementById("portlas");
+        if (las) las.setAttribute("transform", apen ? "translate(0 -10)" : "translate(0 0)");
+        var sk = document.getElementById("skann");
+        if (sk) {
+          sk.setAttribute("opacity", sjekker ? 1 : 0.16);
+          sk.setAttribute("y", sjekker && !rolig
+            ? (0.480 + 0.230 * (0.5 + 0.5 * Math.sin(ctx.tid / 340))).toFixed(4)
+            : 0.470);
+        }
+      },
+      gulv: [
+        { t: "egen", u: 0.50, v: 0.38, tegn: bordTegn },
+        { t: "boks", u: 0.22, v: VEGG, hw: 20, hh: 12, h: 30, f: ["#1e2620", "#2a352c", "#3a4a3c"], stripe: "#4f6b2e", kant: "#9fce5e" },
+        { t: "boks", u: VEGG, v: 0.86, hw: 15, hh: 9, h: 24, f: ["#1e2620", "#2a352c", "#3a4a3c"], stripe: "#4f6b2e", kant: "#9fce5e" },
+        { t: "plante", u: VEGG, v: 0.66, sk: 1 }
+      ],
+      fokus: { u: 0.50, v: 0.38 }, gjest: { u: 0.22, v: 0.70 },
+      benker: [
+        // ÉN pult, to knapper: Coderen skriver koden, Testeren kjører den på samme
+        // maskin. Det er derfor de deler installasjon i stedet for å ha hver sin.
+        { id: "pc", navn: "PC-en", u: 0.60, v: VEGG, vegg: "h", tegn: pcTegn, glo: pcGlod, knapper: [
+          { navn: "Coderen bygger", agent: "Coderen" },
+          { navn: "Testeren verifiserer", agent: "Testeren" }] },
+        { id: "sikkerhet", navn: "Cybersec sjekker", u: VEGG, v: 0.26, vegg: "v", prop: "skjerm" },
+        { id: "port", navn: "Kristian godkjenner", u: 0.88, v: 0.34, vegg: "h", tegn: portTegn, glo: portGlod }
+      ],
+      // Arkitekten melder fra til en PERSON, ikke til en maskin. Det skjer nå av seg
+      // selv når den kommer inn hit på møteinnkalling - se GJESTEPLASS og leggTilGjest.
+      melderPlass: { u: 0.74, v: 0.60, mot: [0.74, 0.44] },
+      // Rekkefølgen her er tegnerekkefølge, sortert etter dybde (u+v) framover.
+      // Arkitekten står IKKE her lenger: den hører til bygget, ikke til ett rom, og
+      // dukker opp som gjest i det rommet den til enhver tid er innom.
+      agenter: [
+        { navn: "Cybersec", stasjonaer: { u: 0.30, v: 0.50 }, eier: ["sikkerhet"],
+          lagOppdrag: function () { return [stopp(0.147, 0.26, [VEGG, 0.26], 6000, "skanner")]; },
+          hud: "#8d5524", hudM: "#70431c", haar: "#2a1c14", hette: "#4a3170", briller: 1, p: "skjold",
+          drakt: "#a06fe0", draktM: "#7a4fb5", ring: "#a06fe0" },
+        { navn: "Testeren", stasjonaer: { u: 0.44, v: 0.54 }, eier: ["pc"],
+          lagOppdrag: function () { return [stopp(0.68, 0.19, [0.60, VEGG], 7000, "tester")]; },
+          hud: "#f0c8a0", hudM: "#d2a87e", haar: "#8a3b2a", briller: 1, p: "sjekkliste",
+          drakt: "#f0b429", draktM: "#b8860b", ring: "#f0b429" },
+        { navn: "Coderen", stasjonaer: { u: 0.58, v: 0.54 }, eier: ["pc"],
+          lagOppdrag: function () { return [stopp(0.55, 0.19, [0.60, VEGG], 7000, "koder")]; },
+          hud: "#e0a878", hudM: "#c78f63", haar: "#3a2a1c", p: "tastatur",
+          drakt: "#2fd4c4", draktM: "#1b6b64", ring: "#2fd4c4" },
+        { navn: "Administratoren", stasjonaer: { u: 0.74, v: 0.44 }, eier: ["port"],
+          lagOppdrag: function () { return [stopp(0.88, 0.44, [0.88, 0.34], 6000, "porten")]; },
+          hud: "#c68642", hudM: "#a06a32", haar: "#2a2420", sloyfe: "#e7edf6", p: "klubbe",
+          drakt: "#9fce5e", draktM: "#6f9440", ring: "#9fce5e" }
+      ]
+    }
+  ];
+
+  function propBenk(navn, x, y) {
+    if (navn === "lapp") return r(x - 6, y - 10, 12, 10, "#f0d264") + r(x - 3, y - 7, 6, 2, "#b09030");
+    if (navn === "bilde") return r(x - 8, y - 12, 16, 12, "#4a3620") + r(x - 6, y - 10, 12, 8, "#8fd9ff");
+    if (navn === "boks") return r(x - 8, y - 10, 16, 10, "#3c4a59") + r(x - 9, y - 12, 18, 3, "#2b3743");
+    if (navn === "skjerm") return r(x - 8, y - 13, 16, 12, "#14120f") + r(x - 6, y - 11, 12, 8, "#9fe1cb");
+    if (navn === "kake") return r(x - 7, y - 9, 14, 9, "#e8c88a") + r(x - 7, y - 12, 14, 4, "#f4ead8") + r(x - 1, y - 16, 2, 4, "#ff5c5c");
+    if (navn === "bryter") return r(x - 8, y - 9, 16, 9, "#2a3039") + r(x - 6, y - 7, 6, 5, "#39e07a") + r(x + 1, y - 7, 6, 5, "#5a6472");
+    return "";
+  }
+  function propAgent(navn) {
+    if (navn === "kasse") return r(14, -46, 18, 16, "#3c4a59") + r(14, -40, 18, 3, "#2b3743");
+    if (navn === "perm") return r(15, -47, 15, 19, "#3c4a59") + r(17, -44, 11, 13, "#f4ead8");
+    if (navn === "brev") return r(15, -42, 17, 12, "#f4ead8") + r(15, -42, 17, 4, "#d8c8a8");
+    if (navn === "bok") return r(14, -47, 18, 18, "#6c5fd8") + r(14, -47, 5, 18, "#4a3fa8") + r(21, -41, 9, 2, "#cfc8f5");
+    if (navn === "trakt") return '<polygon points="14,-47 33,-47 27,-35 20,-35" fill="#d8dde6"/>' + r(22, -35, 4, 9, "#d8dde6");
+    if (navn === "skilt") return r(15, -49, 18, 13, "#f4ead8") + r(18, -45, 12, 2, "#8d5524") + r(22, -36, 4, 11, "#8f99a8");
+    if (navn === "nettbrett") return r(14, -45, 17, 14, "#141a22") + r(16, -43, 13, 10, "#39e07a");
+    if (navn === "klut") return r(15, -41, 14, 11, "#9fe1cb") + r(18, -50, 7, 10, "#5a6472");
+    if (navn === "tegning") return r(13, -44, 22, 6, "#5fa8cc") + r(13, -44, 22, 2, "#8fd9ff") + r(12, -46, 3, 10, "#3d7a99") + r(33, -46, 3, 10, "#3d7a99");
+    if (navn === "skjold") return '<polygon points="14,-49 33,-49 33,-36 23.5,-27 14,-36" fill="#4a3170"/>' + '<polygon points="18,-45 29,-45 29,-37 23.5,-32 18,-37" fill="#a06fe0"/>';
+    if (navn === "tastatur") return r(12, -40, 23, 9, "#2a3039") + r(14, -38, 19, 5, "#1b6b64") + r(16, -37, 3, 3, "#2fd4c4") + r(21, -37, 3, 3, "#2fd4c4") + r(26, -37, 3, 3, "#2fd4c4");
+    if (navn === "sjekkliste") return r(14, -49, 19, 22, "#5a6472") + r(16, -46, 15, 16, "#f4ead8") + r(18, -43, 4, 2, "#39e07a") + r(18, -39, 4, 2, "#39e07a") + r(18, -35, 4, 2, "#ff5c5c") + r(24, -43, 6, 2, "#b8ae98") + r(24, -39, 6, 2, "#b8ae98") + r(24, -35, 6, 2, "#b8ae98");
+    if (navn === "klubbe") return r(17, -34, 4, 13, "#8d5524") + r(12, -43, 15, 10, "#6f5030") + r(12, -43, 15, 3, "#8a6a42");
+    return "";
+  }
+  function sprite(a) {
+    var d = a.drakt, dm = a.draktM, s = "";
+    s += '<ellipse cx="0" cy="2" rx="19" ry="6" fill="#000000" opacity="0.32"/>';
+    s += r(-13, -8, 9, 8, "#2a2f38") + r(4, -8, 9, 8, "#2a2f38");
+    s += r(-11, -25, 8, 17, "#3a4250") + r(3, -25, 8, 17, "#2f3642");
+    s += r(-20, -48, 6, 19, d) + r(14, -48, 6, 19, dm);
+    s += r(-21, -30, 6, 6, a.hud) + r(14, -30, 6, 6, a.hudM);
+    s += r(-14, -50, 28, 25, d) + r(6, -50, 8, 25, dm) + r(-14, -50, 28, 5, dm);
+    if (a.forkle) s += r(-12, -44, 22, 19, a.forkle);
+    if (a.sekk) s += '<polygon points="-15,-50 -9,-50 8,-28 2,-28" fill="#3c4a59"/>' + r(-19, -34, 12, 13, "#2b3743");
+    s += r(-14, -31, 28, 5, "#2a2f38");
+    s += r(-4, -54, 8, 5, a.hudM);
+    s += r(-12, -75, 24, 21, a.hud) + r(6, -75, 6, 21, a.hudM);
+    s += r(-14, -73, 3, 11, a.haar) + r(11, -73, 3, 11, a.haar);
+    if (a.hat) s += r(-15, -81, 30, 7, a.hat) + r(-17, -75, 34, 4, a.hat);
+    else if (a.hette) s += r(-15, -82, 30, 11, a.hette) + r(-16, -74, 4, 14, a.hette) + r(11, -74, 4, 14, a.hette);
+    else s += r(-13, -79, 26, 6, a.haar);
+    if (a.briller) s += r(-10, -70, 9, 7, "#2a3039") + r(1, -70, 9, 7, "#2a3039") + r(-9, -69, 7, 5, "#8fd9ff") + r(2, -69, 7, 5, "#8fd9ff");
+    else s += r(-8, -69, 4, 5, "#2a1c14") + r(3, -69, 4, 5, "#2a1c14");
+    if (a.sloyfe) s += r(-5, -54, 10, 4, a.sloyfe);
+    s += r(-2, -61, 5, 2, "#b5715a");
+    s += propAgent(a.p);
+    s += '<circle class="jobbring" cx="0" cy="-42" r="32" fill="none" stroke="' + (a.ring || "#39e07a") + '" stroke-width="2" opacity="0"/>';
+    return s;
+  }
+
+  var alarmNede = false;
+  var verden = document.getElementById("verden");
+  var aktiv = null, benker = [], agenter = [], kanter = [], romTil = 0, benkeAlarm = 0;
+  var hvelvdor = null, strommer = [], hvelvApen = 0, stromNivaa = 0;
+
+  function skall() {
+    return poly("90,310 340,160 590,310 340,460", "#b98a52")
+      + '<g transform="matrix(250,150,-250,150,340,160)">'
+      + r(0, 0.12, 1, 0.008, "#96693a") + r(0, 0.24, 1, 0.008, "#96693a") + r(0, 0.36, 1, 0.008, "#96693a")
+      + r(0, 0.48, 1, 0.008, "#96693a") + r(0, 0.60, 1, 0.008, "#96693a") + r(0, 0.72, 1, 0.008, "#96693a")
+      + r(0, 0.84, 1, 0.008, "#96693a") + "</g>"
+      + poly("590,310 340,160 340,10 590,160", "#8d7150")
+      + poly("90,310 340,160 340,10 90,160", "#6b563d")
+      + poly("340,10 590,160 600,154 350,4", "#a98b64")
+      + poly("340,10 90,160 80,154 330,4", "#82694a");
+  }
+
+  function byggRom(rom) {
+    benker = []; agenter = []; kanter = []; romTil = 0; benkeAlarm = 0;
+    var s = skall();
+
+    s += '<polygon class="romkant" points="90,310 340,160 590,310 340,460" fill="none" stroke="' + rom.aksent + '" stroke-width="3" opacity="0"/>';
+    s += '<polygon class="romkant" points="90,310 340,160 340,10 90,160" fill="none" stroke="' + rom.aksent + '" stroke-width="3" opacity="0"/>';
+    s += '<polygon class="romkant" points="590,310 340,160 340,10 590,160" fill="none" stroke="' + rom.aksent + '" stroke-width="3" opacity="0"/>';
+
+    rom.vegg.forEach(function (w) {
+      s += veggFlater(w.v, w.p0, w.p1, w.q0, w.q1);
+      var inn = '<rect x="' + w.p0 + '" y="' + w.q0 + '" width="' + (w.p1 - w.p0) + '" height="' + (w.q1 - w.q0) + '" fill="' + (w.ramme || "#232a33") + '"/>';
+      inn += '<rect x="' + (w.p0 + 0.015) + '" y="' + (w.q0 + 0.015) + '" width="' + (w.p1 - w.p0 - 0.03) + '" height="' + (w.q1 - w.q0 - 0.03) + '" fill="' + w.flate + '"/>';
+      if (w.hvelv) {
+        // Bankhvelv: rund dør med ratt og boltekrans. Den svinger opp når Arkivaren
+        // faktisk står der og låser loggen inn.
+        var cp = (w.p0 + w.p1) / 2, cq = (w.q0 + w.q1) / 2, rr = (w.p1 - w.p0) * 0.36;
+        inn += '<circle cx="' + cp + '" cy="' + cq + '" r="' + (rr + 0.022) + '" fill="#161b21"/>';
+        inn += '<g id="hvelvdor"><circle cx="' + cp + '" cy="' + cq + '" r="' + rr + '" fill="#4a5462"/>'
+             + '<circle cx="' + cp + '" cy="' + cq + '" r="' + (rr * 0.74) + '" fill="#5c6875"/>'
+             + '<circle cx="' + cp + '" cy="' + cq + '" r="' + (rr * 0.26) + '" fill="#2b323b"/>'
+             + r(cp - rr * 0.06, cq - rr * 0.62, rr * 0.12, rr * 1.24, "#79838f")
+             + r(cp - rr * 0.62, cq - rr * 0.05, rr * 1.24, rr * 0.10, "#79838f")
+             + '<circle cx="' + (cp - rr * 0.78) + '" cy="' + cq + '" r="' + (rr * 0.09) + '" fill="#8f99a8"/>'
+             + '<circle cx="' + (cp + rr * 0.78) + '" cy="' + cq + '" r="' + (rr * 0.09) + '" fill="#8f99a8"/>'
+             + '<circle cx="' + cp + '" cy="' + (cq + rr * 0.78) + '" r="' + (rr * 0.09) + '" fill="#8f99a8"/>'
+             + '<circle cx="' + cp + '" cy="' + (cq - rr * 0.78) + '" r="' + (rr * 0.09) + '" fill="#8f99a8"/></g>';
+        inn += r(w.p0 + 0.04, w.q0 + 0.05, 0.05, 0.03, "#39e07a");
+      }
+      (w.innhold || []).forEach(function (c) {
+        inn += c[5]
+          ? '<rect id="' + c[5] + '" x="' + c[0] + '" y="' + c[1] + '" width="' + c[2] + '" height="' + c[3] + '" fill="' + c[4] + '"/>'
+          : r(c[0], c[1], c[2], c[3], c[4]);
+      });
+      s += '<g transform="' + veggMatrise(w.v) + '">' + inn + "</g>";
+    });
+
+    (rom.gulv || []).forEach(function (o) {
+      var pt = gulv(o.u, o.v);
+      if (o.t === "egen") s += o.tegn(pt);
+      else if (o.t === "plante") s += plante(pt, o.sk);
+      else s += isoBoks(pt, o.hw, o.hh, o.h, o.f, { innfelt: o.innfelt, stripe: o.stripe, led: o.led, kant: o.kant });
+    });
+
+    // Kommandostrommene ut fra Claudes konsoll - samme idé som sendKommando() i dagens
+    // kart, der en utrulling sender en grønn strøm ut til hver modul den gjelder for.
+    if (rom.strom) {
+      var f = gulv(rom.strom.fra[0], rom.strom.fra[1]);
+      rom.strom.til.forEach(function (t) {
+        // Enten et gulvpunkt [u, v] eller et punkt PA en vegg ["v"|"h", p, q]. Stromene
+        // skal lande i modulrekka pa veggen - ikke stoppe i tom luft pa gulvet.
+        var p;
+        if (typeof t[0] === "string") {
+          var wp = veggPunkt(t[0], t[1], t[2]);
+          var o = t[0] === "h" ? { x: -8, y: 5 } : { x: 8, y: 5 };
+          p = { x: wp.x + o.x, y: wp.y + o.y };
+        } else p = gulv(t[0], t[1]);
+        var mx = (f.x + p.x) / 2, my = (f.y + p.y) / 2 - 22;
+        s += '<path class="strom" d="M ' + f.x + " " + f.y + " Q " + mx + " " + my + " " + p.x + " " + p.y
+           + '" fill="none" stroke="#39e07a" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="7 9" opacity="0"/>';
+      });
+    }
+
+    verden.innerHTML = s;
+    kanter = [].slice.call(verden.querySelectorAll(".romkant"));
+    hvelvdor = verden.querySelector("#hvelvdor");
+    strommer = [].slice.call(verden.querySelectorAll(".strom"));
+
+    (rom.benker || []).forEach(function (b) {
+      var pt = gulv(b.u, b.v), g = document.createElementNS(SVG, "g");
+      g.setAttribute("class", "benk-treff"); g.setAttribute("tabindex", "0"); g.setAttribute("role", "button");
+      g.setAttribute("aria-label", "Utløs hendelse på " + b.navn);
+      if (b.tegn) {
+        g.innerHTML = b.tegn(pt, rom) + '<polygon class="glo" points="' + b.glo(pt) + '" fill="none" stroke="#39e07a" stroke-width="3" opacity="0"/>';
+      } else if (b.trakt) {
+        g.innerHTML = trakt(pt, 22, 13, b.h, ["#2e2129", "#3d2c36", "#4d3a44"], b.aksent || rom.aksent)
+          + '<polygon class="glo" points="' + traktGlod(pt, 22, 13, b.h) + '" fill="none" stroke="#39e07a" stroke-width="3" opacity="0"/>';
+      } else {
+        g.innerHTML = isoBoks(pt, 21, 12, 26, ["#1e2831", "#2b3743", "#3c4a59"],
+          { innfelt: "#222d38", stripe: rom.aksent, led: rom.aksent, kant: rom.aksent })
+          + propBenk(b.prop, pt.x, pt.y - 26)
+          + '<polygon class="glo" points="' + boksGlod(pt, 21, 12, 26) + '" fill="none" stroke="#39e07a" stroke-width="3" opacity="0"/>';
+      }
+      verden.appendChild(g);
+      var jobb = foran(b.u, b.v, b.vegg);
+      // knapper blir med videre: styringa leser fra DENNE kopien, ikke fra romdefinisjonen,
+      // sa en installasjon med to knapper (pulten) mister dem ellers pa veien.
+      var reg = { id: b.id, navn: b.navn, knapper: b.knapper, node: g.querySelector(".glo"), til: 0, jx: jobb.x, jy: jobb.y, bx: pt.x, by: pt.y };
+      benker.push(reg);
+      g.addEventListener("click", function () { hendelse(reg); });
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hendelse(reg); } });
+    });
+
+    rom.agenter.forEach(function (def) { agenter.push(lagAgent(def)); });
+
+    byggStyring(rom);
+    synkGjest();
+  }
+
+  // Lager en agent og setter den inn i rommet som vises nå. Brukes både av rommets
+  // egne agenter og av Arkitekten, som er gjest og kan dukke opp i hvilket som helst rom.
+  function lagAgent(def) {
+    var a = Object.create(def);
+    var g = document.createElementNS(SVG, "g"), kropp = document.createElementNS(SVG, "g");
+    kropp.innerHTML = sprite(def);
+    var boble = document.createElementNS(SVG, "g"); boble.setAttribute("opacity", "0");
+    boble.innerHTML = '<rect x="-78" y="-118" width="156" height="26" fill="#0e131c" stroke="#33273f" stroke-width="1.5"/>'
+      + '<polygon points="-6,-92 6,-92 0,-85" fill="#0e131c"/>'
+      + '<text x="0" y="-101" text-anchor="middle" font-family="Chakra Petch, sans-serif" font-size="12" fill="#e7edf6"></text>';
+    g.appendChild(kropp); g.appendChild(boble); verden.appendChild(g);
+    a.el = g; a.kropp = kropp; a.boble = boble; a.tekst = boble.querySelector("text");
+    a.ring = kropp.querySelector(".jobbring");
+    a.aktivTil = 0; a.bobleTil = 0; a.fase = 0; a.fart = FART_HVILE;
+    if (def.stasjonaer) {
+      var sp = gulv(def.stasjonaer.u, def.stasjonaer.v);
+      a.x = sp.x; a.y = sp.y; a.tilstand = "stasjonaer";
+    } else {
+      var d = "M " + def.rute.map(function (q) { var w = gulv(q[0], q[1]); return w.x.toFixed(1) + " " + w.y.toFixed(1); }).join(" L ") + " Z";
+      var bane = document.createElementNS(SVG, "path");
+      bane.setAttribute("d", d); bane.setAttribute("fill", "none"); bane.setAttribute("stroke", "none");
+      verden.insertBefore(bane, verden.firstChild);
+      a.bane = bane; a.lengde = bane.getTotalLength(); a.pos = Math.random() * a.lengde;
+      var p0 = bane.getPointAtLength(a.pos); a.x = p0.x; a.y = p0.y; a.tilstand = "patrulje";
+    }
+    return a;
+  }
+
+  function naermestPaaRuten(a, x, y) {
+    var best = null, n = 80;
+    for (var i = 0; i < n; i++) {
+      var l = (i / n) * a.lengde, p = a.bane.getPointAtLength(l);
+      var d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+      if (!best || d < best.d) best = { d: d, l: l, x: p.x, y: p.y };
+    }
+    return best;
+  }
+
+  // Et oppdrag er én eller flere stopp. Arkivaren har to: skriv loggen ved pulten,
+  // bær den så til hvelvet. Postbudet henter i luka og sorterer i reolen.
+  function sendAgent(a, stopp, tekst) {
+    var naa = Date.now();
+    a.aktivTil = Math.max(a.aktivTil, naa + ALARM_MS);
+    if (tekst) { a.bobleTil = naa + TALEBOBLE_MS; a.tekst.textContent = tekst; }
+    a.oppdrag = stopp.slice();
+    a.maal = { x: a.oppdrag[0].x, y: a.oppdrag[0].y };
+    a.seMot = a.oppdrag[0].seMot || null;
+    a.gjore = a.oppdrag[0].gjore || null;
+    a.tilstand = "gaar";
+  }
+  function stopp(u, v, seMotUV, ms, gjore) {
+    var pt = gulv(u, v), sm = seMotUV ? gulv(seMotUV[0], seMotUV[1]) : null;
+    return { x: pt.x, y: pt.y, seMot: sm, ms: ms || 3500, gjore: gjore || null };
+  }
+
+  function hendelse(b, kunAgent) {
+    var naa = Date.now();
+    b.til = naa + ALARM_MS;
+    romTil = naa + ROMBLINK_MS;
+    benkeAlarm = 0;
+    if (aktiv && aktiv.ved) aktiv.ved(b);
+    agenter.forEach(function (a) {
+      if (kunAgent && a.navn !== kunAgent) return;
+      var eier = (a.eier || []).indexOf(b.id) !== -1;
+      if (!eier && (a.eier || []).length !== 0) return;
+      var st = a.lagOppdrag
+        ? a.lagOppdrag(b)
+        : [{ x: b.jx, y: b.jy, seMot: { x: b.bx, y: b.by }, ms: ALARM_MS - 1400 }];
+      sendAgent(a, st, b.navn + " oppdatert");
+    });
+  }
+
+  function romHendelse(rom) {
+    var naa = Date.now();
+    benkeAlarm = naa + ALARM_MS;
+    romTil = 0;
+    agenter.forEach(function (a) {
+      var st;
+      if (a.lagOppdrag) st = a.lagOppdrag(null);
+      else {
+        var f = a.fokus || rom.fokus, pt = gulv(f.u, f.v);
+        st = [{ x: pt.x, y: pt.y + 16, seMot: { x: pt.x, y: pt.y }, ms: ALARM_MS - 1400 }];
+      }
+      sendAgent(a, st, rom.navn + " oppdatert");
+    });
+  }
+
+  // En hendelse uten egen installasjon: agenten går til et punkt på gulvet, typisk
+  // bort til en annen agent. Rommet blinker, men ingen benk lyser - det er ingen benk.
+  function romKnapp(def) {
+    romTil = Date.now() + ROMBLINK_MS;
+    benkeAlarm = 0;
+    agenter.forEach(function (a) {
+      if (a.navn !== def.agent) return;
+      sendAgent(a, def.lagOppdrag(), def.tekst || def.navn);
+    });
+  }
+
+  function byggStyring(rom) {
+    var k = document.getElementById("knapper"); k.innerHTML = "";
+    var m = document.getElementById("maalere"); m.innerHTML = "";
+    if (benker.length) {
+      benker.forEach(function (b) {
+        // Flere knapper pa samme installasjon: pulten bygges pa OG testes pa.
+        (b.knapper || [{ navn: b.navn }]).forEach(function (def) {
+          var kn = document.createElement("button"); kn.textContent = def.navn;
+          kn.addEventListener("click", function () { hendelse(b, def.agent); });
+          k.appendChild(kn);
+        });
+      });
+    } else {
+      var kn = document.createElement("button"); kn.textContent = "Utløs hendelse i " + rom.navn;
+      kn.addEventListener("click", function () { romHendelse(rom); });
+      k.appendChild(kn);
+    }
+    (rom.knapper || []).forEach(function (def) {
+      var kn = document.createElement("button"); kn.textContent = def.navn;
+      kn.addEventListener("click", function () { romKnapp(def); });
+      k.appendChild(kn);
+    });
+    agenter.forEach(function (a) {
+      var p = document.createElement("span"); p.className = "pille";
+      p.innerHTML = a.navn + " <b>0.50</b>"; m.appendChild(p);
+      a.maaler = p.querySelector("b");
+    });
+  }
+
+  var faner = document.getElementById("faner");
+  ROM.forEach(function (rom, i) {
+    var b = document.createElement("button");
+    b.textContent = rom.navn;
+    b.addEventListener("click", function () {
+      [].forEach.call(faner.children, function (x) { x.classList.remove("valgt"); });
+      b.classList.add("valgt"); aktiv = rom; byggRom(rom);
+      tegnByggStatus();
+    });
+    faner.appendChild(b);
+    if (i === 0) { b.classList.add("valgt"); aktiv = rom; }
+  });
+  byggRom(aktiv);
+
+  // ---------- bygget, sett rett fra siden ----------
+  // Oversikten er et tverrsnitt: to etasjer med rom ved siden av hverandre, og en heis i
+  // enden som binder dem sammen. Den isometriske miniatyren ble bytta ut fordi trappa
+  // aldri leste seg som en trapp - en heissjakt sett rett forfra gjør det umiddelbart.
+  //
+  // Detaljvisningen under er fortsatt isometrisk. De to viser det samme huset fra hver
+  // sin kant, og peker på hverandre.
+  var RW = 108, RH = 86, RGAP = 8, RP = RW + RGAP;
+  // Venstremargen er der etasjeskiltene står, høyrejustert inn mot bygget.
+  var RX0 = 96, SISTE_KOL = 4;
+  var ETG_Y = [218, 122, 26];          // e = 0 er kjelleren, e = 2 den øverste etasjen
+  var HEIS_KOL = 5, HEIS_B = 44, HEIS_S = 1.9;
+  function romX(kol) { return RX0 + kol * RP; }
+  function romY(e) { return ETG_Y[e]; }
+  function gulvY(e) { return romY(e) + RH - 15; }   // linja folk står på
+  // Mens heisen kjører er e et desimaltall mellom to etasjer.
+  function gulvYMellom(e) {
+    var a = Math.max(0, Math.min(ETG_Y.length - 1, Math.floor(e)));
+    var b = Math.max(0, Math.min(ETG_Y.length - 1, Math.ceil(e)));
+    return gulvY(a) + (gulvY(b) - gulvY(a)) * (e - a);
+  }
+  // Sjakta ligger rett inntil siste rom, med samme fuge som mellom rommene - ikke
+  // midt i en tom kolonne, som gjorde at den fløt utenfor bygget.
+  function heisX() { return romX(SISTE_KOL) + RW + RGAP; }
+  // Hvor Arkitekten står ved en gitt kolonne. Mellom siste rom og heisen glir den
+  // over den korte fugen i stedet for å hoppe en hel kolonnebredde.
+  function agentX(kol) {
+    if (kol >= SISTE_KOL) {
+      var xr = romX(SISTE_KOL) + RW * 0.34, xh = heisX() + HEIS_B / 2;
+      return xr + (xh - xr) * Math.min(1, kol - SISTE_KOL);
+    }
+    var i = Math.floor(kol);
+    return romX(i) + RW * 0.34 + (kol - i) * RP;
+  }
+
+  // Mørkner en farge, så hvert rom kan bygges av sin egen aksent alene.
+  function demp(hex, f) {
+    var n = parseInt(hex.slice(1), 16);
+    var d = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (k) { return Math.round(k * f); });
+    return "#" + ((1 << 24) + (d[0] << 16) + (d[1] << 8) + d[2]).toString(16).slice(1);
+  }
+  function rrekt(x, y, w, h, rad, fyll, strek, sb) {
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + rad +
+      '" fill="' + fyll + '"' + (strek ? ' stroke="' + strek + '" stroke-width="' + (sb || 1) + '"' : "") + "/>";
+  }
+  function tekst(x, y, str, st) {
+    return '<text ' + (st.id ? 'id="' + st.id + '" ' : "") + 'x="' + x + '" y="' + y + '" font-family="Chakra Petch, sans-serif" font-size="' + st.s +
+      '" font-weight="' + (st.v || 600) + '" fill="' + st.f + '"' +
+      (st.midt ? ' text-anchor="middle"' : st.ende ? ' text-anchor="end"' : "") +
+      (st.sp ? ' letter-spacing="' + st.sp + '"' : "") +
+      ">" + str + "</text>";
+  }
+
+  var ETASJER = [
+    // Kjelleren er War room alene, i full bredde - det er der alt avgjøres, og der
+    // alle fem skal kunne sees samtidig.
+    { navn: "KJELLER — BESLUTNING", rom: [
+      { id: "war", kol: 0, bredde: 5 }] },
+    { navn: "1. ETASJE — INNHENTING", rom: [
+      { id: "recman", kol: 0 }, { id: "eksterne", kol: 1 }, { id: "kandidater", kol: 2 },
+      { id: "teamskanal", kol: 3 }, { id: "functions", kol: 4 }] },
+    { navn: "2. ETASJE — STYRING", rom: [
+      { id: "kontroll", kol: 0 }, { id: "tavle", kol: 1 }, { id: "obsidian", kol: 2 },
+      { id: "alarm", kol: 3 }, { id: "sluse", kol: 4 }] }
+  ];
+  // Slusen står mellom heisen og resten av andre etasje. Skal du opp hit, må du forbi
+  // den - nøyaktig det functions/_middleware.js gjør i den ekte løsningen.
+  var RUNDE = ["war", "recman", "eksterne", "kandidater", "teamskanal", "functions",
+               "sluse", "alarm", "obsidian", "tavle", "kontroll"];
+  var SJEKK_MS = 4200, MOTE_MS = 14000, ARK_FART = 0.75;
+
+  // Skiltet på hvert rom: hva det heter kort, hva det gjør, og hvor fullt det er.
+  var OVERSIKT = {
+    recman:     { kort: "RECMAN",      under: "OPPDRAG",        status: "HENTER",    fyll: 0.72 },
+    eksterne:   { kort: "EKSTERNE",    under: "VÆR · BUSS · NYTT", status: "LYTTER", fyll: 0.55 },
+    kandidater: { kort: "KANDIDATER",  under: "SØKNADER",       status: "TELLER",    fyll: 0.40 },
+    teamskanal: { kort: "TEAMSKANAL",  under: "MELDINGER",      status: "MOTTAR",    fyll: 0.64 },
+    functions:  { kort: "FUNCTIONS",   under: "LAGRING",        status: "LAGRER",    fyll: 0.33 },
+    kontroll:   { kort: "KONTROLLROM", under: "UTRULLING",      status: "STYRER",    fyll: 0.80 },
+    tavle:      { kort: "TAVLA",       under: "SKJERMER",       status: "VISER",     fyll: 0.90 },
+    obsidian:   { kort: "OBSIDIAN",    under: "LOGG",           status: "ARKIVERER", fyll: 0.48 },
+    war:        { kort: "WAR ROOM",    under: "FORSLAG · GODKJENNING", status: "MØTE", fyll: 0.25 },
+    alarm:      { kort: "ALARMSENTRAL", under: "HELSESJEKK",    status: "OVERVÅKER", fyll: 0.08 },
+    sluse:      { kort: "SLUSEN",      under: "ADMINNØKKEL",    status: "VOKTER",    fyll: 1.00 }
+  };
+
+  // Innredningen på bakveggen i hvert rom, i romkoordinater 0..1. Nok til at man ser
+  // hvilket rom det er uten å lese skiltet - ikke en kopi av detaljvisningen.
+  var INNRED = {
+    recman: [["r", 0.08, 0.30, 0.13, 0.55], ["r", 0.24, 0.30, 0.13, 0.55], ["r", 0.40, 0.30, 0.13, 0.55],
+             ["l", 0.10, 0.16, 0.30, 0.05], ["l", 0.10, 0.06, 0.20, 0.05, 0.8]],
+    eksterne: [["r", 0.08, 0.50, 0.14, 0.34], ["r", 0.26, 0.50, 0.14, 0.34],
+               ["r", 0.08, 0.10, 0.14, 0.30], ["r", 0.26, 0.10, 0.14, 0.30]],
+    kandidater: [["t", 0.08, 0.28, 0.14, 0.56], ["t", 0.25, 0.36, 0.14, 0.48],
+                 ["t", 0.42, 0.44, 0.14, 0.40], ["t", 0.59, 0.52, 0.14, 0.32]],
+    teamskanal: [["r", 0.10, 0.06, 0.08, 0.80], ["r", 0.26, 0.10, 0.34, 0.16],
+                 ["r", 0.26, 0.32, 0.34, 0.16], ["l", 0.28, 0.58, 0.22, 0.06]],
+    functions: [["r", 0.06, 0.52, 0.12, 0.26], ["r", 0.21, 0.52, 0.12, 0.26], ["r", 0.36, 0.52, 0.12, 0.26],
+                ["r", 0.06, 0.16, 0.12, 0.26], ["r", 0.21, 0.16, 0.12, 0.26], ["r", 0.36, 0.16, 0.12, 0.26],
+                ["r", 0.56, 0.10, 0.16, 0.74, 0.55]],
+    kontroll: [["r", 0.06, 0.16, 0.30, 0.22], ["l", 0.09, 0.44, 0.06, 0.08, 0.9],
+               ["l", 0.17, 0.44, 0.06, 0.08, 0.9], ["l", 0.25, 0.44, 0.06, 0.08, 0.5],
+               ["r", 0.44, 0.10, 0.11, 0.74, 0.5]],
+    tavle: [["r", 0.06, 0.42, 0.17, 0.42, 0.75], ["r", 0.26, 0.42, 0.17, 0.42, 0.75],
+            ["r", 0.46, 0.42, 0.17, 0.42, 0.45], ["r", 0.06, 0.14, 0.57, 0.18, 0.3]],
+    obsidian: [["c", 0.20, 0.52, 0.16], ["r", 0.42, 0.20, 0.10, 0.44], ["r", 0.56, 0.26, 0.10, 0.38],
+               ["l", 0.42, 0.10, 0.24, 0.05]],
+    // War room er fem ganger så bredt som de andre, så innredningen er fordelt deretter:
+    // tavla til venstre, bordet i midten, godkjenningsporten til høyre.
+    war: [["r", 0.03, 0.30, 0.07, 0.42], ["r", 0.11, 0.30, 0.07, 0.42], ["r", 0.19, 0.30, 0.07, 0.42, 0.5],
+          ["l", 0.03, 0.76, 0.23, 0.04, 0.9],
+          ["r", 0.34, 0.44, 0.30, 0.09, 0.55], ["r", 0.36, 0.30, 0.02, 0.14, 0.3], ["r", 0.60, 0.30, 0.02, 0.14, 0.3],
+          ["r", 0.72, 0.10, 0.02, 0.62, 0.8], ["r", 0.80, 0.34, 0.14, 0.36, 0.35],
+          ["l", 0.82, 0.62, 0.10, 0.04, 0.9]],
+    alarm: [["r", 0.05, 0.42, 0.46, 0.38, 0.20],
+            ["l", 0.08, 0.68, 0.06, 0.06, 0.95], ["l", 0.16, 0.68, 0.06, 0.06, 0.95],
+            ["l", 0.24, 0.68, 0.06, 0.06, 0.95], ["l", 0.32, 0.68, 0.06, 0.06, 0.55],
+            ["l", 0.08, 0.56, 0.06, 0.06, 0.95], ["l", 0.16, 0.56, 0.06, 0.06, 0.55],
+            ["r", 0.60, 0.10, 0.04, 0.58], ["r", 0.56, 0.68, 0.12, 0.10, 0.9]],
+    sluse: [["r", 0.10, 0.10, 0.05, 0.74, 0.7], ["r", 0.36, 0.10, 0.05, 0.74, 0.7],
+            ["r", 0.10, 0.74, 0.31, 0.06, 0.9],
+            ["r", 0.52, 0.44, 0.13, 0.30, 0.5], ["r", 0.52, 0.10, 0.13, 0.26, 0.5]]
+  };
+
+  var ARKITEKT = {
+    navn: "Arkitekten", hud: "#f0c8a0", hudM: "#d2a87e", haar: "#5a4632", hat: "#f0b429",
+    briller: 1, p: "tegning", drakt: "#8fd9ff", draktM: "#5fa8cc", ring: "#8fd9ff"
+  };
+
+  var romInfo = {};
+  ROM.forEach(function (x) { romInfo[x.id] = x; });
+  function celle(id) {
+    for (var e = 0; e < ETASJER.length; e++) {
+      var liste = ETASJER[e].rom;
+      for (var i = 0; i < liste.length; i++) if (liste[i].id === id) {
+        // Et bredt rom nås i midten, men tegnes og bebos fra venstre kant.
+        var br = liste[i].bredde || 1;
+        return { kol: liste[i].kol + (br - 1) / 2, e: e, venstre: liste[i].kol, bredde: br };
+      }
+    }
+    return null;
+  }
+  // I et tverrsnitt er veien enkel: gå bortover i etasjen, ta heisen om du skal opp eller
+  // ned, gå bortover igjen. Skal du til andre etasje, passerer du Slusen underveis -
+  // ikke fordi koden sier det, men fordi den står i veien.
+  function vei(fra, til) {
+    if (fra.e === til.e) return [{ kol: til.kol, e: til.e }];
+    return [{ kol: HEIS_KOL, e: fra.e }, { kol: HEIS_KOL, e: til.e }, { kol: til.kol, e: til.e }];
+  }
+
+  var ark = { kol: 0, e: 0, rom: null, maalRom: null, ko: [], vente: 0, indeks: -1,
+              oppgave: "runde", vender: 1, heis: null };
+  var byggVerden = document.getElementById("byggverden");
+  var arkMarkor = null, heisKabin = null, romRammer = {}, oversiktAgenter = [], maalerBredde = {};
+
+  function tegnRom(rm, e) {
+    var info = romInfo[rm.id] || { navn: rm.id, aksent: "#8b8199" };
+    var o = OVERSIKT[rm.id] || { kort: rm.id.toUpperCase(), under: "", status: "", fyll: 0.5 };
+    // Et rom kan spenne over flere kolonner - War room tar hele kjellerbredden.
+    var bredde = rm.bredde || 1, RWb = bredde * RP - RGAP;
+    var a = info.aksent, x = romX(rm.kol), y = romY(e), s = "";
+    var vegg = { x: x + 4, y: y + 4, w: RWb - 8, h: RH - 26 };
+
+    s += rrekt(x, y, RWb, RH, 3, "#0d1016");
+    s += rrekt(vegg.x, vegg.y, vegg.w, vegg.h, 2, demp(a, 0.13));
+    // to svake skjøter i veggplatene, så flaten ikke blir helt død
+    s += r(vegg.x, vegg.y + vegg.h * 0.34, vegg.w, 1, demp(a, 0.2));
+    s += r(vegg.x, vegg.y + vegg.h * 0.67, vegg.w, 1, demp(a, 0.2));
+
+    // innredningen: r = kasse, l = lysstripe, t = trakt, c = hvelvdør
+    (INNRED[rm.id] || []).forEach(function (d) {
+      var ix = vegg.x + d[1] * vegg.w, iy = vegg.y + vegg.h - (d[2] + (d[4] || 0)) * vegg.h;
+      var iw = d[3] * vegg.w, ih = (d[4] || 0) * vegg.h;
+      if (d[0] === "r") s += r(ix, iy, iw, ih, demp(a, d[5] || 0.34));
+      else if (d[0] === "l") s += r(ix, vegg.y + vegg.h - d[2] * vegg.h, iw, Math.max(1.5, d[4] * vegg.h), demp(a, d[5] || 1));
+      else if (d[0] === "t") {
+        var bunn = vegg.y + vegg.h - d[2] * vegg.h;
+        s += poly(ix + "," + (bunn - ih) + " " + (ix + iw) + "," + (bunn - ih) + " " +
+                  (ix + iw * 0.62) + "," + bunn + " " + (ix + iw * 0.38) + "," + bunn, demp(a, 0.38));
+      } else if (d[0] === "c") {
+        var cx = vegg.x + d[1] * vegg.w, cy = vegg.y + vegg.h * (1 - d[2]), rr2 = d[3] * vegg.w;
+        s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rr2 + '" fill="' + demp(a, 0.34) + '"/>';
+        s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rr2 * 0.4 + '" fill="' + demp(a, 0.7) + '"/>';
+      }
+    });
+
+    // gulvet, med en lysere forkant
+    s += r(x + 4, y + RH - 22, RWb - 8, 18, demp(a, 0.22));
+    s += r(x + 4, y + RH - 22, RWb - 8, 1.5, demp(a, 0.5));
+
+    // Alle agentene som hører hjemme her. De får hver sin tredjedel av gulvet å gå
+    // på, og settes i bevegelse av byggSteg - se oversiktAgenter.
+    (romInfo[rm.id].agenter || []).forEach(function (def, i) {
+      s += '<g class="oagent" data-rom="' + rm.id + '" data-i="' + i + '"><g class="oakropp">'
+         + sprite(def) + "</g></g>";
+    });
+
+    // Statuslampe oppe til høyre. Fast bredde, slik at teksten kan bytte når ekte
+    // tall kommer inn uten at pilla endrer størrelse under den.
+    var pw = 76;
+    s += rrekt(x + RWb - pw - 5, y + 5, pw, 11, 5.5, "#0a0c11", demp(a, 0.4), 1);
+    s += '<circle id="sd-' + rm.id + '" cx="' + (x + RWb - pw + 1) + '" cy="' + (y + 10.5) + '" r="2.2" fill="' + a + '"/>';
+    s += tekst(x + RWb - pw + 7, y + 14, o.status, { s: 6.5, f: demp(a, 0.95), sp: 0.4, id: "st-" + rm.id });
+
+    // navnet nederst til venstre, slik det står på et ekte romskilt
+    s += tekst(x + 8, y + RH - 12, o.kort, { s: 10.5, v: 700, f: a, sp: 0.2 });
+    s += tekst(x + 8, y + RH - 5, o.under, { s: 5.6, v: 500, f: "#8b8199", sp: 0.5 });
+
+    // måleren langs underkanten
+    maalerBredde[rm.id] = RWb - 8;
+    s += r(x + 4, y + RH - 3, RWb - 8, 2, "#1b1626");
+    s += '<rect id="mf-' + rm.id + '" x="' + (x + 4) + '" y="' + (y + RH - 3) + '" width="' + ((RWb - 8) * o.fyll) + '" height="2" fill="' + a + '"/>';
+
+    // ramma ligger øverst, så den kan lyse uten at innholdet dekker den
+    s += '<rect class="romramme" data-rom="' + rm.id + '" x="' + x + '" y="' + y + '" width="' + RWb +
+      '" height="' + RH + '" rx="3" fill="transparent" stroke="' + a + '" stroke-width="1.5" opacity="0.35" cursor="pointer"/>';
+    return s;
+  }
+
+  function tegnHeis() {
+    var x = heisX(), yT = romY(ETG_Y.length - 1), yB = romY(0) + RH, s = "";
+    s += rrekt(x - 4, yT - 4, HEIS_B + 8, yB - yT + 8, 3, "#0d1016");
+    s += rrekt(x, yT, HEIS_B, yB - yT, 2, "#090b0f", "#39434f", 1.5);
+    // skinnene i sjakta
+    s += r(x + 5, yT + 3, 2, yB - yT - 6, "#1e242c") + r(x + HEIS_B - 7, yT + 3, 2, yB - yT - 6, "#1e242c");
+    // dørkarm ved hver etasje
+    for (var e = 0; e < ETG_Y.length; e++) {
+      s += r(x + 2, gulvY(e) + 3, HEIS_B - 4, 2, "#39434f");
+      s += r(x + 2, romY(e) + 6, 2, RH - 24, "#2a333d") + r(x + HEIS_B - 4, romY(e) + 6, 2, RH - 24, "#2a333d");
+    }
+    // kabinen
+    s += '<g id="heiskabin">' + rrekt(x + 4, 0, HEIS_B - 8, 48, 2, "#141a21", "#5a6472", 1.5)
+       + r(x + 7, 3, HEIS_B - 14, 42, "#1c242e")
+       + r(x + 7, 44, HEIS_B - 14, 2, "#8f99a8")
+       + r(x + HEIS_B / 2 - 1, 3, 2, 42, "#0d1116") + "</g>";
+    s += tekst(x + HEIS_B / 2, yT - 9, "HEIS", { s: 6.5, f: "#5a6472", midt: 1, sp: 1.2 });
+    return s;
+  }
+
+  function byggTegn() {
+    var s = "";
+    // Tegn ovenfra og ned, saa etasjene under aldri dekker dem over.
+    for (var e = ETASJER.length - 1; e >= 0; e--) {
+      var et = ETASJER[e];
+      s += tekst(RX0 - 12, romY(e) + 14, et.navn.split(" — ")[0], { s: 7.5, f: "#6a6480", sp: 0.5, ende: 1 });
+      s += tekst(RX0 - 12, romY(e) + 24, et.navn.split(" — ")[1], { s: 5.8, v: 500, f: "#443e58", sp: 0.5, ende: 1 });
+      et.rom.forEach(function (rm) { s += tegnRom(rm, e); });
+    }
+    s += tegnHeis();
+    s += '<g id="arkmarkor" opacity="0"><g id="arkkropp">' + sprite(ARKITEKT) + "</g></g>";
+    byggVerden.innerHTML = s;
+    arkMarkor = document.getElementById("arkmarkor");
+    heisKabin = document.getElementById("heiskabin");
+    romRammer = {};
+    [].slice.call(byggVerden.querySelectorAll(".romramme")).forEach(function (n) {
+      romRammer[n.getAttribute("data-rom")] = n;
+      n.addEventListener("click", function () { velgRom(n.getAttribute("data-rom")); });
+    });
+
+    // Hver agent får sin egen stripe av gulvet å vandre på, sin egen fart og sin egen
+    // startretning - ellers marsjerer hele bygget i takt, og det ser ut som en maskin.
+    oversiktAgenter = [];
+    var teller = {};
+    [].slice.call(byggVerden.querySelectorAll(".oagent")).forEach(function (n) {
+      var id = n.getAttribute("data-rom");
+      teller[id] = (teller[id] || 0) + 1;
+    });
+    [].slice.call(byggVerden.querySelectorAll(".oagent")).forEach(function (n) {
+      var id = n.getAttribute("data-rom"), i = +n.getAttribute("data-i");
+      var c = celle(id);
+      if (!c) return;
+      var bredde = c.bredde || 1, venstre = romX(c.venstre) + 18;
+      var full = bredde * RP - RGAP - 36, del = full / teller[id];
+      oversiktAgenter.push({
+        el: n, kropp: n.querySelector(".oakropp"),
+        x0: venstre + i * del, x1: venstre + (i + 1) * del,
+        x: venstre + i * del + del * Math.random(),
+        y: gulvY(c.e), fart: 9 + Math.random() * 9, retn: Math.random() < 0.5 ? -1 : 1,
+        fase: Math.random() * 6, pause: 0
+      });
+    });
+  }
+
+  function settRom(id) {
+    if (ark.rom === id) return;
+    ark.rom = id;
+    synkGjest();
+  }
+  function framme(tid) {
+    settRom(ark.maalRom);
+    ark.vente = tid + (ark.oppgave === "mote" ? MOTE_MS : SJEKK_MS);
+  }
+  function nesteMaal(tid) {
+    settRom(null);
+    if (ark.oppgave === "mote") ark.oppgave = "runde";
+    else ark.indeks = (ark.indeks + 1) % RUNDE.length;
+    ark.maalRom = RUNDE[Math.max(0, ark.indeks)];
+    ark.ko = vei({ kol: ark.kol, e: ark.e }, celle(ark.maalRom));
+    if (!ark.ko.length) framme(tid);
+  }
+  function kallInn() {
+    if (ark.oppgave === "mote") return;
+    ark.oppgave = "mote";
+    settRom(null);
+    ark.maalRom = "war";
+    ark.vente = 0;
+    ark.heis = null;
+    ark.ko = vei({ kol: ark.kol, e: ark.e }, celle("war"));
+    if (!ark.ko.length) framme(Date.now());
+  }
+
+  function byggSteg(dt, tid) {
+    if (!ark.ko.length) {
+      if (tid >= ark.vente) nesteMaal(tid);
+    } else {
+      var m = ark.ko[0];
+      if (m.e !== ark.e) {
+        // Heisturen: kabinen og Arkitekten flytter seg sammen, ellers ville den svevd.
+        if (!ark.heis) ark.heis = { fra: ark.e, t: 0 };
+        ark.heis.t += dt / HEIS_S;
+        var k = Math.min(1, ark.heis.t);
+        ark.e = ark.heis.fra + (m.e - ark.heis.fra) * k;
+        ark.kol = m.kol;
+        if (k >= 1) { ark.e = m.e; ark.heis = null; ark.ko.shift(); if (!ark.ko.length) framme(tid); }
+      } else {
+        var d = m.kol - ark.kol, sk = ARK_FART * dt;
+        if (Math.abs(d) > 0.001) ark.vender = d > 0 ? 1 : -1;
+        if (Math.abs(d) <= sk) { ark.kol = m.kol; ark.ko.shift(); if (!ark.ko.length) framme(tid); }
+        else ark.kol += (d > 0 ? 1 : -1) * sk;
+      }
+    }
+
+    // Agentene i oversikten går fram og tilbake, med en liten pust i bakken i hver ende.
+    oversiktAgenter.forEach(function (a) {
+      if (a.pause > 0) a.pause -= dt;
+      else {
+        a.x += a.fart * a.retn * dt;
+        if (a.x >= a.x1) { a.x = a.x1; a.retn = -1; a.pause = 0.5 + Math.random() * 1.8; }
+        if (a.x <= a.x0) { a.x = a.x0; a.retn = 1; a.pause = 0.5 + Math.random() * 1.8; }
+        a.fase += dt * 7;
+      }
+      var bob = rolig || a.pause > 0 ? 0 : (Math.floor(a.fase) % 2 === 0 ? 0 : -1.5);
+      a.el.setAttribute("transform", "translate(" + a.x.toFixed(1) + " " + (a.y + bob) + ") scale(0.5)");
+      a.kropp.setAttribute("transform", "scale(" + a.retn + " 1)");
+    });
+
+    if (!arkMarkor) return;
+    // Mellom etasjene er e et desimaltall, så posisjonen glir jevnt opp eller ned.
+    var y = gulvYMellom(ark.e);
+    var x = agentX(ark.kol);
+    arkMarkor.setAttribute("opacity", "1");
+    arkMarkor.setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ") scale(0.5)");
+    var kropp = document.getElementById("arkkropp");
+    if (kropp) kropp.setAttribute("transform", "scale(" + ark.vender + " 1)");
+    if (heisKabin) {
+      // Kabinen står der Arkitekten forlot den, og følger den mens den kjører.
+      var ke = ark.heis ? ark.e : Math.round(ark.e);
+      heisKabin.setAttribute("transform", "translate(0 " + (gulvYMellom(ke) - 46).toFixed(1) + ")");
+    }
+    for (var id in romRammer) {
+      var her = id === ark.rom, valgt = aktiv && aktiv.id === id;
+      romRammer[id].setAttribute("opacity",
+        her ? (rolig ? 1 : (0.55 + 0.45 * Math.abs(Math.sin(tid / 420))).toFixed(2)) : valgt ? 0.95 : 0.3);
+      romRammer[id].setAttribute("stroke-width", her || valgt ? 2.5 : 1.5);
+    }
+    tegnByggStatus();
+  }
+
+  var sisteStatus = null;
+  function tegnByggStatus() {
+    var el = document.getElementById("arkstatus");
+    if (!el) return;
+    var navn = function (id) { return (romInfo[id] || {}).navn || id; };
+    var t = ark.rom
+      ? (ark.oppgave === "mote" ? "i møte i " + navn(ark.rom) : "sjekker " + navn(ark.rom))
+      : ark.heis ? "i heisen" : ark.maalRom ? "på vei til " + navn(ark.maalRom) : "går runden";
+    if (t === sisteStatus) return;
+    sisteStatus = t;
+    el.innerHTML = "Arkitekten <b>" + t + "</b>";
+  }
+
+  // Arkitekten som GJEST i rommet som vises. Den hører til bygget, ikke til rommet, så
+  // den settes inn og tas ut etter hvert som den går - og i War room, på møte, går den
+  // rett bort til Administratoren og legger fram det den har funnet.
+  var GJEST_STANDARD = { u: 0.30, v: 0.62 };
+  function synkGjest() {
+    // Første byggRom() kjører FØR byggmodulen er satt opp - da finnes ikke ark ennå,
+    // og det er ingenting å synkronisere. Bygget henter det inn ved første tikk.
+    if (!aktiv || !ark) return;
+    var skalVaere = ark.rom === aktiv.id;
+    var harDen = null;
+    for (var i = 0; i < agenter.length; i++) if (agenter[i].gjest) harDen = agenter[i];
+    if (skalVaere && !harDen) {
+      var pl = aktiv.gjest || GJEST_STANDARD;
+      var def = Object.create(ARKITEKT);
+      def.gjest = true;
+      def.stasjonaer = pl;
+      def.eier = [];
+      var a = lagAgent(def);
+      agenter.push(a);
+      if (aktiv.id === "war" && ark.oppgave === "mote" && aktiv.melderPlass) {
+        var mp = aktiv.melderPlass;
+        sendAgent(a, [stopp(mp.u, mp.v, mp.mot, MOTE_MS - 2000, "melder")], "Fant noe – se på dette");
+      } else {
+        sendAgent(a, [stopp(pl.u, pl.v, [pl.u, pl.v - 0.2], SJEKK_MS - 900, "sjekker")], "Ser etter forbedringer");
+      }
+    } else if (!skalVaere && harDen) {
+      if (harDen.el && harDen.el.parentNode) harDen.el.parentNode.removeChild(harDen.el);
+      agenter.splice(agenter.indexOf(harDen), 1);
+    }
+  }
+
+  function velgRom(id) {
+    for (var i = 0; i < ROM.length; i++) {
+      if (ROM[i].id !== id) continue;
+      [].forEach.call(faner.children, function (x, j) { x.classList.toggle("valgt", j === i); });
+      aktiv = ROM[i]; byggRom(ROM[i]);
+      return;
+    }
+  }
+
+  var forrige = 0;
+  function steg(naaMs) {
+    var dt = Math.min(0.05, (naaMs - forrige) / 1000); forrige = naaMs;
+    var tid = Date.now();
+
+    benker.forEach(function (b) {
+      b.node.setAttribute("opacity", tid < b.til ? (rolig ? 0.9 : 0.35 + 0.55 * Math.abs(Math.sin(tid / 420))).toFixed(2) : 0);
+    });
+
+    var romP = 0;
+    if (tid < benkeAlarm) romP = rolig ? 0.85 : 0.35 + 0.5 * Math.abs(Math.sin(tid / 420));
+    else if (tid < romTil) {
+      var g = 1 - (romTil - tid) / ROMBLINK_MS;
+      romP = rolig ? 0.5 : 0.5 * Math.abs(Math.sin(g * Math.PI * 2));
+    }
+    kanter.forEach(function (k) { k.setAttribute("opacity", romP.toFixed(2)); });
+
+    agenter.forEach(function (a) {
+      var vender = 1, gaar = true;
+      if (a.tilstand === "stasjonaer") {
+        a.fart += ((tid < a.aktivTil ? FART_JOBB : FART_HVILE) - a.fart) * Math.min(1, dt * 2.2);
+        gaar = false;
+      } else if (a.tilstand === "patrulje") {
+        a.fart += (FART_HVILE - a.fart) * Math.min(1, dt * 2.2);
+        a.pos = (a.pos + (a.lengde / a.varighet) * a.fart * dt) % a.lengde;
+        var p = a.bane.getPointAtLength(a.pos), p2 = a.bane.getPointAtLength((a.pos + 6) % a.lengde);
+        a.x = p.x; a.y = p.y; vender = p2.x >= p.x ? 1 : -1;
+      } else if (a.tilstand === "gaar" || a.tilstand === "hjem") {
+        a.fart += (FART_JOBB - a.fart) * Math.min(1, dt * 2.2);
+        var dx = a.maal.x - a.x, dy = a.maal.y - a.y, av = Math.sqrt(dx * dx + dy * dy), sk = GANGFART * dt;
+        vender = dx >= 0 ? 1 : -1;
+        if (av <= sk || av < 2) {
+          a.x = a.maal.x; a.y = a.maal.y;
+          if (a.tilstand === "gaar") { a.tilstand = "jobber"; a.jobbTil = tid + (a.oppdrag[0].ms || 3500); }
+          else if (a.stasjonaer) { a.tilstand = "stasjonaer"; }
+          else { a.tilstand = "patrulje"; a.pos = a.hjemLen; }
+        } else { a.x += (dx / av) * sk; a.y += (dy / av) * sk; }
+      } else {
+        a.fart += (FART_JOBB - a.fart) * Math.min(1, dt * 2.2);
+        gaar = false;
+        vender = a.seMot && a.seMot.x >= a.x ? 1 : -1;
+        if (tid > a.jobbTil) {
+          a.oppdrag.shift();
+          if (a.oppdrag.length) {
+            a.maal = { x: a.oppdrag[0].x, y: a.oppdrag[0].y };
+            a.seMot = a.oppdrag[0].seMot || null;
+            a.gjore = a.oppdrag[0].gjore || null;
+            a.tilstand = "gaar";
+          } else {
+            a.gjore = null;
+            if (a.stasjonaer) {
+              var sp = gulv(a.stasjonaer.u, a.stasjonaer.v);
+              a.maal = { x: sp.x, y: sp.y }; a.tilstand = "hjem";
+            } else {
+              var hj = naermestPaaRuten(a, a.x, a.y);
+              a.hjemLen = hj.l; a.maal = { x: hj.x, y: hj.y }; a.tilstand = "hjem";
+            }
+          }
+        }
+      }
+      if (gaar) a.fase += dt * a.fart * 9;
+      var bob = rolig || !gaar ? 0 : (Math.floor(a.fase) % 2 === 0 ? 0 : -2);
+      a.el.setAttribute("transform", "translate(" + a.x.toFixed(1) + " " + a.y.toFixed(1) + ") scale(0.85)");
+      a.kropp.setAttribute("transform", "translate(0 " + bob + ") scale(" + vender + " 1)");
+      a.boble.setAttribute("transform", "translate(0 " + bob + ")");
+      a.boble.setAttribute("opacity", tid < a.bobleTil ? 1 : 0);
+      a.ring.setAttribute("opacity", a.fart > 0.78 ? (rolig ? 0.8 : (0.4 + 0.35 * Math.sin(tid / 130))).toFixed(2) : 0);
+      if (a.maaler) a.maaler.textContent = a.fart.toFixed(2);
+    });
+
+    // Hvelvdøra svinger opp mens Arkivaren faktisk står der, og strømmene fra Claudes
+    // konsoll renner bare mens han faktisk betjener den.
+    var gjor = function (hva) {
+      for (var i = 0; i < agenter.length; i++) if (agenter[i].tilstand === "jobber" && agenter[i].gjore === hva) return true;
+      return false;
+    };
+    if (hvelvdor) {
+      var apen = gjor("hvelv");
+      hvelvApen += ((apen ? 1 : 0) - hvelvApen) * Math.min(1, dt * 2.6);
+      hvelvdor.setAttribute("transform", "translate(" + (-0.30 * hvelvApen).toFixed(4) + " 0)");
+    }
+    if (aktiv && aktiv.animer) aktiv.animer({ tid: tid, dt: dt, gjor: gjor, agenter: agenter });
+    if (strommer.length) {
+      var paa = gjor("konsoll");
+      stromNivaa += ((paa ? 1 : 0) - stromNivaa) * Math.min(1, dt * 3);
+      for (var si = 0; si < strommer.length; si++) {
+        strommer[si].setAttribute("opacity", (stromNivaa * 0.9).toFixed(2));
+        if (!rolig) strommer[si].setAttribute("stroke-dashoffset", (-(tid / 34) % 32).toFixed(1));
+      }
+    }
+
+    byggSteg(dt, tid);
+    requestAnimationFrame(steg);
+  }
+  // ---------- ekte tall ----------
+  // Skiltene over hvert rom viser det samme som /fabrikk leser, fra de samme
+  // endepunktene. Alt er GET, så siden skriver aldri og koster ingenting av
+  // KV-kvoten. Feiler et kall, blir rommet stående med det det hadde - det er
+  // bedre enn å vise et tall vi ikke vet er sant.
+  var LIVE_MS = 60000;
+  var GRONN = "#39e07a", GUL = "#f0b429", ROED = "#ff5c5c";
+
+  function settSkilt(id, tekst2, fyll, farge) {
+    var t = document.getElementById("st-" + id);
+    if (t) { t.textContent = tekst2; if (farge) t.setAttribute("fill", farge); }
+    var d = document.getElementById("sd-" + id);
+    if (d && farge) d.setAttribute("fill", farge);
+    var m = document.getElementById("mf-" + id);
+    if (m && fyll != null) {
+      m.setAttribute("width", (Math.max(0, Math.min(1, fyll)) * (maalerBredde[id] || 100)).toFixed(1));
+      if (farge) m.setAttribute("fill", farge);
+    }
+  }
+  async function hent(rute) {
+    var r2 = await fetch(rute, { cache: "no-store" });
+    if (!r2.ok) throw new Error(rute + " svarte " + r2.status);
+    return r2.json();
+  }
+  // Er kilden i live? HEAD holder - vi trenger bare statuskoden.
+  async function lever(rute) {
+    try { return (await fetch(rute, { method: "HEAD", cache: "no-store" })).ok; }
+    catch { return false; }
+  }
+  function siden(ms) {
+    if (!ms) return "ALDRI";
+    var m = Math.round((Date.now() - ms) / 60000);
+    return m < 60 ? m + " MIN" : Math.round(m / 60) + " T";
+  }
+
+  var EKTE = [
+    // Recman: hvor mange oppdrag som faktisk ligger på tavlen.
+    { id: "recman", hent: async function () {
+      var d = await hent("/api/oppdrag"), n = (d.oppdrag || []).length;
+      return { tekst: n + " OPPDRAG", fyll: Math.min(1, n / 40) };
+    } },
+    // Eksterne kilder: hvor mange av de fire som svarer akkurat nå.
+    { id: "eksterne", hent: async function () {
+      var ruter = ["/api/vaer", "/api/avganger", "/api/nrk", "/api/kundenytt"];
+      var svar = await Promise.all(ruter.map(lever));
+      var n = svar.filter(Boolean).length;
+      return { tekst: n + "/4 FRISKE", fyll: n / 4, farge: n === 4 ? GRONN : n >= 2 ? GUL : ROED };
+    } },
+    // Kandidattrakten: ubehandlede søknader - tallet Trakteren faktisk teller.
+    { id: "kandidater", hent: async function () {
+      var d = await hent("/api/kandidater");
+      if (!d.tilgjengelig) throw new Error("trakten er ikke klar");
+      var t = d.traktall || {}, ubeh = t.untreated || 0, sum = d.totalt || 1;
+      return { tekst: ubeh + " UBEH.", fyll: Math.min(1, ubeh / (sum || 1)) };
+    } },
+    // Teamskanal: meldinger som ligger i widgeten nå.
+    { id: "teamskanal", hent: async function () {
+      var d = await hent("/api/teamskanal"), n = (d.meldinger || []).length;
+      return { tekst: n + " MELDINGER", fyll: Math.min(1, n / 8) };
+    } },
+    // Functions: skrivekvoten for døgnet. Den er den eneste harde grensa i systemet.
+    { id: "functions", hent: async function () {
+      var d = await hent("/api/kvforbruk");
+      if (!d.tilgjengelig) return { tekst: "KVOTE UKJENT", fyll: 0, farge: GUL };
+      var b = d.skriv || 0;
+      return { tekst: b + "/1000", fyll: b / 1000, farge: b > 800 ? ROED : b > 500 ? GUL : GRONN };
+    } },
+    // Slusen: avviste skriveforsoek. Står det noe her uten at du selv har rotet med
+    // nøkkelen, har noen forsøkt seg.
+    { id: "sluse", hent: async function () {
+      var d = await hent("/api/avviste"), n = d.antall || 0;
+      return { tekst: n + " AVVIST", fyll: n ? 1 : 0, farge: n ? ROED : GRONN };
+    } },
+    // Tavla: skjermer som melder seg levende.
+    { id: "tavle", hent: async function () {
+      var d = await hent("/api/skjermer"), n = (d.skjermer || []).length;
+      return { tekst: n + " P\u00c5 NETT", fyll: Math.min(1, n / 4), farge: n ? GRONN : GUL };
+    } },
+    // Kontrollrommet: hendelser på gulvet siste døgn.
+    { id: "kontroll", hent: async function () {
+      var d = await hent("/api/endringslogg");
+      var grense = Date.now() - 86400000;
+      var n = (d.hendelser || []).filter(function (h) { return (h.tid || 0) > grense; }).length;
+      return { tekst: n + " I D\u00d8GNET", fyll: Math.min(1, n / 30) };
+    } },
+    // Obsidian: når loggjobben sist kjørte, slik den selv rapporterte det.
+    { id: "obsidian", hent: async function () {
+      var d = await hent("/api/agentstatus"), o = (d.oppgaver || {})["obsidian-fabrikk-logg"];
+      if (!o) return { tekst: "VENTER", fyll: 0, farge: GUL };
+      return { tekst: "SIST " + siden(o.sist), fyll: o.ok ? 1 : 0.2, farge: o.ok ? GRONN : ROED };
+    } },
+    // Alarmsentralen: planlagte jobber som har meldt fra at de feilet.
+    { id: "alarm", hent: async function () {
+      var d = await hent("/api/agentstatus"), o = d.oppgaver || {};
+      var navn = Object.keys(o), nede = navn.filter(function (k) { return !o[k].ok; });
+      return nede.length
+        ? { tekst: nede.length + " FEILER", fyll: nede.length / Math.max(1, navn.length), farge: ROED }
+        : { tekst: "ALT OK", fyll: 0, farge: GRONN };
+    } },
+    // War room: forslag som står og venter på at Kristian trykker Godkjenn.
+    { id: "war", hent: async function () {
+      var d = await hent("/api/forslag"), f = d.forslag || [];
+      var venter = f.filter(function (x) { return x.status === "ny"; }).length;
+      var blokkert = f.filter(function (x) { return x.status === "blokkert"; }).length;
+      return blokkert
+        ? { tekst: blokkert + " BLOKKERT", fyll: 1, farge: ROED }
+        : { tekst: venter + " VENTER", fyll: Math.min(1, venter / 12), farge: venter ? GUL : GRONN };
+    } }
+  ];
+
+  var livePille = document.getElementById("livepille");
+  async function hentEkte() {
+    var ok = 0;
+    await Promise.all(EKTE.map(async function (k) {
+      try {
+        var res = await k.hent();
+        settSkilt(k.id, res.tekst, res.fyll, res.farge);
+        ok++;
+      } catch (err) {
+        // Rommet beholder det det hadde. Et tall vi ikke vet er sant, er verre enn
+        // ingen oppdatering.
+      }
+    }));
+    if (livePille) {
+      var kl = new Date().toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+      livePille.innerHTML = ok ? "Ekte tall <b>" + ok + "/" + EKTE.length + " kl. " + kl + "</b>"
+                                : "Ekte tall <b>ikke tilgjengelig</b>";
+    }
+  }
+  byggTegn();
+  document.getElementById("moteknapp").addEventListener("click", kallInn);
+  hentEkte();
+  setInterval(hentEkte, LIVE_MS);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) hentEkte(); });
+  requestAnimationFrame(steg);
+})();
+</script>
