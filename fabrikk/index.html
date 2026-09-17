@@ -161,6 +161,25 @@
     --skilt: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
     }
   #byggvisning { display: flex; flex-direction: column; gap: 14px; }
+  /* En display-erklæring med id-spesifisitet slår ut nettleserens [hidden]-regel, så
+     uten denne ville byggvisningen aldri blitt skjult når dekk-kartet er valgt - og
+     siden tegneløkka står stille mens kartet vises, ville agentene ligget i origo. */
+  #byggvisning[hidden] { display: none; }
+  #byggvisning:fullscreen, #byggvisning:-webkit-full-screen {
+    background: var(--bg-0); padding: 20px; justify-content: center; gap: 10px;
+  }
+  /* Oversikten alene først. .viser-rom bytter de to om. */
+  #byggvisning:fullscreen > .bv-rom { display: none; }
+  #byggvisning:fullscreen.viser-rom > .bv-rom { display: flex; flex-direction: column; gap: 12px; }
+  #byggvisning:fullscreen.viser-rom > .bv-oversikt { display: none; }
+  #byggvisning:fullscreen #byggTilbake { position: fixed; top: 18px; left: 18px; z-index: 40; }
+  #byggTilbake {
+    font-family: "Chakra Petch", sans-serif; font-size: 13px; font-weight: 600; color: var(--text);
+    background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--glass-kant);
+    border-radius: 999px; padding: 9px 16px; cursor: pointer;
+  }
+  #byggTilbake:hover { border-color: var(--aktiv); }
+  #byggTilbake[hidden] { display: none; }
   #byggvisning .ark { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
   #byggvisning h1 { font-family: var(--skilt); font-size: 26px; font-weight: 700; letter-spacing: -0.015em; margin: 0; line-height: 1.1; }
   #byggvisning .ingress { color: var(--svak); font-size: 14px; line-height: 1.6; margin: 0; max-width: 62ch; }
@@ -1067,6 +1086,9 @@
   </div>
 
   <div id="byggvisning" hidden>
+    <!-- I fullskjerm står oversikten alene. Trykker du på et rom, bytter den ut mot
+         rommet, med en tilbakeknapp i hjørnet. Utenfor fullskjerm vises begge. -->
+    <div class="bv-oversikt">
 <div class="ramme">
     <svg class="bv-scene" viewBox="0 0 760 342" id="bygg" role="img" aria-label="Bygget sett rett fra siden: kjeller, to etasjer og en heis mellom dem">
       <rect x="0" y="0" width="760" height="342" fill="#16111f"/>
@@ -1080,6 +1102,8 @@
     <span class="bv-pille" id="livepille">Ekte tall <b>henter…</b></span>
   </div>
 
+    </div>
+    <div class="bv-rom">
   <div class="faner" id="faner"></div>
 
   <div class="ramme">
@@ -1091,6 +1115,8 @@
 
   <div class="styring" id="knapper"></div>
   <div class="bv-maalere" id="maalere"></div>
+    </div>
+    <button type="button" id="byggTilbake" hidden>&larr; Tilbake til bygget</button>
   </div>
 
   <div class="seksjonstittel">
@@ -4026,6 +4052,7 @@
       [].forEach.call(faner.children, function (x) { x.classList.remove("valgt"); });
       b.classList.add("valgt"); aktiv = rom; byggRom(rom);
       tegnByggStatus();
+      visRommet();
     });
     faner.appendChild(b);
     if (i === 0) { b.classList.add("valgt"); aktiv = rom; }
@@ -4474,11 +4501,29 @@
     }
   }
 
+  // I fullskjerm er oversikt og rom to steg, ikke to ting på skjermen samtidig.
+  var byggRot = document.getElementById("byggvisning");
+  var tilbakeKnapp = document.getElementById("byggTilbake");
+  function iFullskjerm() { return document.fullscreenElement === byggRot; }
+  function visOversikt() {
+    if (byggRot) byggRot.classList.remove("viser-rom");
+    if (tilbakeKnapp) tilbakeKnapp.hidden = true;
+  }
+  function visRommet() {
+    if (!iFullskjerm()) return;
+    byggRot.classList.add("viser-rom");
+    if (tilbakeKnapp) tilbakeKnapp.hidden = false;
+  }
+  if (tilbakeKnapp) tilbakeKnapp.addEventListener("click", visOversikt);
+  // Både inn i og ut av fullskjerm starter på oversikten.
+  document.addEventListener("fullscreenchange", visOversikt);
+
   function velgRom(id) {
     for (var i = 0; i < ROM.length; i++) {
       if (ROM[i].id !== id) continue;
       [].forEach.call(faner.children, function (x, j) { x.classList.toggle("valgt", j === i); });
       aktiv = ROM[i]; byggRom(ROM[i]);
+      visRommet();
       return;
     }
   }
