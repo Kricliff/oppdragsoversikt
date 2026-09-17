@@ -4188,6 +4188,36 @@
             ["r", 0.52, 0.44, 0.13, 0.30, 0.5], ["r", 0.52, 0.10, 0.13, 0.26, 0.5]]
   };
 
+  // ---------- samspillet mellom rommene ----------
+  // Hver kobling er en ekte vei dataen går i dette huset, ikke en strek som ser fin ut.
+  var SAMSPILL = [
+    // Traktallene ER Recman sin jobApplication-liste, bare telt opp på en annen måte.
+    { fra: "recman", til: "kandidater" },
+    // Alt som hentes utenfra havner i KV.
+    { fra: "recman", til: "functions" },
+    { fra: "eksterne", til: "functions" },
+    { fra: "teamskanal", til: "functions" },
+    // Hver eneste skriving må forbi nøkkelsjekken først.
+    { fra: "sluse", til: "functions" },
+    // Tavlen viser det som er lagret.
+    { fra: "functions", til: "tavle" },
+    // Loggjobben bærer døgnets hendelser inn i hvelvet.
+    { fra: "functions", til: "obsidian" },
+    // Helsesjekkene ser på lageret, og Slusen melder fra om avviste forsøk.
+    { fra: "functions", til: "alarm" },
+    { fra: "sluse", til: "alarm" },
+    // Et godkjent forslag blir til en utrulling.
+    { fra: "war", til: "kontroll" },
+    // Og utrullingen treffer hele huset.
+    { fra: "kontroll", til: "functions" }
+  ];
+
+  // Føringen ligger i luften under hver etasje, og stigeledningen langs høyre side -
+  // ved siden av heissjakta, ikke i den. Heisen er for folk.
+  function ledningY(e) { return romY(e) + RH + 5; }
+  function stigeX() { return heisX() + HEIS_B + 10; }
+  var PAKKE_FART = 190;   // piksler i sekundet
+
   var ARKITEKT = {
     navn: "Arkitekten", hud: "#f0c8a0", hudM: "#d2a87e", haar: "#5a4632", hat: "#f0b429",
     briller: 1, p: "tegning", drakt: "#8fd9ff", draktM: "#5fa8cc", ring: "#8fd9ff"
@@ -4303,6 +4333,47 @@
     return s;
   }
 
+  // Føringene tegnes svakt hele tiden, så det er synlig HVOR noe kan gå selv når
+  // ingenting går akkurat nå - samme tanke som banene ut fra kontrollrommet på dekk-kartet.
+  function tegnLedninger() {
+    var s = "", sx = stigeX();
+    for (var e = 0; e < ETG_Y.length; e++) {
+      var y = ledningY(e);
+      s += r(RX0 - 6, y - 0.75, sx - RX0 + 6, 1.5, "#2a2438");
+      // korte nedstikk fra hvert rom ned til føringen
+      ETASJER[e].rom.forEach(function (rm) {
+        var bredde = rm.bredde || 1;
+        var x = romX(rm.kol) + (bredde * RP - RGAP) / 2;
+        s += r(x - 0.75, romY(e) + RH, 1.5, y - romY(e) - RH, "#2a2438");
+        s += '<circle cx="' + x + '" cy="' + y + '" r="2" fill="#332b45"/>';
+      });
+    }
+    // stigeledningen som binder etasjene sammen
+    s += r(sx - 0.75, ledningY(ETG_Y.length - 1), 1.5, ledningY(0) - ledningY(ETG_Y.length - 1), "#2a2438");
+    s += tekst(sx + 7, ledningY(ETG_Y.length - 1) + 4, "F\u00d8RING", { s: 5.6, f: "#3d3850", sp: 0.8 });
+    return s;
+  }
+
+  // Veien en pakke går: ned fra rommet, bortover føringen, opp eller ned stigen om
+  // etasjen er en annen, og opp igjen i det andre rommet.
+  function veiMellom(fraId, tilId) {
+    var a = celle(fraId), b = celle(tilId);
+    if (!a || !b) return null;
+    var midt = function (c) {
+      return romX(c.venstre) + ((c.bredde || 1) * RP - RGAP) / 2;
+    };
+    var ax = midt(a), bx = midt(b), pkt = [];
+    pkt.push({ x: ax, y: romY(a.e) + RH });
+    pkt.push({ x: ax, y: ledningY(a.e) });
+    if (a.e !== b.e) {
+      pkt.push({ x: stigeX(), y: ledningY(a.e) });
+      pkt.push({ x: stigeX(), y: ledningY(b.e) });
+    }
+    pkt.push({ x: bx, y: ledningY(b.e) });
+    pkt.push({ x: bx, y: romY(b.e) + RH });
+    return pkt;
+  }
+
   function byggTegn() {
     var s = "";
     // Tegn ovenfra og ned, saa etasjene under aldri dekker dem over.
@@ -4313,9 +4384,18 @@
       et.rom.forEach(function (rm) { s += tegnRom(rm, e); });
     }
     s += tegnHeis();
+    // Gløden brukes bare på sterke pakker, der noe faktisk endret seg.
+    s += '<defs><filter id="pakkeglod" x="-160%" y="-160%" width="420%" height="420%">'
+       + '<feGaussianBlur stdDeviation="2.6" result="u"/>'
+       + '<feMerge><feMergeNode in="u"/><feMergeNode in="SourceGraphic"/></feMerge>'
+       + "</filter></defs>";
+    s += '<g id="ledninger">' + tegnLedninger() + "</g>";
+    s += '<g id="pakker"></g>';
     s += '<g id="arkmarkor" opacity="0"><g id="arkkropp">' + sprite(ARKITEKT) + "</g></g>";
     byggVerden.innerHTML = s;
     arkMarkor = document.getElementById("arkmarkor");
+    pakkeLag = document.getElementById("pakker");
+    pakker = [];
     heisKabin = document.getElementById("heiskabin");
     romRammer = {};
     [].slice.call(byggVerden.querySelectorAll(".romramme")).forEach(function (n) {
@@ -4435,6 +4515,8 @@
       }
     }
 
+    flyttPakker(dt);
+
     if (!arkMarkor) return;
     // Mellom etasjene er e et desimaltall, så posisjonen glir jevnt opp eller ned.
     var y = gulvYMellom(ark.e);
@@ -4451,17 +4533,79 @@
     for (var id in romRammer) {
       var her = id === ark.rom, valgt = aktiv && aktiv.id === id;
       // Et rom i alarm slår alt annet: det skal ses først, uansett hvor Arkitekten er.
+      // Deretter kommer et rom som nettopp jobbet, så rommet Arkitekten står i.
       var iAlarm = alarmRom.has(id);
+      var iArbeid = !iAlarm && jobber[id] > tid;
       romRammer[id].setAttribute("opacity", iAlarm
         ? (rolig ? 1 : (0.55 + 0.45 * Math.abs(Math.sin(tid / 300))).toFixed(2))
+        : iArbeid ? (rolig ? 1 : (0.5 + 0.5 * Math.abs(Math.sin(tid / 190))).toFixed(2))
         : her ? (rolig ? 1 : (0.55 + 0.45 * Math.abs(Math.sin(tid / 420))).toFixed(2)) : valgt ? 0.95 : 0.3);
-      romRammer[id].setAttribute("stroke-width", iAlarm ? 3 : her || valgt ? 2.5 : 1.5);
+      romRammer[id].setAttribute("stroke-width", iAlarm ? 3 : iArbeid ? 2.5 : her || valgt ? 2.5 : 1.5);
     }
     tegnByggStatus();
   }
 
   var ALARM_ROED = "#ff5c5c";
   var sisteAlarmNokkel = null, alarmRom = new Set(), nedeRom = new Set();
+  // ---------- pakkene ----------
+  // En pakke er én hendelse på vei fra ett rom til et annet. Svak puls = vi spurte, og
+  // rommet svarte. Sterk puls = tallet i rommet endret seg faktisk.
+  var pakker = [], pakkeLag = null;
+
+  function sendPakke(fraId, tilId, sterk, farge) {
+    // Ligger fanen i bakgrunnen staar requestAnimationFrame stille, og da flytter
+    // ingenting seg. Slapp vi pakker ut likevel, ville de hopet seg opp usett og
+    // skylt over skjermen i det noen kom tilbake.
+    if (!pakkeLag || document.hidden) return;
+    var vei = veiMellom(fraId, tilId);
+    if (!vei) return;
+    var lengde = 0, ledd = [];
+    for (var i = 1; i < vei.length; i++) {
+      var d = Math.hypot(vei[i].x - vei[i - 1].x, vei[i].y - vei[i - 1].y);
+      ledd.push({ a: vei[i - 1], b: vei[i], d: d });
+      lengde += d;
+    }
+    if (!lengde) return;
+    var el = document.createElementNS(SVG, "circle");
+    el.setAttribute("r", sterk ? 3.4 : 2);
+    el.setAttribute("fill", farge || (sterk ? "#39e07a" : "#4a4160"));
+    if (sterk) el.setAttribute("filter", "url(#pakkeglod)");
+    // Sett startpunktet med en gang - ellers tegnes pakken i (0,0) den foerste rammen.
+    el.setAttribute("cx", vei[0].x.toFixed(1));
+    el.setAttribute("cy", vei[0].y.toFixed(1));
+    pakkeLag.appendChild(el);
+    pakker.push({ el: el, ledd: ledd, lengde: lengde, gatt: 0, sterk: sterk });
+  }
+
+  function flyttPakker(dt) {
+    for (var i = pakker.length - 1; i >= 0; i--) {
+      var pk = pakker[i];
+      pk.gatt += PAKKE_FART * dt;
+      if (pk.gatt >= pk.lengde) {
+        if (pk.el.parentNode) pk.el.parentNode.removeChild(pk.el);
+        pakker.splice(i, 1);
+        continue;
+      }
+      var rest = pk.gatt;
+      for (var j = 0; j < pk.ledd.length; j++) {
+        var l = pk.ledd[j];
+        if (rest > l.d) { rest -= l.d; continue; }
+        var k = l.d ? rest / l.d : 0;
+        pk.el.setAttribute("cx", (l.a.x + (l.b.x - l.a.x) * k).toFixed(1));
+        pk.el.setAttribute("cy", (l.a.y + (l.b.y - l.a.y) * k).toFixed(1));
+        break;
+      }
+      // Fader ut mot slutten, så den ikke forsvinner brått midt i et rom.
+      var igjen = 1 - pk.gatt / pk.lengde;
+      pk.el.setAttribute("opacity", (pk.sterk ? 1 : 0.55) * Math.min(1, igjen * 4));
+    }
+  }
+
+  // Et rom som nettopp gjorde noe skal ses. Blinket varer i noen sekunder og ligger
+  // oppå den vanlige rammen, uten å overdøve en ekte alarm - den sjekkes først.
+  var jobber = {};
+  function settIArbeid(id) { jobber[id] = Date.now() + 3200; }
+
   var sisteStatus = null;
   function tegnByggStatus() {
     var el = document.getElementById("arkstatus");
@@ -4656,7 +4800,12 @@
   // Hva skiltet sa sist, før en eventuell alarm farget det rødt. Uten dette ville
   // rommet blitt stående rødt etter at alarmen er kvittert ut.
   var sisteSkilt = {};
+  // Rom som endret seg i den runden som kjører nå. Tømmes ved starten av hver henting.
+  var endretSist = [];
   function settSkilt(id, tekst2, fyll, farge) {
+    // Endret tallet seg siden sist? Første runde teller ikke - da er alt nytt.
+    var forrige = sisteSkilt[id];
+    if (forrige && forrige.tekst !== tekst2) endretSist.push(id);
     sisteSkilt[id] = { tekst: tekst2, farge: farge };
     var t = document.getElementById("st-" + id);
     if (t) { t.textContent = tekst2; if (farge) t.setAttribute("fill", farge); }
@@ -4764,6 +4913,7 @@
     // Ingen vits i å hente tall til en visning ingen ser på.
     if (!byggetVises()) return;
     var ok = 0;
+    endretSist = [];
     await Promise.all(EKTE.map(async function (k) {
       try {
         var res = await k.hent();
@@ -4774,6 +4924,34 @@
         // ingen oppdatering.
       }
     }));
+    // Svak puls langs hele nettet: vi spurte, og rommene svarte. Det skjer én gang i
+    // minuttet, og er den eneste bevegelsen som ikke krever at noe har endret seg -
+    // men den er heller ikke oppdiktet, for kallene gikk faktisk.
+    // Pulsene fordeles utover hele minuttet fram til neste henting, ikke i en klump paa
+    // tre sekunder. Da staar ikke huset doedt i 57 sekunder av hvert minutt - og hver
+    // enkelt puls betyr fortsatt det samme: dette kallet gikk, og rommet svarte.
+    if (ok) {
+      var luke = (LIVE_MS * 0.85) / SAMSPILL.length;
+      SAMSPILL.forEach(function (kobling, i) {
+        setTimeout(function () { sendPakke(kobling.fra, kobling.til, false); }, i * luke);
+      });
+    }
+
+    // Sterk puls der noe faktisk endret seg: rommet blinker, og pakken går den veien
+    // endringen gikk. Et rom uten utgående kobling blinker bare.
+    endretSist.forEach(function (id, i) {
+      settIArbeid(id);
+      var ut = SAMSPILL.filter(function (k) { return k.fra === id; });
+      // Slusen er den ene som betyr noe vondt når den rører seg: et avvist skriveforsoek.
+      var farge = id === "sluse" ? "#ff5c5c" : null;
+      ut.forEach(function (k, j) {
+        setTimeout(function () {
+          sendPakke(k.fra, k.til, true, farge);
+          settIArbeid(k.til);
+        }, 900 + i * 400 + j * 220);
+      });
+    });
+
     if (livePille) {
       var kl = new Date().toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
       livePille.innerHTML = ok ? "Ekte tall <b>" + ok + "/" + EKTE.length + " kl. " + kl + "</b>"
