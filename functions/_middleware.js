@@ -26,8 +26,24 @@
 // av et forslag krever i tillegg admin-nøkkelen alene - agentnøkkelen kommer ikke forbi.
 const UNNTATTE_RUTER = new Set(["/api/teamskanal", "/api/endringslogg", "/api/avviste", "/api/agentstatus", "/api/kvforbruk", "/api/forslag"]);
 
+// Grener som heter agent-* er der agentene bygger. De skal kunne rulle ut og teste
+// uten å kunne røre levende tilstand, så bindingen byttes ut for hele forespørselen -
+// én gang her, i stedet for i hver eneste funksjon som bruker KV.
+//
+// Oppdaget 2026-09-17: før dette delte forhåndsvisninger og produksjon navnerom, så
+// "rull kun ut til forhåndsvisning" - en av Coderens absolutte grenser - var ingen
+// sandkasse i det hele tatt. Bekreftet ved at endringsloggen leste identisk fra begge.
+//
+// Bare agent-grenene byttes, ikke alle forhåndsvisninger: automasjon-aliaset er også
+// en forhåndsvisning, og er døra de planlagte jobbene skriver gjennom. Flyttet vi den
+// også, ville jobbene svart OK mens ingenting de skrev nådde tavlen.
+const AGENTGREN = /^agent-/;
+
 export async function onRequest(context) {
   const branch = context.env.CF_PAGES_BRANCH;
+  if (AGENTGREN.test(branch ?? "") && context.env.AGENT_KV) {
+    context.env.NOTAT_KV = context.env.AGENT_KV;
+  }
   const erProduksjon = branch === "master";
   if (erProduksjon) return context.next();
 

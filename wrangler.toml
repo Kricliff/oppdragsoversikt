@@ -2,6 +2,26 @@ name = "oppdragsoversikt"
 pages_build_output_dir = "."
 compatibility_date = "2026-08-01"
 
+# Produksjon (grenen master): den ekte tilstanden - post-it, bilde, bursdager,
+# innstillinger, skjermregister, endringslogg, feiring og forslagskøen.
 [[kv_namespaces]]
 binding = "NOTAT_KV"
 id = "041d970ead1042f0aabd622afebb1965"
+
+# Forhåndsvisninger har BEGGE navnerommene bundet, og _middleware.js velger mellom dem.
+#
+# Hvorfor ikke bare gi alle forhåndsvisninger det tomme navnerommet: automasjon-aliaset
+# ER en forhåndsvisning. Det er døra de tre planlagte jobbene bruker for å skrive
+# agentstatus, Teams-meldinger og forslag uten å måtte logge inn gjennom Access. Hadde
+# forhåndsvisningene byttet navnerom under ett, ville de tre jobbene fortsatt svart OK
+# mens ingenting de skrev nådde tavlen - en stillhet som er vanskelig å oppdage.
+#
+# Derfor er det bare grener som heter agent-* som får sandkassen. Se _middleware.js.
+[env.preview]
+[[env.preview.kv_namespaces]]
+binding = "NOTAT_KV"
+id = "041d970ead1042f0aabd622afebb1965"
+
+[[env.preview.kv_namespaces]]
+binding = "AGENT_KV"
+id = "263df564cbd642d197b24f50c76b3ef0"
