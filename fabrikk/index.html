@@ -168,11 +168,13 @@
   #byggvisning:fullscreen, #byggvisning:-webkit-full-screen {
     background: var(--bg-0); padding: 20px; justify-content: center; gap: 10px;
   }
-  /* Oversikten alene først. .viser-rom bytter de to om. */
-  #byggvisning:fullscreen > .bv-rom { display: none; }
-  #byggvisning:fullscreen.viser-rom > .bv-rom { display: flex; flex-direction: column; gap: 12px; }
-  #byggvisning:fullscreen.viser-rom > .bv-oversikt { display: none; }
-  #byggvisning:fullscreen #byggTilbake { position: fixed; top: 18px; left: 18px; z-index: 40; }
+  /* Oversikten alene først, rommet når du trykker på det. Klassen settes av koden
+     når NETTOPP bygget går i fullskjerm - :fullscreen ville også slagt til om noe
+     annet på sida gjorde det, og lar seg ikke etterprøve. */
+  #byggvisning.i-fullskjerm > .bv-rom { display: none; }
+  #byggvisning.i-fullskjerm.viser-rom > .bv-rom { display: flex; flex-direction: column; gap: 12px; }
+  #byggvisning.i-fullskjerm.viser-rom > .bv-oversikt { display: none; }
+  #byggvisning.i-fullskjerm #byggTilbake { position: fixed; top: 18px; left: 18px; z-index: 40; }
   #byggTilbake {
     font-family: "Chakra Petch", sans-serif; font-size: 13px; font-weight: 600; color: var(--text);
     background: var(--glass); backdrop-filter: blur(14px); border: 1px solid var(--glass-kant);
@@ -3905,7 +3907,7 @@
       var jobb = foran(b.u, b.v, b.vegg);
       // knapper blir med videre: styringa leser fra DENNE kopien, ikke fra romdefinisjonen,
       // sa en installasjon med to knapper (pulten) mister dem ellers pa veien.
-      var reg = { id: b.id, navn: b.navn, knapper: b.knapper, node: g.querySelector(".glo"), til: 0, jx: jobb.x, jy: jobb.y, bx: pt.x, by: pt.y };
+      var reg = { id: b.id, navn: b.navn, knapper: b.knapper, node: g.querySelector(".bv-glo"), til: 0, jx: jobb.x, jy: jobb.y, bx: pt.x, by: pt.y };
       benker.push(reg);
       g.addEventListener("click", function () { hendelse(reg); });
       g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); hendelse(reg); } });
@@ -3929,7 +3931,7 @@
       + '<text x="0" y="-101" text-anchor="middle" font-family="Chakra Petch, sans-serif" font-size="12" fill="#e7edf6"></text>';
     g.appendChild(kropp); g.appendChild(boble); verden.appendChild(g);
     a.el = g; a.kropp = kropp; a.boble = boble; a.tekst = boble.querySelector("text");
-    a.ring = kropp.querySelector(".jobbring");
+    a.ring = kropp.querySelector(".bv-jobbring");
     a.aktivTil = 0; a.bobleTil = 0; a.fase = 0; a.fart = FART_HVILE;
     if (def.stasjonaer) {
       var sp = gulv(def.stasjonaer.u, def.stasjonaer.v);
@@ -4504,19 +4506,25 @@
   // I fullskjerm er oversikt og rom to steg, ikke to ting på skjermen samtidig.
   var byggRot = document.getElementById("byggvisning");
   var tilbakeKnapp = document.getElementById("byggTilbake");
-  function iFullskjerm() { return document.fullscreenElement === byggRot; }
+  function iFullskjerm() { return byggRot && byggRot.classList.contains("i-fullskjerm"); }
   function visOversikt() {
     if (byggRot) byggRot.classList.remove("viser-rom");
     if (tilbakeKnapp) tilbakeKnapp.hidden = true;
   }
   function visRommet() {
+    // Utenfor fullskjerm vises begge deler samtidig - da er det ingenting å bytte.
     if (!iFullskjerm()) return;
     byggRot.classList.add("viser-rom");
     if (tilbakeKnapp) tilbakeKnapp.hidden = false;
   }
   if (tilbakeKnapp) tilbakeKnapp.addEventListener("click", visOversikt);
   // Både inn i og ut av fullskjerm starter på oversikten.
-  document.addEventListener("fullscreenchange", visOversikt);
+  document.addEventListener("fullscreenchange", function () {
+    if (byggRot) {
+      byggRot.classList.toggle("i-fullskjerm", document.fullscreenElement === byggRot);
+    }
+    visOversikt();
+  });
 
   function velgRom(id) {
     for (var i = 0; i < ROM.length; i++) {
