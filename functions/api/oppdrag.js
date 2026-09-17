@@ -120,6 +120,14 @@ export async function onRequestGet(context) {
 
 const ENDRINGSLOGG_KV_KEY = "oppdrag-endringslogg";
 const ENDRINGSLOGG_VIS_DAGER = 14; // hvor lenge en hendelse beholdes i loggen
+// Hvor mange oppfriskninger på rad et oppdrag må være borte FØR vi tror på det.
+// Recman sorterer lista selv mens vi paginerer (se den lange merknaden over
+// MAKS_SIDER), så et oppdrag kan mangle i én henting og være tilbake i neste uten at
+// noe er endret. Før dette ble en slik glipp logget som "borte" med én gang - og
+// gjenkomsten som "nytt", siden oppdraget samtidig falt ut av forrige-bildet.
+// Med CACHE_SECONDS på 20 minutter betyr 2 at et EKTE borte vises omtrent 40 minutter
+// forsinket. Det er en bevisst avveining: heller sent og sant enn raskt og feil.
+const BORTE_BEKREFTELSER = 2;
 
 async function loggEndringer(oppdrag, kv) {
   if (!kv) return;
@@ -132,13 +140,24 @@ async function loggEndringer(oppdrag, kv) {
   const tilstand = (await kv.get(ENDRINGSLOGG_KV_KEY, "json")) ?? {};
   const forrige = tilstand.forrige ?? null;
   const hendelser = tilstand.hendelser ?? [];
+  // id -> hvor mange oppfriskninger på rad oppdraget har manglet. Tom for alt som
+  // er der nå, og nullstilles automatisk når et oppdrag dukker opp igjen.
+  const mistenktBorte = tilstand.mistenktBorte ?? {};
   const naa = Date.now();
+  const fortsattMistenkt = {};
 
   // Bootstrap-sikkert: kun diff når det faktisk finnes en forrige tilstand å diffe
   // mot, ellers ville aller første kjøring logget ALLE oppdrag som "nytt".
   if (forrige) {
     for (const [id, o] of Object.entries(forrige)) {
-      if (!naaKart[id]) hendelser.push({ tidspunkt: naa, type: "borte", ...o });
+      if (naaKart[id]) continue;
+      const runder = (mistenktBorte[id] ?? 0) + 1;
+      if (runder >= BORTE_BEKREFTELSER) {
+        hendelser.push({ tidspunkt: naa, type: "borte", ...o });
+      } else {
+        // Ikke tro på det ennå - vent til neste oppfriskning.
+        fortsattMistenkt[id] = runder;
+      }
     }
     for (const [id, o] of Object.entries(naaKart)) {
       if (!forrige[id]) {
@@ -155,8 +174,16 @@ async function loggEndringer(oppdrag, kv) {
   // Kjøres via context.waitUntil (se onRequestGet) og påvirker derfor ikke selve
   // svaret om den feiler - fanges likevel her for å unngå støy i loggene ved en
   // feilet skriving (f.eks. KV sin daglige gratiskvote brukt opp).
+  // Et oppdrag som er mistenkt borte blir stående i forrige-bildet. Uten dette ville
+  // gjenkomsten lest som "nytt" - den andre halvdelen av flimringen.
+  const nesteForrige = { ...naaKart };
+  for (const id of Object.keys(fortsattMistenkt)) nesteForrige[id] = forrige[id];
+
   try {
-    await kv.put(ENDRINGSLOGG_KV_KEY, JSON.stringify({ forrige: naaKart, hendelser: beholdt }));
+    await kv.put(
+      ENDRINGSLOGG_KV_KEY,
+      JSON.stringify({ forrige: nesteForrige, hendelser: beholdt, mistenktBorte: fortsattMistenkt })
+    );
   } catch (err) {
     console.warn("Fikk ikke skrevet endringslogg til KV:", err);
   }
