@@ -1099,7 +1099,6 @@
   </div>
 
   <div class="styring">
-    <button type="button" id="moteknapp">Administratoren kaller inn til møte</button>
     <span class="bv-pille" id="arkstatus">Arkitekten <b>går runden</b></span>
     <span class="bv-pille" id="livepille">Ekte tall <b>henter…</b></span>
   </div>
@@ -1115,8 +1114,8 @@
     </svg>
   </div>
 
-  <div class="styring" id="knapper"></div>
-  <div class="bv-maalere" id="maalere"></div>
+  <!-- Demoknappene og fartsmålerne sto her. De er borte: bygget viser ekte tall, og en
+       knapperad som bare demonstrerer noe hører ikke hjemme på et veggdisplay. -->
     </div>
     <button type="button" id="byggTilbake" hidden>&larr; Tilbake til bygget</button>
   </div>
@@ -4018,8 +4017,12 @@
   }
 
   function byggStyring(rom) {
-    var k = document.getElementById("knapper"); k.innerHTML = "";
-    var m = document.getElementById("maalere"); m.innerHTML = "";
+    var k = document.getElementById("knapper"), m = document.getElementById("maalere");
+    // Demoradene er fjernet fra sida. Uten denne vakta ville dette kastet på null, og
+    // siden requestAnimationFrame står sist i steg() hadde det drept hele animasjonen.
+    if (!k || !m) return;
+    k.innerHTML = "";
+    m.innerHTML = "";
     if (benker.length) {
       benker.forEach(function (b) {
         // Flere knapper pa samme installasjon: pulten bygges pa OG testes pa.
@@ -4778,7 +4781,8 @@
     }
   }
   byggTegn();
-  document.getElementById("moteknapp").addEventListener("click", kallInn);
+  var moteKnapp = document.getElementById("moteknapp");
+  if (moteKnapp) moteKnapp.addEventListener("click", kallInn);
   hentEkte();
   setInterval(hentEkte, LIVE_MS);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) hentEkte(); });

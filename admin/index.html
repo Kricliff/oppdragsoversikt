@@ -152,6 +152,45 @@
   .endring-meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 0.15rem; }
   .endring-tid { color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; flex: none; }
   .endring-tom { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+
+  /* Forslag fra agentmøtet. Egne regler, ikke lånt fra endringsloggen: den er en
+     flex-rad laget for én linje, og presset kortene ned i smale spalter. */
+  .forslag {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--aktiv);
+    border-radius: 6px;
+    background: var(--bg-0);
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.7rem;
+  }
+  .forslag:last-child { margin-bottom: 0; }
+  .forslag.er-blokkert { border-left-color: #c02626; }
+  .forslag.er-igang { border-left-color: #2f7f9c; }
+  .forslag h3 { font-size: 0.9rem; font-weight: 600; line-height: 1.35; margin: 0 0 0.5rem; }
+  .forslag p { font-size: 0.8rem; line-height: 1.55; color: var(--text-muted); margin: 0 0 0.55rem; }
+  .forslag-merker { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 0.6rem; }
+  .merke {
+    font-size: 0.68rem; font-weight: 600; border-radius: 999px;
+    padding: 2px 9px; background: #f0f0f0; color: var(--text-muted); white-space: nowrap;
+  }
+  .merke.venter { background: #fff3dc; color: #8a5a00; }
+  .merke.blokkert { background: #fdecec; color: #c02626; }
+  .merke.igang { background: #e8f2f6; color: #256b83; }
+  /* Cybersec sin merknad er den viktigste linja i kortet og skal aldri drukne. */
+  .forslag .sikkerhet {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+    padding: 0.5rem 0.6rem; font-size: 0.76rem; line-height: 1.5;
+    color: var(--text-muted); margin: 0 0 0.6rem;
+  }
+  .forslag .sikkerhet.roed { background: #fdecec; border-color: #f0c6c6; color: #8f2323; }
+  .forslag details { margin: 0 0 0.6rem; }
+  .forslag summary { font-size: 0.76rem; color: var(--text-muted); cursor: pointer; }
+  .forslag details p { margin: 0.5rem 0 0; font-size: 0.76rem; }
+  .forslag details b { color: var(--text); font-weight: 600; }
+  .forslag-knapper { display: flex; gap: 8px; margin-top: 0.7rem; }
+  .forslag-knapper .lagreknapp { padding: 0.42rem 0.9rem; font-size: 0.8rem; }
+  .avvisknapp { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .avvisknapp:hover:not(:disabled) { border-color: #c02626; color: #c02626; }
   .parkering-tittel {
     font-size: 0.85rem;
     font-weight: 600;
@@ -1115,64 +1154,105 @@
     ferdig: "Ferdig", blokkert: "Blokkert av Cybersec"
   };
 
+  // Et forslag leses ovenfra og ned: hva det er, hvor det står, hvorfor, hva Cybersec
+  // mener - og til slutt hva du kan gjøre med det. Detaljene ligger sammenfoldet, så
+  // kortet kan skummes når det ligger flere av dem.
+  const MERKEKLASSE = {
+    ny: "venter", blokkert: "blokkert",
+    godkjent: "igang", bygges: "igang", testes: "igang"
+  };
   function tegnForslag(data) {
     const apne = (data.forslag ?? []).filter((f) => f.status !== "avvist" && f.status !== "ferdig");
     if (!apne.length) {
-      forslagListeEl.innerHTML = '<p class="endring-tom">Ingen forslag akkurat nå. Arkitekten leter hver morgen klokka ni.</p>';
+      forslagListeEl.innerHTML = '<p class="endring-tom">Ingen forslag akkurat n\u00e5. Arkitekten leter hver morgen klokka ni.</p>';
       return;
     }
     forslagListeEl.replaceChildren(...apne.map((f) => {
-      const rad = document.createElement("div");
-      rad.className = "endring-rad";
+      const kort = document.createElement("div");
+      kort.className = "forslag";
+      if (f.status === "blokkert") kort.classList.add("er-blokkert");
+      else if (MERKEKLASSE[f.status] === "igang") kort.classList.add("er-igang");
 
-      const tittel = document.createElement("p");
-      tittel.style.margin = "0 0 4px";
-      tittel.style.fontWeight = "600";
+      const tittel = document.createElement("h3");
       tittel.textContent = f.tittel;
-      rad.append(tittel);
+      kort.append(tittel);
 
-      const merke = document.createElement("p");
-      merke.className = "storrelse-hint";
-      merke.style.margin = "0 0 6px";
-      merke.textContent = (STATUSTEKST[f.status] ?? f.status) + (f.anslag ? " · " + f.anslag : "");
-      if (f.status === "blokkert") merke.style.color = "#b23b3b";
-      rad.append(merke);
+      const merker = document.createElement("div");
+      merker.className = "forslag-merker";
+      const leggMerke = (tekst, klasse) => {
+        const m = document.createElement("span");
+        m.className = "merke" + (klasse ? " " + klasse : "");
+        m.textContent = tekst;
+        merker.append(m);
+      };
+      leggMerke(STATUSTEKST[f.status] ?? f.status, MERKEKLASSE[f.status]);
+      if (f.anslag) leggMerke("St\u00f8rrelse " + f.anslag);
+      if (f.kilde) leggMerke("Fra " + f.kilde);
+      kort.append(merker);
 
       if (f.begrunnelse) {
         const b = document.createElement("p");
-        b.className = "storrelse-hint";
-        b.style.margin = "0 0 6px";
         b.textContent = f.begrunnelse;
-        rad.append(b);
+        kort.append(b);
       }
+
       // Cybersec sin merknad står ALLTID synlig - det er den viktigste linja i kortet.
       if (f.sikkerhet?.merknad) {
-        const s = document.createElement("p");
-        s.className = "storrelse-hint";
-        s.style.margin = "0 0 6px";
-        s.style.color = f.status === "blokkert" ? "#b23b3b" : "";
-        s.textContent = "Cybersec: " + f.sikkerhet.merknad;
-        rad.append(s);
+        const sk = document.createElement("p");
+        sk.className = "sikkerhet" + (f.status === "blokkert" ? " roed" : "");
+        sk.textContent = "Cybersec: " + f.sikkerhet.merknad;
+        kort.append(sk);
       }
+
+      // Det tekniske ligger sammenfoldet: du trenger det når du bestemmer deg, ikke når
+      // du skummer lista.
+      const detaljer = [];
+      if (f.krever) detaljer.push(["Krever", f.krever]);
+      if (f.risiko) detaljer.push(["Risiko", f.risiko]);
+      if (detaljer.length || (f.kilder ?? []).length) {
+        const d = document.createElement("details");
+        const sum = document.createElement("summary");
+        sum.textContent = "Detaljer";
+        d.append(sum);
+        for (const [navn, verdi] of detaljer) {
+          const rad = document.createElement("p");
+          const b = document.createElement("b");
+          b.textContent = navn + ": ";
+          rad.append(b, document.createTextNode(verdi));
+          d.append(rad);
+        }
+        for (const kilde of f.kilder ?? []) {
+          const rad = document.createElement("p");
+          const a = document.createElement("a");
+          a.href = kilde;
+          a.textContent = kilde;
+          a.rel = "noreferrer";
+          rad.append(a);
+          d.append(rad);
+        }
+        kort.append(d);
+      }
+
       if (f.forhandsvisning) {
         const a = document.createElement("a");
         a.href = f.forhandsvisning;
-        a.textContent = "Se forhåndsvisning";
+        a.textContent = "Se forh\u00e5ndsvisning";
         a.className = "storrelse-hint";
         a.style.display = "inline-block";
-        a.style.marginBottom = "6px";
-        rad.append(a);
+        a.style.margin = "0 0 0.3rem";
+        kort.append(a);
       }
 
       if (f.status === "ny" || f.status === "blokkert") {
         const knapper = document.createElement("div");
-        knapper.style.display = "flex";
-        knapper.style.gap = "8px";
+        knapper.className = "forslag-knapper";
         if (f.status === "ny") knapper.append(lagKnapp("Godkjenn", () => avgjor(f.id, "godkjent")));
-        knapper.append(lagKnapp("Avvis", () => avgjor(f.id, "avvist")));
-        rad.append(knapper);
+        const avvis = lagKnapp("Avvis", () => avgjor(f.id, "avvist"));
+        avvis.classList.add("avvisknapp");
+        knapper.append(avvis);
+        kort.append(knapper);
       }
-      return rad;
+      return kort;
     }));
   }
 
