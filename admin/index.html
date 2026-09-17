@@ -190,6 +190,15 @@
   .forslag-knapper { display: flex; gap: 8px; margin-top: 0.7rem; }
   .forslag-knapper .lagreknapp { padding: 0.42rem 0.9rem; font-size: 0.8rem; }
   .avvisknapp { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .forslag.er-klar { border-left-color: #2f8f4f; }
+  .forslag .utrulling {
+    background: #f1f8f2; border: 1px solid #cfe6d5; border-radius: 5px;
+    padding: 0.5rem 0.6rem; font-size: 0.76rem; line-height: 1.5; color: #24603a;
+    margin: 0 0 0.2rem;
+  }
+  .forslag .utrulling code {
+    background: #e3f0e7; border-radius: 3px; padding: 1px 5px; font-size: 0.72rem;
+  }
   .avvisknapp:hover:not(:disabled) { border-color: #c02626; color: #c02626; }
   .parkering-tittel {
     font-size: 0.85rem;
@@ -417,7 +426,7 @@
 
     <div class="kort">
       <h2>Forslag fra agentmøtet</h2>
-      <p class="storrelse-hint">Arkitekten leter etter forbedringer, Cybersec går dem etter i sømmene, og Administratoren legger dem fram her. <b>Ingenting bygges før du har trykket Godkjenn.</b> Det er ikke en avtale med agentene - serveren nekter dem å sette godkjent-status uansett hva de finner på.</p>
+      <p class="storrelse-hint">Arkitekten leter etter forbedringer, Cybersec går dem etter i sømmene, og Administratoren legger dem fram her. <b>Ingenting bygges før du har trykket Godkjenn</b>, og ingenting legges ut før du kjører <code>verktoy\Slaa-sammen-og-rull-ut.cmd</code>. Det er ikke en avtale med agentene - serveren nekter dem å sette godkjent-status uansett hva de finner på.</p>
       <div id="forslagListe"><p class="endring-tom">Laster…</p></div>
     </div>
 
@@ -1163,14 +1172,18 @@
   };
   function tegnForslag(data) {
     const apne = (data.forslag ?? []).filter((f) => f.status !== "avvist" && f.status !== "ferdig");
-    if (!apne.length) {
+    // Ferdige ligger på en gren og venter på å bli lagt ut. De skal ses, ellers er det
+    // ingenting som sier fra at det står noe klart.
+    const klare = (data.forslag ?? []).filter((f) => f.status === "ferdig" && f.gren);
+    if (!apne.length && !klare.length) {
       forslagListeEl.innerHTML = '<p class="endring-tom">Ingen forslag akkurat n\u00e5. Arkitekten leter hver morgen klokka ni.</p>';
       return;
     }
-    forslagListeEl.replaceChildren(...apne.map((f) => {
+    forslagListeEl.replaceChildren(...apne.concat(klare).map((f) => {
       const kort = document.createElement("div");
       kort.className = "forslag";
       if (f.status === "blokkert") kort.classList.add("er-blokkert");
+      else if (f.status === "ferdig") kort.classList.add("er-klar");
       else if (MERKEKLASSE[f.status] === "igang") kort.classList.add("er-igang");
 
       const tittel = document.createElement("h3");
@@ -1231,6 +1244,23 @@
           d.append(rad);
         }
         kort.append(d);
+      }
+
+      // Et ferdig forslag er bygget og testet, men ligger fortsatt bare på en gren.
+      // Her står det hva som mangler - og hva du skal trykke på.
+      if (f.status === "ferdig") {
+        const u = document.createElement("p");
+        u.className = "utrulling";
+        u.append("Bygget og testet, men ligger fortsatt bare p\u00e5 grenen ");
+        const g = document.createElement("code");
+        g.textContent = f.gren;
+        u.append(g);
+        u.append(". Kj\u00f8r ");
+        const k = document.createElement("code");
+        k.textContent = "verktoy\\Slaa-sammen-og-rull-ut.cmd";
+        u.append(k);
+        u.append(" for \u00e5 legge den ut.");
+        kort.append(u);
       }
 
       if (f.forhandsvisning) {
