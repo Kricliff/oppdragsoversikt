@@ -49,12 +49,23 @@ export function bestemStatus(p) {
 // et utført oppdrag for en tidligere kunde er ingen selvmotsigelse, og telleverket for
 // "Utført i år" skal derfor ikke endre seg av dette.
 //
+// prospect er det andre unntaket (lagt til 2026-09-22): en FORESPØRSEL fra et prospekt er
+// nettopp det en forespørsel er - noen som ikke er kunde ennå spør om vi kan levere. Å
+// kreve at kunden allerede er kunde, gjør at forespørsler fra nye navn aldri når tavlen.
+// Bakgrunn: Christina Waale Salomaa sitt Brynhilds-oppdrag sto som forespørsel i Recman,
+// men kunden var merket prospekt, og oppdraget ble derfor luket bort her.
+//
+// Unntaket gjelder BARE forespørsler. Et prospekt med et AKTIVT prosjekt er fortsatt
+// salgsoppfølging og skal ikke på tavlen - og fordi feiring.js spør med "aktiv" fast,
+// kan denne regelen aldri utløse en "Nytt oppdrag"-feiring.
+//
 // Merk: funksjonen svarer kun på hva en KJENT type skal føre til. Hva som skjer når typen
 // mangler avgjør kallstedet selv - tavlen viser da heller for mye enn å skjule ekte
 // arbeid, mens feiringen heller lar være å feire enn å feire noe feil.
 export function kundeTypeSkalVises(kundeType, status) {
   if (kundeType === "customer") return true;
   if (kundeType === "formerCustomer" && status === "aktiv") return true;
+  if (kundeType === "prospect" && status === "paVent") return true;
   return false;
 }
 

@@ -4,7 +4,7 @@
 //
 // Versjonen bumpes når normaliseringslogikken i oppdrag.js endres, slik at gamle
 // cachede svar ikke fortsetter å bli servert etter en deploy.
-export const OPPDRAG_CACHE_VERSION = 30;
+export const OPPDRAG_CACHE_VERSION = 31;
 
 export function oppdragCacheKey() {
   return new Request(`https://oppdragsoversikt-cache.internal/oppdrag?v=${OPPDRAG_CACHE_VERSION}`);
