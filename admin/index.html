@@ -267,6 +267,41 @@
     justify-content: center;
   }
   .bursdag-slett:hover { border-color: #c02626; color: #c02626; }
+  .linkedin-rad {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .linkedin-rad:last-child { border-bottom: none; }
+  .linkedin-rad-tekst { flex: 1 1 auto; min-width: 0; }
+  .linkedin-rad-navn { font-weight: 600; }
+  /* Innleggsteksten kan være lang. Én linje her holder listen lesbar - hele teksten
+     ligger uansett bak lenken. */
+  .linkedin-rad-om {
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .linkedin-rad-tid { color: var(--text-muted); flex: none; font-size: 0.78rem; }
+  .linkedin-ny {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+  .linkedin-ny input {
+    font-family: "Poppins", sans-serif;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.6rem;
+    color: var(--text);
+    min-width: 0;
+  }
+  .linkedin-ny input:focus { outline: 2px solid var(--aktiv); outline-offset: -1px; }
   .bursdag-ny-rad {
     display: flex;
     gap: 0.5rem;
@@ -443,6 +478,21 @@
       <h3 class="parkering-tittel">Parker et oppdrag</h3>
       <input type="search" id="parkerSok" class="parker-sok" placeholder="Søk på rolle, kunde eller rådgiver…" autocomplete="off">
       <div id="parkerTreff" class="parker-treff"></div>
+    </div>
+
+    <div class="kort">
+      <h2>LinkedIn</h2>
+      <p class="storrelse-hint">De siste innleggene fra folk hos oss, vist i eget panel på tavlen. Limes inn manuelt: LinkedIn har ingen feed vi kan hente personlige innlegg fra - det offisielle APIet gir kun firmasidens egne innlegg, og skraping bryter vilkårene deres. Kopier lenken til innlegget, skriv hvem som skrev det, og legg gjerne ved en linje om hva det handler om. Innlegg eldre enn 30 dager faller av tavlen av seg selv.</p>
+      <div id="linkedinListe"><p class="endring-tom">Laster…</p></div>
+      <div class="linkedin-ny">
+        <input type="text" id="linkedinNavn" placeholder="Hvem skrev det?" maxlength="60">
+        <input type="url" id="linkedinLenke" placeholder="Lenke til innlegget (https://www.linkedin.com/…)">
+        <input type="text" id="linkedinTekst" placeholder="Hva handler det om? (valgfritt)" maxlength="280">
+        <div class="statusrad">
+          <span id="linkedinStatus"></span>
+          <button id="linkedinLeggTilKnapp" class="lagreknapp">Legg til</button>
+        </div>
+      </div>
     </div>
 
     <div class="kort">
@@ -881,6 +931,144 @@
   bursdagDatoEl.addEventListener("keydown", (e) => { if (e.key === "Enter") leggTilBursdag(); });
   lastBursdager();
 
+  // ---------- LinkedIn ----------
+  // Listen sendes i sin helhet ved hver endring, samme mønster som bursdager. Serveren
+  // er den som validerer lenken og setter tidspunktet - her holder vi det enkelt.
+  const linkedinListeEl = document.getElementById("linkedinListe");
+  const linkedinNavnEl = document.getElementById("linkedinNavn");
+  const linkedinLenkeEl = document.getElementById("linkedinLenke");
+  const linkedinTekstEl = document.getElementById("linkedinTekst");
+  const linkedinStatusEl = document.getElementById("linkedinStatus");
+  const linkedinLeggTilKnapp = document.getElementById("linkedinLeggTilKnapp");
+  let linkedinInnlegg = [];
+
+  function renderLinkedin() {
+    if (linkedinInnlegg.length === 0) {
+      linkedinListeEl.innerHTML = '<p class="endring-tom">Ingen innlegg lagt inn ennå.</p>';
+      return;
+    }
+
+    linkedinListeEl.replaceChildren(
+      ...linkedinInnlegg.map((i) => {
+        const rad = document.createElement("div");
+        rad.className = "linkedin-rad";
+
+        const midt = document.createElement("div");
+        midt.className = "linkedin-rad-tekst";
+
+        // Navnet er lenken - da er det ett klikk til innlegget, uten en egen kolonne.
+        const navn = document.createElement("a");
+        navn.className = "linkedin-rad-navn";
+        navn.href = i.lenke;
+        navn.target = "_blank";
+        navn.rel = "noopener noreferrer";
+        navn.textContent = i.navn;
+        midt.appendChild(navn);
+
+        if (i.tekst) {
+          const om = document.createElement("div");
+          om.className = "linkedin-rad-om";
+          om.textContent = i.tekst;
+          midt.appendChild(om);
+        }
+        rad.appendChild(midt);
+
+        const tid = document.createElement("span");
+        tid.className = "linkedin-rad-tid";
+        tid.textContent = new Date(i.lagtInn).toLocaleDateString("no-NO", { day: "numeric", month: "short" });
+        rad.appendChild(tid);
+
+        const slett = document.createElement("button");
+        slett.type = "button";
+        slett.className = "bursdag-slett";
+        slett.textContent = "×";
+        slett.setAttribute("aria-label", "Fjern innlegget fra " + i.navn);
+        slett.addEventListener("click", () => fjernLinkedin(i));
+        rad.appendChild(slett);
+
+        return rad;
+      })
+    );
+  }
+
+  async function lastLinkedin() {
+    try {
+      const res = await fetch("/api/linkedin");
+      const data = await res.json();
+      linkedinInnlegg = Array.isArray(data.innlegg) ? data.innlegg : [];
+      renderLinkedin();
+    } catch (err) {
+      linkedinListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet LinkedIn-innlegg.</p>';
+      console.warn(err);
+    }
+  }
+
+  // Serveren er fasit: den avviser en lenke som ikke er LinkedIn, og svarer med listen
+  // slik den faktisk ble lagret. Vi tegner det svaret, ikke vår egen antagelse.
+  //
+  // Merk res.ok: uten den ville et avvist skrivekall (feil nøkkel, serverfeil) blitt
+  // meldt som "Lagt til.", og raden blitt stående i listen som om den var lagret -
+  // helt til noen lastet siden på nytt og oppdaget at innlegget aldri kom fram.
+  async function lagreLinkedin(melding) {
+    const foer = linkedinInnlegg.length;
+    try {
+      const res = await fetch("/api/linkedin", {
+        method: "POST",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ innlegg: linkedinInnlegg })
+      });
+      if (!res.ok) {
+        linkedinStatusEl.textContent = "Serveren avviste lagringen (" + res.status + "). Ingenting er lagret.";
+        await lastLinkedin();
+        return;
+      }
+      const data = await res.json();
+      linkedinInnlegg = Array.isArray(data.innlegg) ? data.innlegg : linkedinInnlegg;
+      renderLinkedin();
+      if (!melding) return;
+      // Serveren beholdt færre rader enn vi sendte: lenken var ikke en LinkedIn-lenke.
+      linkedinStatusEl.textContent = linkedinInnlegg.length < foer
+        ? "Lenken ble ikke godtatt - må være en LinkedIn-lenke."
+        : "Lagt til.";
+      if (linkedinInnlegg.length >= foer) {
+        setTimeout(() => { linkedinStatusEl.textContent = ""; }, 3000);
+      }
+    } catch (err) {
+      linkedinStatusEl.textContent = "Fikk ikke lagret - sjekk nettforbindelsen.";
+      await lastLinkedin();
+      console.warn("Fikk ikke lagret LinkedIn-innlegg:", err);
+    }
+  }
+
+  function leggTilLinkedin() {
+    const navn = linkedinNavnEl.value.trim();
+    const lenke = linkedinLenkeEl.value.trim();
+    if (!navn || !lenke) {
+      linkedinStatusEl.textContent = "Både navn og lenke må fylles ut.";
+      return;
+    }
+
+    linkedinInnlegg = [{ navn, lenke, tekst: linkedinTekstEl.value.trim(), kilde: "manuell" }, ...linkedinInnlegg];
+    linkedinNavnEl.value = "";
+    linkedinLenkeEl.value = "";
+    linkedinTekstEl.value = "";
+    linkedinNavnEl.focus();
+    renderLinkedin();
+    lagreLinkedin(true);
+  }
+
+  function fjernLinkedin(mal) {
+    linkedinInnlegg = linkedinInnlegg.filter((i) => i !== mal);
+    renderLinkedin();
+    lagreLinkedin(false);
+  }
+
+  linkedinLeggTilKnapp.addEventListener("click", leggTilLinkedin);
+  for (const el of [linkedinNavnEl, linkedinLenkeEl, linkedinTekstEl]) {
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") leggTilLinkedin(); });
+  }
+  lastLinkedin();
+
   const skjermerListeEl = document.getElementById("skjermerListe");
 
   function relativTid(ms) {
@@ -987,7 +1175,7 @@
 
   const innstillingerListeEl = document.getElementById("innstillingerListe");
   const statlinjeListeEl = document.getElementById("statlinjeListe");
-  const BRYTER_NAVN = { kundenytt: "Kundenytt", feiring: "Feiring", bursdager: "Bursdager", teamskanal: "Teamskanal" };
+  const BRYTER_NAVN = { kundenytt: "Kundenytt", linkedin: "LinkedIn", feiring: "Feiring", bursdager: "Bursdager", teamskanal: "Teamskanal" };
   const STAT_NAVN = {
     statAktive: "Aktive Prosjekter",
     statUtfort: "Utført i år",

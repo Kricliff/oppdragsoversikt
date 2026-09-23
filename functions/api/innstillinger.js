@@ -11,6 +11,7 @@ const KV_KEY = "innstillinger";
 // renderStats(), som må ha nøyaktig samme feltnavn.
 const STANDARD = {
   kundenytt: true,
+  linkedin: true,
   feiring: true,
   bursdager: true,
   teamskanal: true,

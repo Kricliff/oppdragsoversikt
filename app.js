@@ -21,7 +21,7 @@ const BUSS_TIKK_MS = 15 * 1000; // tikker ned "om X min" mellom hver reell henti
 const PANEL_BYTT_MS = 6 * 1000; // veksler mellom visningene i samme panel
 const PANEL_REKKEFOLGE = ["buss", "togOslo", "togDrammen", "trikk", "tbaneVest", "tbaneOst"];
 const DEPLOY_SJEKK_MS = 2 * 60 * 1000; // skjermen kjører ubetjent - må selv oppdage nye deploys
-const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js", "/bursdager.js", "/teamskanal.js"];
+const DEPLOY_SJEKK_FILER = ["/index.html", "/style.css", "/app.js", "/busstider.js", "/recman-adapter.js", "/telling.js", "/vaer.js", "/feiring.js", "/nrk.js", "/kundenytt.js", "/linkedin.js", "/bursdager.js", "/teamskanal.js"];
 const TELLING_REFRESH_MS = 5 * 60 * 1000; // matcher cache-tiden i functions/api/telling.js
 const VAER_REFRESH_MS = 30 * 60 * 1000; // matcher cache-tiden i functions/api/vaer.js
 const FEIRING_REFRESH_MS = 60 * 1000; // hent fasiten fra serveren hvert minutt
@@ -29,6 +29,8 @@ const FEIRING_TIKK_MS = 60 * 1000; // tikker ned lokalt mellom hver reelle henti
 const NRK_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/nrk.js
 const KUNDENYTT_REFRESH_MS = 10 * 60 * 1000; // matcher cache-tiden i functions/api/kundenytt.js
 const KUNDENYTT_KAROUSELL_MS = 10 * 1000; // bytter til neste sak hvert 10. sekund
+const LINKEDIN_REFRESH_MS = 5 * 60 * 1000; // billig KV-lesing, og innlegg limes inn nar som helst
+const LINKEDIN_KAROUSELL_MS = 12 * 1000; // ett innlegg av gangen, litt lengre enn kundenytt - det er mer tekst a lese
 const TEAMSKANAL_REFRESH_MS = 2 * 60 * 1000; // billig KV-lesing - kan friskes opp ofte
 const BURSDAG_REFRESH_MS = 10 * 60 * 1000; // bursdagslisten endrer seg sjelden
 const TILBUD_REFRESH_MS = 20 * 60 * 1000; // matcher cache-tiden i functions/api/tilbud.js
@@ -44,6 +46,7 @@ const BILDE_SJEKK_MS = 20 * 1000; // hvor ofte skjermen sjekker om admin har lag
 let alleOppdrag = [];
 let innstillinger = {
   kundenytt: true,
+  linkedin: true,
   feiring: true,
   bursdager: true,
   teamskanal: true,
@@ -69,6 +72,9 @@ let kundenytt = []; // omtale av kunder i nyhetene, se lastKundenytt
 let kundenyttIndeks = 0; // hvilken sak som vises nå i karusellen
 let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, vises i panel-header
 let sisteKundenyttOppdatert = null;
+let linkedinInnlegg = []; // siste LinkedIn-innlegg fra folk hos oss, se lastLinkedin
+let linkedinIndeks = 0; // hvilket innlegg som vises na i karusellen
+let sisteLinkedinOppdatert = null;
 let teamskanal = []; // siste meldinger fra Teams-gruppechatten, se lastTeamskanal
 let sisteTeamskanalOppdatert = null;
 let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
@@ -113,6 +119,9 @@ const nyheterTekst2El = document.getElementById("nyheterTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
+const linkedinPanelEl = document.getElementById("linkedinPanel");
+const linkedinHeaderEl = document.getElementById("linkedinHeader");
+const linkedinListeEl = document.getElementById("linkedinListe");
 const teamskanalPanelEl = document.getElementById("teamskanalPanel");
 const teamskanalHeaderEl = document.getElementById("teamskanalHeader");
 const teamskanalListeEl = document.getElementById("teamskanalListe");
@@ -167,6 +176,11 @@ async function init() {
     lastKundenytt();
     setInterval(lastKundenytt, KUNDENYTT_REFRESH_MS);
     setInterval(rullKundenytt, KUNDENYTT_KAROUSELL_MS);
+  }
+  if (innstillinger.linkedin) {
+    lastLinkedin();
+    setInterval(lastLinkedin, LINKEDIN_REFRESH_MS);
+    setInterval(rullLinkedin, LINKEDIN_KAROUSELL_MS);
   }
   if (innstillinger.teamskanal) {
     lastTeamskanal();
@@ -634,6 +648,76 @@ function renderKundenytt() {
   }
 
   kundenyttListeEl.replaceChildren(rad);
+}
+
+// Siste LinkedIn-innlegg fra folk hos oss (functions/api/linkedin.js). Limes inn
+// manuelt på /admin - LinkedIn har ingen feed vi kan hente personlige innlegg fra,
+// se kommentaren øverst i den Functionen. Samme karusell som kundenytt: spalten er
+// smal, og ett innlegg av gangen er lettere å lese på avstand enn tre avkortede.
+async function lastLinkedin() {
+  linkedinInnlegg = await hentLinkedin();
+  if (linkedinIndeks >= linkedinInnlegg.length) linkedinIndeks = 0;
+  sisteLinkedinOppdatert = Date.now();
+  renderLinkedin();
+}
+
+function rullLinkedin() {
+  if (linkedinInnlegg.length <= 1) return; // ingenting å bytte til
+  linkedinListeEl.classList.add("bytter");
+  setTimeout(() => {
+    linkedinIndeks = (linkedinIndeks + 1) % linkedinInnlegg.length;
+    renderLinkedin();
+    linkedinListeEl.classList.remove("bytter");
+  }, 300);
+}
+
+function renderLinkedin() {
+  if (linkedinInnlegg.length === 0) {
+    linkedinPanelEl.classList.remove("vis");
+    setTimeout(() => {
+      if (linkedinInnlegg.length === 0) linkedinPanelEl.hidden = true;
+    }, 500);
+    return;
+  }
+
+  linkedinPanelEl.hidden = false;
+  requestAnimationFrame(() => linkedinPanelEl.classList.add("vis"));
+  settPanelHeader(linkedinHeaderEl, "💼 LinkedIn", sisteLinkedinOppdatert);
+
+  const innlegg = linkedinInnlegg[linkedinIndeks];
+  const rad = document.createElement("div");
+  rad.className = "linkedin-rad";
+
+  const navn = document.createElement("div");
+  navn.className = "linkedin-navn";
+  navn.textContent = innlegg.navn;
+  rad.appendChild(navn);
+
+  // Uten tekst har vi ingenting å vise fra selve innlegget - da sier vi det rett ut
+  // heller enn å la raden stå tom og se ut som en feil.
+  const tekst = document.createElement("div");
+  tekst.className = "linkedin-tekst";
+  tekst.textContent = innlegg.tekst || "La ut et innlegg";
+  rad.appendChild(tekst);
+
+  const tid = document.createElement("div");
+  tid.className = "linkedin-tid";
+  tid.textContent = linkedinTidTekst(innlegg.lagtInn);
+  rad.appendChild(tid);
+
+  linkedinListeEl.replaceChildren(rad);
+}
+
+// Tavlen henger på veggen og leses på avstand - «i går» sier mer enn en dato.
+function linkedinTidTekst(iso) {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  const dager = Math.floor((Date.now() - t) / 86400000);
+  if (dager <= 0) return "i dag";
+  if (dager === 1) return "i går";
+  if (dager < 7) return dager + " dager siden";
+  const uker = Math.floor(dager / 7);
+  return uker === 1 ? "1 uke siden" : uker + " uker siden";
 }
 
 // Dato foran klokkeslett - meldingene kan være flere dager gamle (feires ikke
