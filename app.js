@@ -1357,6 +1357,34 @@ function tegnStortLinkedin(kort) {
 
   kort.appendChild(kropp);
   if (innlegg.harBilde) hentLinkedinBilde(innlegg, kort);
+  tilpassLkort(kort);
+}
+
+// Cellen er like høy som raden, og raden varierer mye: rundt 400 px på en 1080p-vegg,
+// rundt 100 i et lite vindu. Derfor tilpasses innholdet etter at det er tegnet, i stedet
+// for å stole på faste verdier:
+//
+//   1. teksten kortes ned linje for linje til den faktisk får plass - ellers ble siste
+//      linje klippet midt over av kortets egen overflow: hidden
+//   2. blir det bare en stripe igjen til bildet, fjernes det - en centimeter bilde med
+//      en strek over sier ingenting, og teksten er viktigere
+const LKORT_MIN_BILDE = 60;
+function tilpassLkort(kort) {
+  requestAnimationFrame(() => {
+    if (!kort.isConnected) return;
+    const kropp = kort.querySelector(".lkort-kropp");
+    const tekst = kort.querySelector(".lkort-tekst");
+    if (!kropp || !tekst) return;
+
+    const plass = () => kort.clientHeight - kropp.offsetHeight;
+    for (let linjer = 3; linjer >= 1; linjer--) {
+      tekst.style.webkitLineClamp = String(linjer);
+      if (plass() >= 0) break;
+    }
+
+    const bilde = kort.querySelector(".lkort-bilde");
+    if (bilde && plass() < LKORT_MIN_BILDE) bilde.remove();
+  });
 }
 
 // Bildet hentes for seg, og bare for det innlegget som faktisk vises. Én gang per
@@ -1382,7 +1410,10 @@ async function hentLinkedinBilde(innlegg, kort) {
   bilde.className = "lkort-bilde";
   bilde.alt = "";
   bilde.src = kilde;
-  kort.insertBefore(bilde, kort.firstChild);
+  kort.appendChild(bilde);
+  // Høyden er først kjent når bildet faktisk er lastet.
+  bilde.addEventListener("load", () => tilpassLkort(kort));
+  tilpassLkort(kort);
 }
 
 function tetthetForAntall(antallRadgivere) {
