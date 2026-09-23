@@ -312,6 +312,18 @@
   }
   .linkedin-bildevelger:hover { border-color: var(--aktiv); color: var(--text); }
   .linkedin-bildevelger input { display: none; }
+  .linkedin-radknapp {
+    flex: none;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text-muted);
+    font-family: "Poppins", sans-serif;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+  }
+  .linkedin-radknapp:hover { border-color: var(--aktiv); color: var(--text); }
+  .linkedin-radknapp:disabled { cursor: default; opacity: 0.6; }
   .linkedin-miniatyr {
     flex: none;
     width: 40px;
@@ -1052,6 +1064,27 @@
         tid.textContent = new Date(i.lagtInn).toLocaleDateString("no-NO", { day: "numeric", month: "short" });
         rad.appendChild(tid);
 
+        // Bildet kan settes på et innlegg som allerede ligger der. Uten dette måtte man
+        // slette og legge inn på nytt bare for å få med et bilde i ettertid.
+        const bildeknapp = document.createElement("button");
+        bildeknapp.type = "button";
+        bildeknapp.className = "linkedin-radknapp";
+        bildeknapp.textContent = i.harBilde ? "Bytt" : "Bilde";
+        bildeknapp.addEventListener("click", () => velgBildeTil(i, bildeknapp));
+        rad.appendChild(bildeknapp);
+
+        if (i.harBilde) {
+          const fjern = document.createElement("button");
+          fjern.type = "button";
+          fjern.className = "linkedin-radknapp";
+          fjern.textContent = "Fjern bilde";
+          fjern.addEventListener("click", () => {
+            i.bilde = null;
+            lagreLinkedin(false);
+          });
+          rad.appendChild(fjern);
+        }
+
         const slett = document.createElement("button");
         slett.type = "button";
         slett.className = "bursdag-slett";
@@ -1137,6 +1170,33 @@
     linkedinLenkeEl.focus();
     renderLinkedin();
     lagreLinkedin(true);
+  }
+
+  // Én filvelger gjenbrukes for alle radene - den lages ved behov og kastes etterpå,
+  // så det ikke ligger et skjult felt per innlegg i DOM-en.
+  function velgBildeTil(innlegg, knapp) {
+    const velger = document.createElement("input");
+    velger.type = "file";
+    velger.accept = "image/*";
+    velger.addEventListener("change", async () => {
+      const fil = velger.files[0];
+      if (!fil) return;
+      const forrigeTekst = knapp.textContent;
+      knapp.textContent = "…";
+      knapp.disabled = true;
+      try {
+        innlegg.bilde = await krympBilde(fil);
+        await lagreLinkedin(false);
+        linkedinStatusEl.textContent = "Bildet er lagret.";
+        setTimeout(() => { linkedinStatusEl.textContent = ""; }, 3000);
+      } catch (err) {
+        knapp.textContent = forrigeTekst;
+        knapp.disabled = false;
+        linkedinStatusEl.textContent = "Fikk ikke lest bildet - prøv et annet.";
+        console.warn(err);
+      }
+    });
+    velger.click();
   }
 
   function fjernLinkedin(mal) {
