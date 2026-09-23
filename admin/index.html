@@ -482,10 +482,10 @@
 
     <div class="kort">
       <h2>LinkedIn</h2>
-      <p class="storrelse-hint">De siste innleggene fra folk hos oss, vist i eget panel på tavlen. Limes inn manuelt: LinkedIn har ingen feed vi kan hente personlige innlegg fra - det offisielle APIet gir kun firmasidens egne innlegg, og skraping bryter vilkårene deres. Kopier lenken til innlegget, skriv hvem som skrev det, og legg gjerne ved en linje om hva det handler om. Innlegg eldre enn 30 dager faller av tavlen av seg selv.</p>
+      <p class="storrelse-hint">De siste innleggene fra folk hos oss, vist i eget panel på tavlen. Limes inn manuelt: LinkedIn har ingen feed vi kan hente personlige innlegg fra - det offisielle APIet gir kun firmasidens egne innlegg, og skraping bryter vilkårene deres. Lim inn lenken til innlegget - navnet hentes fra lenken selv. Legg gjerne ved en linje om hva det handler om, og overstyr navnet hvis det ble feil. Innlegg eldre enn 30 dager faller av tavlen av seg selv.</p>
       <div id="linkedinListe"><p class="endring-tom">Laster…</p></div>
       <div class="linkedin-ny">
-        <input type="text" id="linkedinNavn" placeholder="Hvem skrev det?" maxlength="60">
+        <input type="text" id="linkedinNavn" placeholder="Hvem skrev det? (hentes fra lenken)" maxlength="60">
         <input type="url" id="linkedinLenke" placeholder="Lenke til innlegget (https://www.linkedin.com/…)">
         <input type="text" id="linkedinTekst" placeholder="Hva handler det om? (valgfritt)" maxlength="280">
         <div class="statusrad">
@@ -1026,13 +1026,15 @@
       linkedinInnlegg = Array.isArray(data.innlegg) ? data.innlegg : linkedinInnlegg;
       renderLinkedin();
       if (!melding) return;
-      // Serveren beholdt færre rader enn vi sendte: lenken var ikke en LinkedIn-lenke.
-      linkedinStatusEl.textContent = linkedinInnlegg.length < foer
-        ? "Lenken ble ikke godtatt - må være en LinkedIn-lenke."
-        : "Lagt til.";
-      if (linkedinInnlegg.length >= foer) {
-        setTimeout(() => { linkedinStatusEl.textContent = ""; }, 3000);
+      // Serveren sier selv hvorfor den ikke tok imot - det er mer nyttig enn at vi gjetter
+      // ut fra at listen ble kortere.
+      const grunn = Array.isArray(data.avvist) && data.avvist.length ? data.avvist[0].grunn : null;
+      if (grunn) {
+        linkedinStatusEl.textContent = grunn;
+        return;
       }
+      linkedinStatusEl.textContent = linkedinInnlegg.length > foer - 1 ? "Lagt til." : "Ingen endring.";
+      setTimeout(() => { linkedinStatusEl.textContent = ""; }, 3000);
     } catch (err) {
       linkedinStatusEl.textContent = "Fikk ikke lagret - sjekk nettforbindelsen.";
       await lastLinkedin();
@@ -1040,11 +1042,14 @@
     }
   }
 
+  // Lenken er det eneste som kreves. Navnet står som regel i lenken, og serveren utleder
+  // det - navnefeltet er en overstyring for de lenkene som ikke røper noe navn.
   function leggTilLinkedin() {
     const navn = linkedinNavnEl.value.trim();
     const lenke = linkedinLenkeEl.value.trim();
-    if (!navn || !lenke) {
-      linkedinStatusEl.textContent = "Både navn og lenke må fylles ut.";
+    if (!lenke) {
+      linkedinStatusEl.textContent = "Lim inn lenken til innlegget.";
+      linkedinLenkeEl.focus();
       return;
     }
 

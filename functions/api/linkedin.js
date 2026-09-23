@@ -41,14 +41,25 @@ export async function onRequestPost(context) {
 
   const raa = Array.isArray(body?.innlegg) ? body.innlegg : [];
   const renset = [];
+  const avvist = [];
   const sett = new Set();
   for (const i of raa) {
     const lenke = normaliserLenke(i?.lenke);
     // En tavle på veggen skal ikke kunne vise en vilkårlig lenke noen limte inn i feil
     // felt. Er det ikke LinkedIn, er det enten en feil eller noe vi ikke vil ha der.
-    if (!lenke || sett.has(lenke)) continue;
-    const navn = String(i?.navn ?? "").trim().slice(0, 60);
-    if (!navn) continue;
+    if (!lenke) {
+      avvist.push({ lenke: String(i?.lenke ?? ""), grunn: "Må være en https-lenke til linkedin.com." });
+      continue;
+    }
+    if (sett.has(lenke)) continue;
+    // Navnet står som regel i lenken selv. Å kreve at det skrives inn på nytt er unødig
+    // arbeid for den som bare vil lime inn og gå videre - så vi utleder det, og lar
+    // feltet være en overstyring for de tilfellene der lenken ikke røper noe navn.
+    const navn = String(i?.navn ?? "").trim().slice(0, 60) || utledNavn(lenke);
+    if (!navn) {
+      avvist.push({ lenke: lenke, grunn: "Fant ikke navnet i lenken - skriv hvem som skrev det." });
+      continue;
+    }
     sett.add(lenke);
     renset.push({
       navn,
@@ -61,7 +72,7 @@ export async function onRequestPost(context) {
 
   const liste = sortert(renset).slice(0, MAKS_ANTALL);
   await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(liste));
-  return json({ success: true, innlegg: liste });
+  return json({ success: true, innlegg: liste, avvist });
 }
 
 async function les(context) {
@@ -93,6 +104,32 @@ function normaliserLenke(raa) {
   const vert = url.hostname.toLowerCase();
   if (vert !== "linkedin.com" && !vert.endsWith(".linkedin.com")) return null;
   return "https://" + vert + url.pathname.replace(/\/+$/, "");
+}
+
+// LinkedIn legger forfatteren inn i lenken: /posts/fornavn-etternavn_tema-activity-…,
+// /in/fornavn-etternavn og /company/navn. Det som ikke røper noe navn er /feed/update/…
+// - da må det skrives inn for hånd.
+//
+// Merk at LinkedIn translittererer norske tegn i slugen (Bjørn blir bjorn), så et utledet
+// navn kan bli nesten riktig. Derfor overstyrer navnefeltet alltid det vi utleder.
+function utledNavn(lenke) {
+  const deler = new URL(lenke).pathname.split("/").filter(Boolean);
+  let slug = null;
+  if (deler[0] === "posts" && deler[1]) slug = deler[1].split("_")[0];
+  else if ((deler[0] === "in" || deler[0] === "company" || deler[0] === "school") && deler[1]) slug = deler[1];
+  if (!slug) return "";
+
+  const ord = slug.split("-").filter(Boolean);
+  // LinkedIn henger på en unik hale når flere har samme navn (…-1a2b3c4). Den er ikke
+  // en del av navnet, og kjennes på at den blander bokstaver og tall.
+  if (ord.length > 1) {
+    const siste = ord[ord.length - 1];
+    if (/\d/.test(siste) && /[a-z]/i.test(siste)) ord.pop();
+  }
+  return ord
+    .map((o) => o.charAt(0).toUpperCase() + o.slice(1))
+    .join(" ")
+    .slice(0, 60);
 }
 
 function gyldigTid(raa) {
