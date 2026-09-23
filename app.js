@@ -677,6 +677,12 @@ function renderLinkedin() {
     setTimeout(() => {
       if (linkedinInnlegg.length === 0) linkedinPanelEl.hidden = true;
     }, 500);
+    // Storkortet må bort samtidig. Uten dette ble det siste innlegget stående i
+    // rutenettet etter at det var slettet eller blitt for gammelt - tavlen ville vist
+    // noe som ikke lenger fantes.
+    const kort = lanesEl.querySelector(".lkort");
+    if (kort) kort.remove();
+    haddeLinkedin = false;
     return;
   }
 
@@ -706,6 +712,27 @@ function renderLinkedin() {
   rad.appendChild(tid);
 
   linkedinListeEl.replaceChildren(rad);
+  oppdaterStortLinkedin();
+}
+
+// Storkortet i rutenettet viser samme innlegg som panelet. Finnes det ikke ennå - fordi
+// tavlen ble tegnet før innleggene var hentet - tegnes rutenettet på nytt, slik at
+// tomrommet etter siste rådgiver faktisk blir fylt.
+let haddeLinkedin = false;
+function oppdaterStortLinkedin() {
+  const kort = lanesEl.querySelector(".lkort");
+  if (!kort) {
+    // Bare når det gikk fra ingen innlegg til noen. Uten den grensen ville en tavle
+    // uten ledig celle tegnet hele rutenettet på nytt hvert 12. sekund, for et kort
+    // det uansett ikke er plass til.
+    const nytt = linkedinInnlegg.length > 0;
+    if (nytt && !haddeLinkedin && alleOppdrag.length) { haddeLinkedin = true; render(); return; }
+    haddeLinkedin = nytt;
+    return;
+  }
+  haddeLinkedin = true;
+  kort.replaceChildren();
+  tegnStortLinkedin(kort);
 }
 
 // Tavlen henger på veggen og leses på avstand - «i går» sier mer enn en dato.
@@ -1278,7 +1305,84 @@ function renderLanes(liste) {
     lanesEl.appendChild(lane);
   });
 
-  lanesEl.style.gridTemplateColumns = `repeat(${balanserKolonner(grupper.length, tetthet)}, 1fr)`;
+  const kolonner = balanserKolonner(grupper.length, tetthet);
+  lanesEl.style.gridTemplateColumns = `repeat(${kolonner}, 1fr)`;
+  fyllTomrom(grupper.length, kolonner);
+}
+
+// Siste rad går sjelden opp: elleve rådgivere på tre kolonner gir to tomme celler etter
+// den siste. Der står det nå et LinkedIn-innlegg, i full kortbredde, med bilde hvis det
+// er lagt inn. Er raden full, er det ingen plass, og da vises ingenting - kortet skal
+// aldri skyve en rådgiver ned på en ny rad.
+function fyllTomrom(antallLaner, kolonner) {
+  const ledige = (kolonner - (antallLaner % kolonner)) % kolonner;
+  if (!ledige || !innstillinger.linkedin || linkedinInnlegg.length === 0) return;
+
+  const kort = document.createElement("section");
+  kort.className = "lkort";
+  kort.style.gridColumn = `span ${ledige}`;
+  lanesEl.appendChild(kort);
+  tegnStortLinkedin(kort);
+}
+
+// Viser samme innlegg som panelet i sidespalten, så de to aldri motsier hverandre.
+function tegnStortLinkedin(kort) {
+  const innlegg = linkedinInnlegg[linkedinIndeks];
+  if (!innlegg) return;
+
+  const kropp = document.createElement("div");
+  kropp.className = "lkort-kropp";
+
+  // Merket står inne i teksten, ikke som en egen topplinje: cellen er lav, og en linje
+  // til på toppen gikk direkte ut over plassen navnet og teksten trenger.
+  const merke = document.createElement("div");
+  merke.className = "lkort-merke";
+  merke.textContent = "💼 LinkedIn";
+  kropp.appendChild(merke);
+
+  const navn = document.createElement("div");
+  navn.className = "lkort-navn";
+  navn.textContent = innlegg.navn;
+  kropp.appendChild(navn);
+
+  const tekst = document.createElement("div");
+  tekst.className = "lkort-tekst";
+  tekst.textContent = innlegg.tekst || "La ut et innlegg";
+  kropp.appendChild(tekst);
+
+  const tid = document.createElement("div");
+  tid.className = "lkort-tid";
+  tid.textContent = linkedinTidTekst(innlegg.lagtInn);
+  kropp.appendChild(tid);
+
+  kort.appendChild(kropp);
+  if (innlegg.harBilde) hentLinkedinBilde(innlegg, kort);
+}
+
+// Bildet hentes for seg, og bare for det innlegget som faktisk vises. Én gang per
+// innlegg - deretter ligger det i minnet, så karusellen ikke spør på nytt hver runde.
+const linkedinBilder = new Map();
+async function hentLinkedinBilde(innlegg, kort) {
+  const id = innlegg.bildeId;
+  if (!linkedinBilder.has(id)) {
+    try {
+      const res = await fetch("/api/linkedin?bilde=" + encodeURIComponent(id));
+      const data = await res.json();
+      linkedinBilder.set(id, data.bilde || null);
+    } catch (err) {
+      linkedinBilder.set(id, null);
+      console.warn("Fikk ikke hentet LinkedIn-bildet:", err);
+    }
+  }
+  const kilde = linkedinBilder.get(id);
+  // Kortet kan ha blitt tegnet på nytt mens bildet ble hentet. Da hører bildet til et
+  // annet innlegg, og skal ikke inn.
+  if (!kilde || !kort.isConnected) return;
+  const bilde = document.createElement("img");
+  bilde.className = "lkort-bilde";
+  bilde.alt = "";
+  bilde.src = kilde;
+  kort.insertBefore(bilde, kort.firstChild);
 }
 
 function tetthetForAntall(antallRadgivere) {

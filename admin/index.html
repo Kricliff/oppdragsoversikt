@@ -302,6 +302,23 @@
     min-width: 0;
   }
   .linkedin-ny input:focus { outline: 2px solid var(--aktiv); outline-offset: -1px; }
+  .linkedin-bildevelger {
+    display: block;
+    border: 1px dashed var(--border);
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .linkedin-bildevelger:hover { border-color: var(--aktiv); color: var(--text); }
+  .linkedin-bildevelger input { display: none; }
+  .linkedin-miniatyr {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+  }
   .bursdag-ny-rad {
     display: flex;
     gap: 0.5rem;
@@ -488,6 +505,10 @@
         <input type="text" id="linkedinNavn" placeholder="Hvem skrev det? (hentes fra lenken)" maxlength="60">
         <input type="url" id="linkedinLenke" placeholder="Lenke til innlegget (https://www.linkedin.com/…)">
         <input type="text" id="linkedinTekst" placeholder="Hva handler det om? (valgfritt)" maxlength="280">
+        <label class="linkedin-bildevelger">
+          <span id="linkedinBildeNavn">Bilde fra innlegget (valgfritt)</span>
+          <input type="file" id="linkedinBilde" accept="image/*">
+        </label>
         <div class="statusrad">
           <span id="linkedinStatus"></span>
           <button id="linkedinLeggTilKnapp" class="lagreknapp">Legg til</button>
@@ -940,7 +961,48 @@
   const linkedinTekstEl = document.getElementById("linkedinTekst");
   const linkedinStatusEl = document.getElementById("linkedinStatus");
   const linkedinLeggTilKnapp = document.getElementById("linkedinLeggTilKnapp");
+  const linkedinBildeEl = document.getElementById("linkedinBilde");
+  const linkedinBildeNavnEl = document.getElementById("linkedinBildeNavn");
   let linkedinInnlegg = [];
+  let valgtBilde = null;
+
+  // Bildet krympes i nettleseren før det sendes. Et telefonbilde er lett 4-5 MB, og
+  // hverken KV eller en veggskjerm har noe å hente på mer enn 900 piksler bredde.
+  function krympBilde(fil) {
+    return new Promise((løs, avvis) => {
+      const leser = new FileReader();
+      leser.onerror = () => avvis(new Error("kunne ikke lese fila"));
+      leser.onload = () => {
+        const bilde = new Image();
+        bilde.onerror = () => avvis(new Error("kunne ikke tolke bildet"));
+        bilde.onload = () => {
+          const maks = 900;
+          const skala = Math.min(1, maks / Math.max(bilde.width, bilde.height));
+          const lerret = document.createElement("canvas");
+          lerret.width = Math.round(bilde.width * skala);
+          lerret.height = Math.round(bilde.height * skala);
+          lerret.getContext("2d").drawImage(bilde, 0, 0, lerret.width, lerret.height);
+          løs(lerret.toDataURL("image/jpeg", 0.82));
+        };
+        bilde.src = leser.result;
+      };
+      leser.readAsDataURL(fil);
+    });
+  }
+
+  linkedinBildeEl.addEventListener("change", async () => {
+    const fil = linkedinBildeEl.files[0];
+    if (!fil) { valgtBilde = null; linkedinBildeNavnEl.textContent = "Bilde fra innlegget (valgfritt)"; return; }
+    linkedinBildeNavnEl.textContent = "Klargjør bildet…";
+    try {
+      valgtBilde = await krympBilde(fil);
+      linkedinBildeNavnEl.textContent = fil.name + " (" + Math.round(valgtBilde.length / 1024) + " kB)";
+    } catch (err) {
+      valgtBilde = null;
+      linkedinBildeNavnEl.textContent = "Fikk ikke lest bildet - prøv et annet.";
+      console.warn(err);
+    }
+  });
 
   function renderLinkedin() {
     if (linkedinInnlegg.length === 0) {
@@ -952,6 +1014,18 @@
       ...linkedinInnlegg.map((i) => {
         const rad = document.createElement("div");
         rad.className = "linkedin-rad";
+
+        if (i.harBilde) {
+          const mini = document.createElement("img");
+          mini.className = "linkedin-miniatyr";
+          mini.alt = "";
+          // Endepunktet svarer med JSON som inneholder data-URL-en, ikke med selve bildet,
+          // så src kan ikke peke rett på det.
+          fetch("/api/linkedin?bilde=" + encodeURIComponent(i.bildeId))
+            .then((r) => r.json())
+            .then((d) => { if (d.bilde) mini.src = d.bilde; });
+          rad.appendChild(mini);
+        }
 
         const midt = document.createElement("div");
         midt.className = "linkedin-rad-tekst";
@@ -1053,11 +1127,14 @@
       return;
     }
 
-    linkedinInnlegg = [{ navn, lenke, tekst: linkedinTekstEl.value.trim(), kilde: "manuell" }, ...linkedinInnlegg];
+    linkedinInnlegg = [{ navn, lenke, tekst: linkedinTekstEl.value.trim(), bilde: valgtBilde, kilde: "manuell" }, ...linkedinInnlegg];
     linkedinNavnEl.value = "";
     linkedinLenkeEl.value = "";
     linkedinTekstEl.value = "";
-    linkedinNavnEl.focus();
+    linkedinBildeEl.value = "";
+    valgtBilde = null;
+    linkedinBildeNavnEl.textContent = "Bilde fra innlegget (valgfritt)";
+    linkedinLenkeEl.focus();
     renderLinkedin();
     lagreLinkedin(true);
   }

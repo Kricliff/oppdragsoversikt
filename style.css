@@ -954,6 +954,71 @@ body {
   color: var(--text-muted);
 }
 
+/* ---------- LinkedIn-kortet i rutenettet ---------- */
+/* Står i tomrommet etter siste rådgiver, og har samme ramme som en rådgiverspalte så det
+   leser som en del av tavlen. Cellen er bred og lav - typisk 460x100 - og derfor ligger
+   bildet ved siden av teksten, ikke over. Stablet ble kortet høyere enn raden, og
+   navnet ble klippet bort i underkant. */
+
+.lkort {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.lkort-bilde {
+  flex: none;
+  width: 34%;
+  max-width: 190px;
+  align-self: stretch;
+  object-fit: cover;
+  border-right: 1px solid var(--border);
+}
+
+.lkort-kropp {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  justify-content: center;
+}
+
+.lkort-merke {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.lkort-navn {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lkort-tekst {
+  font-size: 0.82rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Uten bilde er det plass til mer av teksten. */
+.lkort:not(:has(.lkort-bilde)) .lkort-tekst { -webkit-line-clamp: 3; }
+
+.lkort-tid { font-size: 0.7rem; color: var(--text-muted); }
+
 /* ---------- LinkedIn (siste innlegg fra folk hos oss) ---------- */
 /* Samme form som kundenytt-panelet - de står rett over hverandre i spalten, og to
    ulike kortformer ved siden av hverandre ville sett tilfeldig ut. */

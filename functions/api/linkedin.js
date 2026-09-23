@@ -19,7 +19,20 @@ const MAKS_ANTALL = 40;
 // visning - slik at en feilaktig dato kan rettes i admin uten at innlegget er tapt.
 const FERSKHET_DAGER = 30;
 
+// Bildene ligger for seg, én KV-nøkkel per innlegg. En veggskjerm henter listen hvert
+// 5. minutt, og skal ikke dra med seg bildene den ikke viser.
+const BILDE_PREFIKS = "linkedin-bilde:";
+const MAKS_BILDE_BYTES = 900_000; // admin krymper bildet før opplasting - dette er taket
+
 export async function onRequestGet(context) {
+  // ?bilde=<id> henter ETT bilde. Bildene ligger under hver sin KV-nøkkel, ikke i listen,
+  // nettopp fordi listen hentes hvert 5. minutt av en veggskjerm som ikke skal dra med
+  // seg flere megabyte for å vise tre linjer tekst.
+  const bildeId = new URL(context.request.url).searchParams.get("bilde");
+  if (bildeId) {
+    const bilde = await context.env.NOTAT_KV.get(BILDE_PREFIKS + reinId(bildeId));
+    return json({ bilde: bilde ?? null });
+  }
   const innlegg = sortert(await les(context)).filter(erFerskt).slice(0, 12);
   return json({ innlegg });
 }
@@ -38,6 +51,11 @@ export async function onRequestPost(context) {
   // Et innlegg beholder tidspunktet sitt gjennom en redigering. Uten dette ville hver
   // lagring i admin flyttet alt til toppen og gjort "nyeste" meningsløst.
   const tidFraFor = new Map(forrige.map((i) => [i.lenke, i.lagtInn]));
+
+  // Hvilke innlegg som ALLEREDE har et bilde. Uten dette ville harBilde blitt false på
+  // hver lagring der bildet ikke ble sendt med på nytt - altså hver gang noen retter en
+  // tekst - og bildet blitt liggende igjen i KV uten at noe pekte på det.
+  const bilder = new Set(forrige.filter((i) => i.harBilde).map((i) => i.bildeId ?? bildeId(i.lenke)));
 
   const raa = Array.isArray(body?.innlegg) ? body.innlegg : [];
   const renset = [];
@@ -61,10 +79,23 @@ export async function onRequestPost(context) {
       continue;
     }
     sett.add(lenke);
+    // Bildet følger lenken, ikke raden: samme innlegg gir samme id, så en redigering av
+    // teksten ikke mister bildet. harBilde er det eneste listen bærer - selve bildet
+    // hentes for seg når det faktisk skal vises.
+    const id = bildeId(lenke);
+    if (typeof i?.bilde === "string" && i.bilde.startsWith("data:image/") && i.bilde.length <= MAKS_BILDE_BYTES) {
+      await context.env.NOTAT_KV.put(BILDE_PREFIKS + id, i.bilde);
+      bilder.add(id);
+    } else if (i?.bilde === null) {
+      await context.env.NOTAT_KV.delete(BILDE_PREFIKS + id);
+      bilder.delete(id);
+    }
     renset.push({
       navn,
       tekst: String(i?.tekst ?? "").trim().slice(0, 280),
       lenke,
+      bildeId: id,
+      harBilde: bilder.has(id),
       lagtInn: tidFraFor.get(lenke) ?? gyldigTid(i?.lagtInn) ?? new Date().toISOString(),
       kilde: i?.kilde === "firmaside" ? "firmaside" : "manuell"
     });
@@ -72,6 +103,15 @@ export async function onRequestPost(context) {
 
   const liste = sortert(renset).slice(0, MAKS_ANTALL);
   await context.env.NOTAT_KV.put(KV_KEY, JSON.stringify(liste));
+
+  // Et slettet innlegg skal ta bildet sitt med seg. Ellers ville bildene hopet seg opp i
+  // KV uten at noe pekte på dem, og ingen ville noensinne oppdaget det.
+  const beholdt = new Set(liste.map((i) => i.bildeId));
+  for (const i of forrige) {
+    const id = i.bildeId ?? bildeId(i.lenke);
+    if (i.harBilde && !beholdt.has(id)) await context.env.NOTAT_KV.delete(BILDE_PREFIKS + id);
+  }
+
   return json({ success: true, innlegg: liste, avvist });
 }
 
@@ -130,6 +170,24 @@ function utledNavn(lenke) {
     .map((o) => o.charAt(0).toUpperCase() + o.slice(1))
     .join(" ")
     .slice(0, 60);
+}
+
+// En kort, stabil id utledet av lenken (FNV-1a). Den skal bare være entydig nok til å
+// skille innlegg fra hverandre som KV-nøkkel - den beskytter ingenting, så en enkel
+// hash holder, og den må være den samme hver gang så et bilde ikke mister innlegget sitt.
+function bildeId(lenke) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < lenke.length; i++) {
+    h ^= lenke.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+// Id-en kommer fra nettleseren og settes sammen til en KV-nøkkel. Alt annet enn tegnene
+// en hash kan bestå av kastes, så ingen kan be om en helt annen nøkkel enn sin egen.
+function reinId(raa) {
+  return String(raa).replace(/[^a-z0-9]/gi, "").slice(0, 16);
 }
 
 function gyldigTid(raa) {
