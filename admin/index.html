@@ -511,7 +511,7 @@
 
     <div class="kort">
       <h2>LinkedIn</h2>
-      <p class="storrelse-hint">De siste innleggene fra folk hos oss, vist i eget panel på tavlen. Limes inn manuelt: LinkedIn har ingen feed vi kan hente personlige innlegg fra - det offisielle APIet gir kun firmasidens egne innlegg, og skraping bryter vilkårene deres. Lim inn lenken til innlegget - navnet hentes fra lenken selv. Legg gjerne ved en linje om hva det handler om, og overstyr navnet hvis det ble feil. Innlegg eldre enn 30 dager faller av tavlen av seg selv.</p>
+      <p class="storrelse-hint">De siste innleggene fra folk hos oss, vist på tavlen og i eget panel i sidespalten. <b>Lim inn lenken til innlegget - så henter vi forfatter, tekst og bilde fra innlegget selv.</b> Skriver du noe i feltene under, er det ditt som gjelder. «Hent» på en rad henter på nytt, for eksempel hvis innlegget er redigert i etterkant. Innlegg eldre enn 30 dager faller av tavlen av seg selv. Innlegg eldre enn 30 dager faller av tavlen av seg selv.</p>
       <div id="linkedinListe"><p class="endring-tom">Laster…</p></div>
       <div class="linkedin-ny">
         <input type="text" id="linkedinNavn" placeholder="Hvem skrev det? (hentes fra lenken)" maxlength="60">
@@ -1064,8 +1064,27 @@
         tid.textContent = new Date(i.lagtInn).toLocaleDateString("no-NO", { day: "numeric", month: "short" });
         rad.appendChild(tid);
 
-        // Bildet kan settes på et innlegg som allerede ligger der. Uten dette måtte man
-        // slette og legge inn på nytt bare for å få med et bilde i ettertid.
+        // Henter tekst, bilde og forfatter fra innlegget selv en gang til. Trengs for
+        // innlegg som ble lagt inn før hentingen fantes, og når noen har redigert
+        // innlegget sitt i etterkant.
+        const hent = document.createElement("button");
+        hent.type = "button";
+        hent.className = "linkedin-radknapp";
+        hent.textContent = "Hent";
+        hent.title = "Hent tekst og bilde fra innlegget på nytt";
+        hent.addEventListener("click", async () => {
+          hent.textContent = "…";
+          hent.disabled = true;
+          i.hentPaNytt = true;
+          await lagreLinkedin(false);
+          delete i.hentPaNytt;
+          linkedinStatusEl.textContent = "Hentet fra innlegget.";
+          setTimeout(() => { linkedinStatusEl.textContent = ""; }, 3000);
+        });
+        rad.appendChild(hent);
+
+        // Bildet kan settes manuelt på et innlegg som allerede ligger der - for de
+        // gangene LinkedIn ikke gir fra seg noe bilde, eller gir feil bilde.
         const bildeknapp = document.createElement("button");
         bildeknapp.type = "button";
         bildeknapp.className = "linkedin-radknapp";

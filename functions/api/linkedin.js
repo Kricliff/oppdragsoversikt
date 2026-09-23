@@ -70,10 +70,26 @@ export async function onRequestPost(context) {
       continue;
     }
     if (sett.has(lenke)) continue;
-    // Navnet står som regel i lenken selv. Å kreve at det skrives inn på nytt er unødig
-    // arbeid for den som bare vil lime inn og gå videre - så vi utleder det, og lar
-    // feltet være en overstyring for de tilfellene der lenken ikke røper noe navn.
-    const navn = String(i?.navn ?? "").trim().slice(0, 60) || utledNavn(lenke);
+
+    // Hent innlegget selv når vi ikke har sett det før. Det som står i skjemaet vinner
+    // alltid over det vi henter - den som skriver noe har en grunn til det.
+    // hentPaNytt lar admin be om en ny henting for et innlegg som allerede ligger der -
+    // ellers ville de som ble lagt inn før dette fantes aldri fått tekst og bilde.
+    const nytt = !tidFraFor.has(lenke) || i?.hentPaNytt === true;
+    let fra = null;
+    if (nytt) {
+      try {
+        fra = await hentForhandsvisning(lenke);
+      } catch (err) {
+        // Nettverksfeil, tidsavbrudd, endret markup: innlegget legges inn med det lille
+        // vi vet, og resten kan skrives inn for hånd.
+        console.warn("Fikk ikke hentet forhåndsvisning:", err);
+      }
+    }
+
+    // Navnet står som regel i lenken selv, ellers i innlegget vi nettopp hentet.
+    const navn =
+      String(i?.navn ?? "").trim().slice(0, 60) || utledNavn(lenke) || (fra?.navn ?? "");
     if (!navn) {
       avvist.push({ lenke: lenke, grunn: "Fant ikke navnet i lenken - skriv hvem som skrev det." });
       continue;
@@ -89,10 +105,22 @@ export async function onRequestPost(context) {
     } else if (i?.bilde === null) {
       await context.env.NOTAT_KV.delete(BILDE_PREFIKS + id);
       bilder.delete(id);
+      // Ber noen uttrykkelig om en ny henting, skal bildet også friskes opp - innlegget
+      // kan ha blitt redigert. Ellers hentes bildet bare når vi ikke har et fra før.
+    } else if (fra?.bildeUrl && (!bilder.has(id) || i?.hentPaNytt === true)) {
+      try {
+        const hentet = await hentBilde(fra.bildeUrl);
+        if (hentet) {
+          await context.env.NOTAT_KV.put(BILDE_PREFIKS + id, hentet);
+          bilder.add(id);
+        }
+      } catch (err) {
+        console.warn("Fikk ikke hentet bildet fra innlegget:", err);
+      }
     }
     renset.push({
       navn,
-      tekst: String(i?.tekst ?? "").trim().slice(0, 280),
+      tekst: (String(i?.tekst ?? "").trim() || (fra?.tekst ?? "")).slice(0, 280),
       lenke,
       bildeId: id,
       harBilde: bilder.has(id),
@@ -170,6 +198,95 @@ function utledNavn(lenke) {
     .map((o) => o.charAt(0).toUpperCase() + o.slice(1))
     .join(" ")
     .slice(0, 60);
+}
+
+// ---------- forhåndsvisning hentet fra innlegget selv ----------
+// LinkedIn legger ut Open Graph-merkelapper på hvert enkelt innlegg - det er slik Slack
+// og WhatsApp lager forhåndsvisninger. Vi leser de samme merkelappene: teksten,
+// forfatteren og bildet. Målt 2026-09-23: /feed/update/… og /posts/… svarer med dem,
+// mens /company/…/posts/ sender deg til innloggingssiden.
+//
+// Dette er ikke skraping av profiler: ett kall per lenke noen limer inn for hånd, og bare
+// de merkelappene LinkedIn selv publiserer for nettopp dette formålet.
+//
+// Alt her er beste forsøk. Svarer LinkedIn med noe annet enn ventet, står innlegget igjen
+// med det som ble skrevet inn manuelt - det er bedre enn et halvt innlegg på veggen.
+const NETTLESER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+const BILDEVERTER = /(^|\.)licdn\.com$/;
+
+async function hentForhandsvisning(lenke) {
+  const res = await fetch(lenke, {
+    headers: { "User-Agent": NETTLESER_UA, Accept: "text/html" },
+    redirect: "follow"
+  });
+  if (!res.ok) return null;
+  const html = await res.text();
+
+  const merkelapp = (navn) => {
+    const m = html.match(
+      new RegExp('<meta[^>]+property="' + navn + '"[^>]*content="([^"]*)"', "i")
+    );
+    return m ? avkod(m[1]) : null;
+  };
+
+  // Havnet vi på innloggingssiden, er merkelappene LinkedIn sine egne - ikke innleggets.
+  const url = merkelapp("og:url") ?? "";
+  if (!url || /\/(login|uas\/login)/.test(url)) return null;
+
+  const tittel = merkelapp("og:title") ?? "";
+  // LinkedIn korter ned selve teksten i tittelen, men forfatteren står helt til slutt:
+  // "… | Christina Waale Salomaa". Beskrivelsen har hele teksten.
+  const skille = tittel.lastIndexOf(" | ");
+  const navn = skille > 0 ? tittel.slice(skille + 3).trim() : "";
+
+  return {
+    navn: navn.slice(0, 60),
+    tekst: (merkelapp("og:description") ?? "").replace(/\s+/g, " ").trim(),
+    bildeUrl: merkelapp("og:image")
+  };
+}
+
+// Bildet hentes fra LinkedIn sin egen mediavert og lagres hos oss. Å peke tavlen rett på
+// media.licdn.com ville virket i dag og vært et hull i morgen: adressene der har en
+// utløpsdel (?e=…&t=…), og en veggskjerm som står på i ukevis ville til slutt vist et
+// tomt felt. Verten sjekkes, så vi aldri laster ned fra en adresse LinkedIn ikke eier.
+async function hentBilde(bildeUrl) {
+  let url;
+  try {
+    url = new URL(bildeUrl);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || !BILDEVERTER.test(url.hostname.toLowerCase())) return null;
+
+  const res = await fetch(url.toString(), { headers: { "User-Agent": NETTLESER_UA } });
+  if (!res.ok) return null;
+  const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!/^image\/(jpeg|png|gif|webp)$/.test(type)) return null;
+
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Base64 blir en tredjedel større enn kilden, og det er base64 som skal ligge i KV.
+  if (bytes.length > (MAKS_BILDE_BYTES / 4) * 3) return null;
+
+  let binaer = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binaer += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return "data:" + type + ";base64," + btoa(binaer);
+}
+
+// Merkelappene er HTML-rømt: bildeadressen har &amp; i seg, og teksten kan ha &#39;.
+function avkod(raa) {
+  return raa
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
 }
 
 // En kort, stabil id utledet av lenken (FNV-1a). Den skal bare være entydig nok til å
