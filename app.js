@@ -74,7 +74,6 @@ let sisteBusstiderOppdatert = null; // tidspunkt for siste vellykkede henting, v
 let sisteKundenyttOppdatert = null;
 let linkedinInnlegg = []; // siste LinkedIn-innlegg fra folk hos oss, se lastLinkedin
 let linkedinIndeks = 0; // hvilket innlegg som vises na i karusellen
-let sisteLinkedinOppdatert = null;
 let teamskanal = []; // siste meldinger fra Teams-gruppechatten, se lastTeamskanal
 let sisteTeamskanalOppdatert = null;
 let bursdager = []; // [{ navn, dato }] - lagt inn manuelt på /admin, se lastBursdager
@@ -119,9 +118,6 @@ const nyheterTekst2El = document.getElementById("nyheterTekst2");
 const kundenyttPanelEl = document.getElementById("kundenyttPanel");
 const kundenyttHeaderEl = document.getElementById("kundenyttHeader");
 const kundenyttListeEl = document.getElementById("kundenyttListe");
-const linkedinPanelEl = document.getElementById("linkedinPanel");
-const linkedinHeaderEl = document.getElementById("linkedinHeader");
-const linkedinListeEl = document.getElementById("linkedinListe");
 const teamskanalPanelEl = document.getElementById("teamskanalPanel");
 const teamskanalHeaderEl = document.getElementById("teamskanalHeader");
 const teamskanalListeEl = document.getElementById("teamskanalListe");
@@ -650,72 +646,34 @@ function renderKundenytt() {
   kundenyttListeEl.replaceChildren(rad);
 }
 
-// Siste LinkedIn-innlegg fra folk hos oss (functions/api/linkedin.js). Limes inn
-// manuelt på /admin - LinkedIn har ingen feed vi kan hente personlige innlegg fra,
-// se kommentaren øverst i den Functionen. Samme karusell som kundenytt: spalten er
-// smal, og ett innlegg av gangen er lettere å lese på avstand enn tre avkortede.
+// Siste LinkedIn-innlegg fra folk hos oss (functions/api/linkedin.js). Vises i ett kort
+// i rutenettet, i tomrommet etter siste rådgiver - se fyllTomrom(). Ett innlegg av
+// gangen, og karusellen bytter til neste hvert 12. sekund.
 async function lastLinkedin() {
   linkedinInnlegg = await hentLinkedin();
   if (linkedinIndeks >= linkedinInnlegg.length) linkedinIndeks = 0;
-  sisteLinkedinOppdatert = Date.now();
   renderLinkedin();
 }
 
 function rullLinkedin() {
   if (linkedinInnlegg.length <= 1) return; // ingenting å bytte til
-  linkedinListeEl.classList.add("bytter");
-  setTimeout(() => {
-    linkedinIndeks = (linkedinIndeks + 1) % linkedinInnlegg.length;
-    renderLinkedin();
-    linkedinListeEl.classList.remove("bytter");
-  }, 300);
+  linkedinIndeks = (linkedinIndeks + 1) % linkedinInnlegg.length;
+  renderLinkedin();
 }
 
 function renderLinkedin() {
   if (linkedinInnlegg.length === 0) {
-    linkedinPanelEl.classList.remove("vis");
-    setTimeout(() => {
-      if (linkedinInnlegg.length === 0) linkedinPanelEl.hidden = true;
-    }, 500);
-    // Storkortet må bort samtidig. Uten dette ble det siste innlegget stående i
-    // rutenettet etter at det var slettet eller blitt for gammelt - tavlen ville vist
-    // noe som ikke lenger fantes.
+    // Kortet må bort. Uten dette ble det siste innlegget stående i rutenettet etter at
+    // det var slettet eller blitt for gammelt - tavlen ville vist noe som ikke fantes.
     const kort = lanesEl.querySelector(".lkort");
     if (kort) kort.remove();
     haddeLinkedin = false;
     return;
   }
-
-  linkedinPanelEl.hidden = false;
-  requestAnimationFrame(() => linkedinPanelEl.classList.add("vis"));
-  settPanelHeader(linkedinHeaderEl, "💼 LinkedIn", sisteLinkedinOppdatert);
-
-  const innlegg = linkedinInnlegg[linkedinIndeks];
-  const rad = document.createElement("div");
-  rad.className = "linkedin-rad";
-
-  const navn = document.createElement("div");
-  navn.className = "linkedin-navn";
-  navn.textContent = innlegg.navn;
-  rad.appendChild(navn);
-
-  // Uten tekst har vi ingenting å vise fra selve innlegget - da sier vi det rett ut
-  // heller enn å la raden stå tom og se ut som en feil.
-  const tekst = document.createElement("div");
-  tekst.className = "linkedin-tekst";
-  tekst.textContent = innlegg.tekst || "La ut et innlegg";
-  rad.appendChild(tekst);
-
-  const tid = document.createElement("div");
-  tid.className = "linkedin-tid";
-  tid.textContent = linkedinTidTekst(innlegg.lagtInn);
-  rad.appendChild(tid);
-
-  linkedinListeEl.replaceChildren(rad);
   oppdaterStortLinkedin();
 }
 
-// Storkortet i rutenettet viser samme innlegg som panelet. Finnes det ikke ennå - fordi
+// Finnes kortet ikke ennå - fordi
 // tavlen ble tegnet før innleggene var hentet - tegnes rutenettet på nytt, slik at
 // tomrommet etter siste rådgiver faktisk blir fylt.
 let haddeLinkedin = false;

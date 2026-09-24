@@ -1018,74 +1018,6 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* ---------- LinkedIn (siste innlegg fra folk hos oss) ---------- */
-/* Samme form som kundenytt-panelet - de står rett over hverandre i spalten, og to
-   ulike kortformer ved siden av hverandre ville sett tilfeldig ut. */
-
-.linkedin {
-  flex: 0 0 auto;
-  max-height: 150px; /* ett innlegg av gangen, som kundenytt - men navnet tar en linje ekstra */
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
-  transform: translateX(120%);
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.linkedin.vis {
-  transform: translateX(0);
-}
-
-.linkedin-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 8px 12px;
-  font-weight: 600;
-  font-size: 0.76rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-1);
-}
-
-.linkedin-liste {
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 110px;
-  overflow: hidden;
-  transition: opacity 0.3s ease;
-}
-
-.linkedin-liste.bytter { opacity: 0; }
-
-.linkedin-rad { display: flex; flex-direction: column; gap: 0.1rem; }
-
-.linkedin-navn {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.linkedin-tekst {
-  font-size: 0.8rem;
-  color: var(--text);
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.linkedin-tid {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
 /* ---------- Teamskanal (siste meldinger fra Teams-gruppechatten) ---------- */
 
 .teamskanal {
@@ -1770,7 +1702,6 @@ body {
   .postit { right: 170px; bottom: 108px; width: 160px; }
   .busstider { right: 12px; bottom: 276px; width: 150px; }
   .kundenytt { right: 12px; bottom: 144px; width: 150px; max-height: 120px; }
-  .linkedin { right: 12px; width: 150px; max-height: 120px; }
   .feiring-item { font-size: 0.95rem; }
   .nyheter-item { font-size: 0.95rem; }
   .gjeste-stat { flex-basis: 45%; }
