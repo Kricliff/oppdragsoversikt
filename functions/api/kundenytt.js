@@ -18,9 +18,11 @@
 // selskapet sjekkes på nytt uten treff. Med ti minutters cache og ~100+ kunder tar en full
 // runde et par timer - godt nok for "har noe skjedd med en kunde nylig", ikke sanntid.
 
+import { hentAnonyme, anonymeSelskapIder } from "../_lib/anonyme.js";
+
 const KV_KEY = "kundenytt-tilstand";
 const CACHE_SECONDS = 10 * 60;
-const CACHE_VERSION = 25;
+const CACHE_VERSION = 26;
 const BATCH_SIZE = 8;
 const ANTALL_VIST = 8; // panelet viser nå kun én sak av gangen i en karusell, så flere kan samles opp
 const FERSKHET_DAGER = 7;
@@ -51,7 +53,10 @@ export async function onRequestGet(context) {
 }
 
 async function hentKundenytt(apiKey, kv) {
-  const kunder = await hentKundeliste(apiKey);
+  // En fortrolig kunde skal ikke stå i nyhetspanelet heller - der ville navnet stått
+  // i klartekst ved siden av en overskrift om dem. Se functions/_lib/anonyme.js.
+  const hemmelige = anonymeSelskapIder(await hentAnonyme(kv));
+  const kunder = (await hentKundeliste(apiKey)).filter((k) => !hemmelige.has(String(k.id)));
   const tilstand = (await kv.get(KV_KEY, "json")) ?? { nesteIndeks: 0, funn: {} };
   if (!tilstand.funn) tilstand.funn = {};
 
@@ -80,7 +85,11 @@ async function hentKundenytt(apiKey, kv) {
   }
 
   const naa = Date.now();
-  const funn = Object.values(tilstand.funn)
+  const funn = Object.entries(tilstand.funn)
+    // Funnene ligger lagret fra før. Å ta kunden ut av søkelista stopper nye treff, men
+    // et treff som allerede lå der ville blitt stående i opptil en uke.
+    .filter(([kundeId]) => !hemmelige.has(String(kundeId)))
+    .map(([, f]) => f)
     .filter((f) => naa - f.publisert < FERSKHET_MS)
     .sort((a, b) => b.publisert - a.publisert)
     .slice(0, ANTALL_VIST);

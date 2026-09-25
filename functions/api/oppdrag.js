@@ -10,6 +10,7 @@
 // skjermen ikke bruker opp kvoten.
 
 import { bestemStatus, kundeTypeSkalVises } from "../_lib/oppdragStatus.js";
+import { hentAnonyme, anonymeSelskapIder, ANONYM_MERKE } from "../_lib/anonyme.js";
 // Cache-nøkkelen (og versjonen) ligger i _lib fordi skjulte.js må kunne blanke den når
 // skjulelista endres - bump OPPDRAG_CACHE_VERSION der ved endringer i logikken under.
 import { oppdragCacheKey } from "../_lib/oppdragCache.js";
@@ -68,7 +69,8 @@ export async function onRequestGet(context) {
       const svar = await hentOgNormaliser(
         context.env.RECMAN_API_KEY,
         await hentSkjulteIder(context.env.NOTAT_KV),
-        diagnoseSok
+        diagnoseSok,
+        anonymeSelskapIder(await hentAnonyme(context.env.NOTAT_KV))
       );
       return new Response(JSON.stringify({ kilde: svar.kilde, diagnose: svar.diagnose }), {
         headers: { "Content-Type": "application/json" }
@@ -89,11 +91,16 @@ export async function onRequestGet(context) {
   try {
     const payload = await hentOgNormaliser(
       context.env.RECMAN_API_KEY,
-      await hentSkjulteIder(context.env.NOTAT_KV)
+      await hentSkjulteIder(context.env.NOTAT_KV),
+      null,
+      anonymeSelskapIder(await hentAnonyme(context.env.NOTAT_KV))
     );
     // Må skje FØR responsen bygges (ikke context.waitUntil) - erNytt-flagget skal jo
     // faktisk være med i det som sendes til klienten.
     await merkNyeOppdrag(payload.oppdrag, context.env.NOTAT_KV);
+    // Settet er kun til internt bruk - det skal ikke ut i svaret.
+    const hemmeligeNavn = payload.hemmeligeNavn;
+    delete payload.hemmeligeNavn;
     // Tidspunktet dette faktisk ble hentet fra Recman. Cachen gjør at svaret kan være
     // opptil CACHE_SECONDS gammelt, og uten dette er det umulig å se utenfra om dataen
     // er fersk eller har stått fast - fabrikkvisningen (/fabrikk) varsler på nettopp det.
@@ -108,7 +115,7 @@ export async function onRequestGet(context) {
     // Logger nye/borte/status-endrede oppdrag til KV, til bruk i endringsloggen på
     // /admin (functions/api/endringslogg.js) - kjører kun ved et faktisk cache-miss,
     // altså på samme kadens som tavlen selv faktisk friskes opp mot Recman.
-    context.waitUntil(loggEndringer(payload.oppdrag, context.env.NOTAT_KV));
+    context.waitUntil(loggEndringer(payload.oppdrag, context.env.NOTAT_KV, hemmeligeNavn));
     return response;
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
@@ -129,7 +136,7 @@ const ENDRINGSLOGG_VIS_DAGER = 14; // hvor lenge en hendelse beholdes i loggen
 // forsinket. Det er en bevisst avveining: heller sent og sant enn raskt og feil.
 const BORTE_BEKREFTELSER = 2;
 
-async function loggEndringer(oppdrag, kv) {
+async function loggEndringer(oppdrag, kv, hemmeligeNavn = new Set()) {
   if (!kv) return;
 
   const naaKart = {};
@@ -139,7 +146,13 @@ async function loggEndringer(oppdrag, kv) {
 
   const tilstand = (await kv.get(ENDRINGSLOGG_KV_KEY, "json")) ?? {};
   const forrige = tilstand.forrige ?? null;
-  const hendelser = tilstand.hendelser ?? [];
+  // Loggen er historikk, skrevet før kunden ble merket fortrolig. Nye hendelser arver
+  // maskeringen fra oppdrag-lista, men de gamle ville blitt stående med det ekte navnet
+  // til de falt ut av loggen av seg selv. Både i hendelsene og i forrige-tilstanden,
+  // som er det neste diff sammenlignes mot.
+  const vask = (o) => (o && hemmeligeNavn.has(o.kunde) ? { ...o, kunde: ANONYM_MERKE } : o);
+  const hendelser = (tilstand.hendelser ?? []).map(vask);
+  if (forrige) for (const id of Object.keys(forrige)) forrige[id] = vask(forrige[id]);
   // id -> hvor mange oppfriskninger på rad oppdraget har manglet. Tom for alt som
   // er der nå, og nullstilles automatisk når et oppdrag dukker opp igjen.
   const mistenktBorte = tilstand.mistenktBorte ?? {};
@@ -322,7 +335,7 @@ async function hentAlleProsjekter(apiKey, projectFields) {
   return { prosjekter: Object.values(alle), sider };
 }
 
-async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = null) {
+async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = null, hemmelige = new Set()) {
   if (!apiKey) throw new Error("RECMAN_API_KEY er ikke satt");
 
   const projectFields = "name,status,completePercent,companyId,responsibleUserId,updated,members,startDate,endDate";
@@ -414,6 +427,7 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = n
       if (!ansvarlig) { merk(p, "fant ingen rådgiver for responsibleUserId " + p.responsibleUserId); return null; }
       merk(p, "VISES på tavlen");
 
+      const hemmelig = hemmelige.has(String(p.companyId));
       let fremdriftProsent = p.completePercent != null ? Math.round(Number(p.completePercent)) : null;
       if (PERIODE_PROSENT_RADGIVERE.has(ansvarlig) && p.startDate && p.endDate) {
         const periodeProsent = beregnPeriodeProsent(p.startDate, p.endDate);
@@ -423,7 +437,15 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = n
       return {
         id: "recman-" + p.projectId,
         tittel: p.name,
-        kunde: kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
+        // Et fortrolig oppdrag teller og står hos rådgiveren som alle andre - det er
+        // bare navnet som ikke skal ut. Maskeringen går på KUNDEN, ikke oppdraget:
+        // ellers ville nabo-oppdraget for samme kunde røpet navnet likevel.
+        // Se functions/_lib/anonyme.js.
+        kunde: hemmelig ? ANONYM_MERKE : kundeNavn[p.companyId] ?? `Kunde #${p.companyId}`,
+        // Admin trenger selskaps-id-en for å kunne anonymisere kunden. For en som
+        // allerede ER hemmelig sendes den ikke - da ligger den i lista fra før, og
+        // en stabil peker til selskapet har ingenting på tavlen å gjøre.
+        selskapId: hemmelig ? undefined : String(p.companyId),
         ansvarlig,
         status,
         fremdriftProsent,
@@ -437,8 +459,15 @@ async function hentOgNormaliser(apiKey, skjulteIder = new Set(), diagnoseSok = n
 
   // Tellere som gjør det mulig å se utenfra hvorfor et oppdrag ikke står på tavlen:
   // ble det aldri hentet fra Recman, eller ble det filtrert bort her?
+  // Navnene på de fortrolige kundene. De sendes ALDRI ut - de brukes bare til å vaske
+  // historikk som ble skrevet før kunden ble merket fortrolig, se loggEndringer().
+  const hemmeligeNavn = new Set(
+    Object.keys(kundeNavn).filter((id) => hemmelige.has(String(id))).map((id) => kundeNavn[id])
+  );
+
   return {
     oppdrag,
+    hemmeligeNavn,
     kilde: {
       raaAntall: prosjektKilde.prosjekter.length,
       sider: prosjektKilde.sider,

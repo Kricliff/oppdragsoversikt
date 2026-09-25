@@ -30,10 +30,11 @@
 //   klienten nettopp lastet siden på nytt eller har stått åpen lenge.
 
 import { bestemStatus, kundeTypeSkalVises } from "../_lib/oppdragStatus.js";
+import { hentAnonyme, anonymeSelskapIder, ANONYM_MERKE } from "../_lib/anonyme.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 22;
+const CACHE_VERSION = 23;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 // En opprydding i Recman 2026-09-02 (gamle prosjekter og kunder massebehandlet) traff
@@ -144,6 +145,11 @@ async function hentAktiveFeiringer(apiKey, kv) {
     jobPostId: a.jobPostId
   }));
 
+  // Fortrolige kunder skal ikke nevnes i banneret heller. Et «X er ny kunde»-rop
+  // røper akkurat det kunden har bedt oss holde for oss selv, og det ropes høyere enn
+  // et kort på tavlen. Se functions/_lib/anonyme.js.
+  const hemmelige = anonymeSelskapIder(await hentAnonyme(kv));
+
   // --- Ny kunde: type=customer OG minst ett reelt prosjekt (kjent ansvarlig) ---
   const ansvarligForCompanyId = {};
   Object.values(projectById).forEach((p) => {
@@ -154,6 +160,8 @@ async function hentAktiveFeiringer(apiKey, kv) {
   });
   const nyeKunder = Object.entries(companyById)
     .filter(([id, c]) => c.type === "customer" && ansvarligForCompanyId[id] && !inneholderGreatPeople(c.name))
+    // Her hjelper det ikke å maskere navnet: hele poenget med feiringen ER navnet.
+    .filter(([id]) => !hemmelige.has(String(id)))
     .map(([id, c]) => ({ id, navn: c.name, ansvarlig: ansvarligForCompanyId[id] }));
 
   // --- Nytt oppdrag: status "aktiv" - SAMME kriterier som avgjør at kortet faktisk
@@ -170,7 +178,7 @@ async function hentAktiveFeiringer(apiKey, kv) {
     .map((p) => ({
       id: String(p.projectId),
       rolle: p.name,
-      kunde: companyById[p.companyId]?.name ?? null,
+      kunde: hemmelige.has(String(p.companyId)) ? ANONYM_MERKE : companyById[p.companyId]?.name ?? null,
       ansvarlig: navnForUserId[String(p.responsibleUserId)] ?? null
     }))
     .filter((o) => o.ansvarlig); // ukjent rådgiver = ikke synlig på tavlen, skal heller ikke feires
@@ -280,7 +288,9 @@ async function hentKandidatDetaljer(apiKey, ansettelse, projectById, companyById
   const project = treff ? projectById[treff.projectId] : null;
   return {
     navn: `${rad.firstName ?? ""} ${rad.lastName ?? ""}`.trim() || null,
-    kunde: project ? companyById[project.companyId]?.name ?? null : null,
+    kunde: project
+      ? hemmelige.has(String(project.companyId)) ? ANONYM_MERKE : companyById[project.companyId]?.name ?? null
+      : null,
     // Faller tilbake til den som eier pipeline-oppføringen hvis prosjektet ikke lar seg slå opp
     ansvarlig:
       (project ? navnForUserId[String(project.responsibleUserId)] : null) ??

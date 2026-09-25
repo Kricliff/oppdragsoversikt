@@ -529,6 +529,12 @@
     </div>
 
     <div class="kort">
+      <h2>Fortrolige kunder</h2>
+      <p class="storrelse-hint">Oppdrag der kundenavnet ikke skal stå på tavlen. Oppdraget teller og står hos rådgiveren som før - bare navnet byttes ut med «Konfidensiell kunde». Maskeringen skjer på serveren, så det ekte navnet sendes ikke til skjermen i det hele tatt, og den gjelder <b>kunden</b>: andre oppdrag for samme kunde, feiringer og kundenytt-panelet skjuler navnet også. Bruk søket under «Parkerte oppdrag» for å legge til et oppdrag.</p>
+      <div id="anonymeListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
       <h2>Bursdager</h2>
       <p class="storrelse-hint">Legges inn manuelt her - Recman har ikke fødselsdato på ansatte.</p>
       <div id="bursdagerListe"><p class="endring-tom">Laster…</p></div>
@@ -748,9 +754,11 @@
   let skjulte = [];
   let oppdragPaaTavlen = [];
 
-  function radFor(o, knappTekst, knappKlasse, handling) {
+  // knapper er [{ tekst, klasse, handling }] - en rad i søket har både «Parker» og
+  // «Anonymiser», mens en rad i en av listene bare har veien tilbake.
+  function radFor(o, knapper) {
     const rad = document.createElement("div");
-    rad.className = knappKlasse === "hent-tilbake" ? "skjult-rad" : "parker-rad";
+    rad.className = knapper.some((k) => k.klasse === "hent-tilbake") ? "skjult-rad" : "parker-rad";
 
     const innhold = document.createElement("div");
     innhold.className = "parker-innhold";
@@ -763,12 +771,14 @@
     innhold.append(rolle, meta);
     rad.appendChild(innhold);
 
-    const knapp = document.createElement("button");
-    knapp.type = "button";
-    knapp.className = `parker-knapp ${knappKlasse}`;
-    knapp.textContent = knappTekst;
-    knapp.addEventListener("click", () => handling(knapp));
-    rad.appendChild(knapp);
+    for (const k of knapper) {
+      const knapp = document.createElement("button");
+      knapp.type = "button";
+      knapp.className = `parker-knapp ${k.klasse ?? ""}`;
+      knapp.textContent = k.tekst;
+      knapp.addEventListener("click", () => k.handling(knapp));
+      rad.appendChild(knapp);
+    }
 
     return rad;
   }
@@ -781,7 +791,7 @@
     skjulteListeEl.replaceChildren(
       ...[...skjulte]
         .sort((a, b) => (b.skjultTidspunkt ?? 0) - (a.skjultTidspunkt ?? 0))
-        .map((s) => radFor(s, "Hent tilbake", "hent-tilbake", (knapp) => endreSkjult(s, true, knapp)))
+        .map((s) => radFor(s, [{ tekst: "Hent tilbake", klasse: "hent-tilbake", handling: (knapp) => endreSkjult(s, true, knapp) }]))
     );
   }
 
@@ -800,7 +810,12 @@
       return;
     }
     parkerTreffEl.replaceChildren(
-      ...treff.map((o) => radFor(o, "Parker", "", (knapp) => endreSkjult(o, false, knapp)))
+      ...treff.map((o) =>
+        radFor(o, [
+          { tekst: "Parker", handling: (knapp) => endreSkjult(o, false, knapp) },
+          { tekst: "Anonymiser", handling: (knapp) => endreAnonym(o, false, knapp) }
+        ])
+      )
     );
   }
 
@@ -853,16 +868,79 @@
         id: String(o.id).replace("recman-", ""),
         tittel: o.tittel,
         kunde: o.kunde,
-        ansvarlig: o.ansvarlig
+        ansvarlig: o.ansvarlig,
+        selskapId: o.selskapId
       }));
     } catch (err) {
       console.warn("Fikk ikke hentet oppdrag til parkeringssøket:", err);
     }
   }
 
+  // ---------- fortrolige kunder ----------
+  const anonymeListeEl = document.getElementById("anonymeListe");
+  let anonyme = [];
+
+  function renderAnonyme() {
+    if (anonyme.length === 0) {
+      anonymeListeEl.innerHTML = '<p class="endring-tom">Ingen kunder er anonymisert.</p>';
+      return;
+    }
+    anonymeListeEl.replaceChildren(
+      ...[...anonyme]
+        .sort((a, b) => (b.lagtTil ?? 0) - (a.lagtTil ?? 0))
+        // Kundenavnet lagres bevisst IKKE i lista - da ville det ligget i svaret fra
+        // /api/anonyme, som er det samme hullet vi nettopp tettet på tavlen.
+        .map((a) => radFor(
+          { tittel: a.tittel, kunde: "Konfidensiell kunde", ansvarlig: null },
+          [{ tekst: "Vis navnet igjen", klasse: "hent-tilbake", handling: (knapp) => endreAnonym(a, true, knapp) }]
+        ))
+    );
+  }
+
+  async function endreAnonym(oppdrag, vis, knapp) {
+    knapp.disabled = true;
+    knapp.textContent = vis ? "Henter…" : "Anonymiserer…";
+    try {
+      const res = await fetch("/api/anonyme", {
+        method: "POST",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          id: String(oppdrag.id).replace("recman-", ""),
+          selskapId: oppdrag.selskapId,
+          vis,
+          tittel: oppdrag.tittel
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Status ${res.status}`);
+      anonyme = Array.isArray(data.anonyme) ? data.anonyme : anonyme;
+      renderAnonyme();
+      await lastOppdragPaaTavlen();
+      renderTreff();
+    } catch (err) {
+      knapp.disabled = false;
+      knapp.textContent = vis ? "Vis navnet igjen" : "Anonymiser";
+      console.warn(err);
+      alert(`Fikk ikke lagret: ${err.message}`);
+    }
+  }
+
+  async function lastAnonyme() {
+    try {
+      const res = await fetch("/api/anonyme", { cache: "no-store" });
+      const data = await res.json();
+      anonyme = Array.isArray(data.anonyme) ? data.anonyme : [];
+      renderAnonyme();
+    } catch (err) {
+      anonymeListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet fortrolige kunder.</p>';
+      console.warn(err);
+    }
+  }
+
   parkerSokEl.addEventListener("input", renderTreff);
   renderTreff();
   lastSkjulte();
+  lastAnonyme();
   lastOppdragPaaTavlen();
 
   const bursdagerListeEl = document.getElementById("bursdagerListe");
