@@ -35,7 +35,7 @@ import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
-const CACHE_VERSION = 23;
+const CACHE_VERSION = 24;
 const FEIRING_VIS_MS = 2 * 60 * 60 * 1000; // hver hendelse vises i 2 timer før den forsvinner
 
 // En opprydding i Recman 2026-09-02 (gamle prosjekter og kunder massebehandlet) traff
@@ -54,6 +54,14 @@ const MAKS_NYE_PER_RUNDE = 5;
 // stående til den har manglet BORTE_BEKREFTELSER ganger på rad.
 const BORTE_BEKREFTELSER = 2;
 const MAKS_AKTIVE = 12;
+
+// Recman svarer med "2026-09-25 07:50:08" i UTC, uten sone. Samme tolkning som resten
+// av huset gjør (se _lib/oppdragStatus.js).
+function erNyligOppdatert(oppdatert) {
+  if (!oppdatert) return false;
+  const t = Date.parse(String(oppdatert).replace(" ", "T") + "Z");
+  return Number.isFinite(t) && Date.now() - t <= FEIRING_VIS_MS;
+}
 
 function massendringsvakt(nye, hva) {
   if (nye.length <= MAKS_NYE_PER_RUNDE) return nye;
@@ -112,6 +120,13 @@ function feiringTekst(h) {
     return h.kunde && h.ansvarlig
       ? `🎉 Nytt oppdrag: ${h.rolle} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
       : `🎉 Nytt oppdrag: ${h.rolle}! 🎉`;
+  }
+  if (h.type === "landet") {
+    // Signalet er prosjektet, ikke kandidaten - da vet vi ikke hvem som ble ansatt,
+    // og skal ikke late som. Rollen og kunden er det landingen faktisk forteller.
+    return h.kunde && h.ansvarlig
+      ? `🎉 Oppdrag landet: ${h.rolle} hos ${h.kunde}! (${h.ansvarlig}) 🎉`
+      : `🎉 Oppdrag landet: ${h.rolle}! 🎉`;
   }
   // kandidat
   const hvem = h.navn ? `Ny kandidat landet: ${h.navn}` : "Ny kandidat landet";
@@ -203,10 +218,30 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
     }))
     .filter((o) => o.ansvarlig); // ukjent rådgiver = ikke synlig på tavlen, skal heller ikke feires
 
+  // --- Landet oppdrag: prosjektet er lukket som utført ---
+  // Den andre veien en landing kan bli registrert på. Kandidaten kan ha kommet inn uten
+  // utlyst stilling - da finnes det ingen jobbsøknad å merke «hired», og prosjektet
+  // lukkes i stedet som løst. Målt 2026-09-25: «KDA - Platform Arkitekt» ble landet
+  // nettopp slik, og banneret sa ingenting fordi det bare lyttet etter jobbsøknader.
+  const utforteOppdrag = Object.values(projectById)
+    .filter((p) => bestemStatus(p) === "utfort")
+    .filter((p) => !erInternKunde(p))
+    .filter((p) => kundeTypeSkalVises(companyById[p.companyId]?.type, "utfort"))
+    .map((p) => ({
+      id: String(p.projectId),
+      rolle: p.name,
+      kunde: hemmelige.has(String(p.companyId)) ? ANONYM_MERKE : companyById[p.companyId]?.name ?? null,
+      ansvarlig: navnForUserId[String(p.responsibleUserId)] ?? null,
+      oppdatert: p.updated
+    }))
+    .filter((o) => o.ansvarlig);
+
   // --- Diff mot lagret tilstand for å finne det som er NYTT ---
   const tilstand = (await kv.get(KV_KEY, "json")) ?? {};
 
   const nyeHendelser = [];
+  // Prosjekter som ble feiret via en jobbsøknad i DENNE runden.
+  const feiretViaSoknad = [];
 
   // Hva som SKJEDDE denne runden - svaret på «hvorfor er banneret tomt».
   const diagnose = {
@@ -214,13 +249,15 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
     bootstrappet: {
       hired: !!tilstand.kjenteHired,
       kunder: !!tilstand.kjenteKunder,
-      oppdrag: !!tilstand.kjenteAktiveOppdrag
+      oppdrag: !!tilstand.kjenteAktiveOppdrag,
+      utfort: !!tilstand.kjenteUtforteOppdrag
     },
-    seesNaa: { hired: hired.length, kunder: nyeKunder.length, oppdrag: aktiveOppdrag.length },
+    seesNaa: { hired: hired.length, kunder: nyeKunder.length, oppdrag: aktiveOppdrag.length, utfort: utforteOppdrag.length },
     kjentFraFoer: {
       hired: (tilstand.kjenteHired ?? []).length,
       kunder: (tilstand.kjenteKunder ?? []).length,
-      oppdrag: (tilstand.kjenteAktiveOppdrag ?? []).length
+      oppdrag: (tilstand.kjenteAktiveOppdrag ?? []).length,
+      utfort: (tilstand.kjenteUtforteOppdrag ?? []).length
     },
     nyeDenneRunden: {},
     sperretAvMassendringsvakt: {},
@@ -252,11 +289,14 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
     const kjenteHiredSet = new Set(tilstand.kjenteHired);
     const nyeAnsettelser = massendringsvakt(tell("hired", hired.filter((h) => !kjenteHiredSet.has(h.id))), "ansettelser");
     const detaljer = await Promise.all(
-      nyeAnsettelser.map((h) => hentKandidatDetaljer(apiKey, h, projectById, companyById, navnForUserId))
+      nyeAnsettelser.map((h) => hentKandidatDetaljer(apiKey, h, projectById, companyById, navnForUserId, hemmelige))
     );
     detaljer
       .filter((d) => !erInternKunde(d.project))
-      .forEach((d) => nyeHendelser.push({ type: "kandidat", navn: d.navn, kunde: d.kunde, ansvarlig: d.ansvarlig }));
+      .forEach((d) => {
+        nyeHendelser.push({ type: "kandidat", navn: d.navn, kunde: d.kunde, ansvarlig: d.ansvarlig });
+        if (d.projectId) feiretViaSoknad.push(d.projectId);
+      });
   }
 
   if (tilstand.kjenteKunder) {
@@ -270,6 +310,26 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
     massendringsvakt(tell("oppdrag", aktiveOppdrag.filter((o) => !kjenteAktiveOppdragSet.has(o.id))), "nye oppdrag")
       .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
+
+  // Prosjekter som allerede er feiret gjennom en jobbsøknad. Uten denne ville samme
+  // landing blitt feiret to ganger: én gang da søknaden ble merket, og én gang til da
+  // prosjektet ble lukket. Ansettelser feires fortsatt per søknad - to kandidater på
+  // samme oppdrag er to landinger, ikke én.
+  const hiredProsjekter = new Set(tilstand.hiredProsjekter ?? []);
+
+  // Første gang denne kategorien kjører finnes ingen kjenteUtforteOppdrag, og da ville
+  // hele historikken sett ut som nye landinger. Vanlig bootstrap svelger dem alle - men
+  // den ville også svelget en landing som skjedde for et kvarter siden, altså nettopp
+  // det vi vil fange. Derfor: ved bootstrap regnes bare de som er oppdatert innenfor
+  // visningsvinduet som ferske nok til å feires. Alt eldre blir stille kjent.
+  const kjenteUtforteSet = new Set(
+    tilstand.kjenteUtforteOppdrag ??
+      utforteOppdrag.filter((o) => !erNyligOppdatert(o.oppdatert)).map((o) => o.id)
+  );
+  massendringsvakt(
+    tell("utfort", utforteOppdrag.filter((o) => !kjenteUtforteSet.has(o.id) && !hiredProsjekter.has(o.id))),
+    "landede oppdrag"
+  ).forEach((o) => nyeHendelser.push({ type: "landet", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
 
   // --- Bygg "aktive" - det som fortsatt var aktivt fra før (ikke utløpt) + det nye ---
   const naa = Date.now();
@@ -312,6 +372,9 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
         kjenteHired: hired.map((h) => h.id),
         kjenteKunder: nyeKunder.map((k) => k.id),
         kjenteAktiveOppdrag,
+        kjenteUtforteOppdrag: utforteOppdrag.map((o) => o.id),
+        // Vokser sakte og trimmes, slik at lista ikke blir uendelig lang.
+        hiredProsjekter: [...new Set([...hiredProsjekter, ...feiretViaSoknad])].slice(-300),
         mistenktBorteOppdrag: fortsattMistenkt,
         aktive
       })
@@ -333,8 +396,12 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
 //
 // Veien går nå via kandidatens egen pipeline i candidate-scopet, som har både projectId,
 // jobPostId og userId - og navnet ligger i samme oppslag.
-async function hentKandidatDetaljer(apiKey, ansettelse, projectById, companyById, navnForUserId) {
-  const tomt = { navn: null, kunde: null, ansvarlig: null, project: null };
+// hemmelige må sendes inn: denne funksjonen ligger på modulnivå, ikke inni
+// hentAktiveFeiringer. Den leste settet rett ut av det ytre skopet en kort stund i dag,
+// og ville kastet ReferenceError første gang en ny ansettelse faktisk dukket opp - altså
+// nøyaktig når den skulle virke. Ingen nye ansettelser rakk å treffe den.
+async function hentKandidatDetaljer(apiKey, ansettelse, projectById, companyById, navnForUserId, hemmelige) {
+  const tomt = { navn: null, kunde: null, ansvarlig: null, project: null, projectId: null };
   if (!ansettelse.candidateId) return tomt;
 
   const json = await hentJson(
@@ -361,7 +428,10 @@ async function hentKandidatDetaljer(apiKey, ansettelse, projectById, companyById
       (project ? navnForUserId[String(project.responsibleUserId)] : null) ??
       (treff ? navnForUserId[String(treff.userId)] : null) ??
       null,
-    project
+    project,
+    // Hvilket prosjekt landingen hørte til. Brukes til å la være å feire det samme
+    // igjen når prosjektet senere lukkes som utført.
+    projectId: treff ? String(treff.projectId) : null
   };
 }
 
