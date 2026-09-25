@@ -68,7 +68,8 @@ export async function onRequestGet(context) {
   if (new URL(context.request.url).searchParams.has("diagnose")) {
     if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "feiring-diagnose");
     try {
-      const d = await hentAktiveFeiringer(context.env.RECMAN_API_KEY, context.env.NOTAT_KV, true);
+      const sok = new URL(context.request.url).searchParams.get("diagnose");
+      const d = await hentAktiveFeiringer(context.env.RECMAN_API_KEY, context.env.NOTAT_KV, true, sok);
       return new Response(JSON.stringify(d.diagnose, null, 1), {
         headers: { "Content-Type": "application/json" }
       });
@@ -119,7 +120,7 @@ function feiringTekst(h) {
   return `🎉 ${hvem}! 🎉`;
 }
 
-async function hentAktiveFeiringer(apiKey, kv, kunLes = false) {
+async function hentAktiveFeiringer(apiKey, kv, kunLes = false, sok = null) {
   const [projectJson, userJson, hiredJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId,status,completePercent,updated&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
@@ -225,7 +226,21 @@ async function hentAktiveFeiringer(apiKey, kv, kunLes = false) {
     sperretAvMassendringsvakt: {},
     maksNyePerRunde: MAKS_NYE_PER_RUNDE,
     feiringerSomFortsattVises: (tilstand.aktive ?? []).filter((a) => a.utloper > Date.now()).length,
-    visesITimer: FEIRING_VIS_MS / 3600000
+    visesITimer: FEIRING_VIS_MS / 3600000,
+    // Begge disse henter bare side 1. Det er greit saa lenge alt faar plass, men
+    // grensen sier ikke fra naar den naas - derfor staar tallene her.
+    prosjekterPaaSide1: Object.keys(projectById).length,
+    ansettelserPaaSide1: hired.length,
+    sisteAnsettelser: hired.slice(-5),
+    treff: sok
+      ? {
+          sok: sok,
+          prosjekter: Object.entries(projectById)
+            .filter(([, p]) => (p.name ?? "").toLowerCase().includes(sok.toLowerCase()))
+            .map(([id, p]) => ({ projectId: id, navn: p.name, status: p.status, companyId: p.companyId, oppdatert: p.updated })),
+          ansettelser: hired.filter((h) => JSON.stringify(h).toLowerCase().includes(sok.toLowerCase()))
+        }
+      : undefined
   };
   const tell = (navn, nye) => {
     diagnose.nyeDenneRunden[navn] = nye.length;
