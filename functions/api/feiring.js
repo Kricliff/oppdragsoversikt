@@ -31,6 +31,7 @@
 
 import { bestemStatus, kundeTypeSkalVises } from "../_lib/oppdragStatus.js";
 import { hentAnonyme, anonymeSelskapIder, ANONYM_MERKE } from "../_lib/anonyme.js";
+import { harGyldigAdminNokkel, ikkeGodkjentSvar } from "../_lib/skrivevern.js";
 
 const KV_KEY = "feiring-tilstand";
 const CACHE_SECONDS = 5 * 60;
@@ -61,6 +62,24 @@ function massendringsvakt(nye, hva) {
 }
 
 export async function onRequestGet(context) {
+  // ?diagnose svarer med HVORFOR banneret er tomt, i stedet for at man må gjette.
+  // Krever adminnøkkel, går utenom cachen, og skriver IKKE tilstand - en diagnose som
+  // spiste opp diffen ville gjort neste ekte hendelse usynlig.
+  if (new URL(context.request.url).searchParams.has("diagnose")) {
+    if (!harGyldigAdminNokkel(context)) return ikkeGodkjentSvar(context, "feiring-diagnose");
+    try {
+      const d = await hentAktiveFeiringer(context.env.RECMAN_API_KEY, context.env.NOTAT_KV, true);
+      return new Response(JSON.stringify(d.diagnose, null, 1), {
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({ error: String(err) }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }
+
   const cache = caches.default;
   const cacheKey = new Request(`https://oppdragsoversikt-cache.internal/feiring?v=${CACHE_VERSION}`);
   const cached = await cache.match(cacheKey);
@@ -100,7 +119,7 @@ function feiringTekst(h) {
   return `🎉 ${hvem}! 🎉`;
 }
 
-async function hentAktiveFeiringer(apiKey, kv) {
+async function hentAktiveFeiringer(apiKey, kv, kunLes = false) {
   const [projectJson, userJson, hiredJson] = await Promise.all([
     hentJson(`https://api.recman.io/v2/get/?key=${apiKey}&scope=project&fields=name,companyId,responsibleUserId,status,completePercent,updated&page=1`),
     hentJson(`https://api.recman.io/v1.php?key=${apiKey}&type=json&scope=user&fields=first_name,last_name`),
@@ -188,9 +207,35 @@ async function hentAktiveFeiringer(apiKey, kv) {
 
   const nyeHendelser = [];
 
+  // Hva som SKJEDDE denne runden - svaret på «hvorfor er banneret tomt».
+  const diagnose = {
+    naa: new Date().toISOString(),
+    bootstrappet: {
+      hired: !!tilstand.kjenteHired,
+      kunder: !!tilstand.kjenteKunder,
+      oppdrag: !!tilstand.kjenteAktiveOppdrag
+    },
+    seesNaa: { hired: hired.length, kunder: nyeKunder.length, oppdrag: aktiveOppdrag.length },
+    kjentFraFoer: {
+      hired: (tilstand.kjenteHired ?? []).length,
+      kunder: (tilstand.kjenteKunder ?? []).length,
+      oppdrag: (tilstand.kjenteAktiveOppdrag ?? []).length
+    },
+    nyeDenneRunden: {},
+    sperretAvMassendringsvakt: {},
+    maksNyePerRunde: MAKS_NYE_PER_RUNDE,
+    feiringerSomFortsattVises: (tilstand.aktive ?? []).filter((a) => a.utloper > Date.now()).length,
+    visesITimer: FEIRING_VIS_MS / 3600000
+  };
+  const tell = (navn, nye) => {
+    diagnose.nyeDenneRunden[navn] = nye.length;
+    diagnose.sperretAvMassendringsvakt[navn] = nye.length > MAKS_NYE_PER_RUNDE;
+    return nye;
+  };
+
   if (tilstand.kjenteHired) {
     const kjenteHiredSet = new Set(tilstand.kjenteHired);
-    const nyeAnsettelser = massendringsvakt(hired.filter((h) => !kjenteHiredSet.has(h.id)), "ansettelser");
+    const nyeAnsettelser = massendringsvakt(tell("hired", hired.filter((h) => !kjenteHiredSet.has(h.id))), "ansettelser");
     const detaljer = await Promise.all(
       nyeAnsettelser.map((h) => hentKandidatDetaljer(apiKey, h, projectById, companyById, navnForUserId))
     );
@@ -201,13 +246,13 @@ async function hentAktiveFeiringer(apiKey, kv) {
 
   if (tilstand.kjenteKunder) {
     const kjenteKunderSet = new Set(tilstand.kjenteKunder);
-    massendringsvakt(nyeKunder.filter((k) => !kjenteKunderSet.has(k.id)), "nye kunder")
+    massendringsvakt(tell("kunder", nyeKunder.filter((k) => !kjenteKunderSet.has(k.id))), "nye kunder")
       .forEach((k) => nyeHendelser.push({ type: "kunde", navn: k.navn, ansvarlig: k.ansvarlig }));
   }
 
   if (tilstand.kjenteAktiveOppdrag) {
     const kjenteAktiveOppdragSet = new Set(tilstand.kjenteAktiveOppdrag);
-    massendringsvakt(aktiveOppdrag.filter((o) => !kjenteAktiveOppdragSet.has(o.id)), "nye oppdrag")
+    massendringsvakt(tell("oppdrag", aktiveOppdrag.filter((o) => !kjenteAktiveOppdragSet.has(o.id))), "nye oppdrag")
       .forEach((o) => nyeHendelser.push({ type: "oppdrag", rolle: o.rolle, kunde: o.kunde, ansvarlig: o.ansvarlig }));
   }
 
@@ -238,6 +283,11 @@ async function hentAktiveFeiringer(apiKey, kv) {
       fortsattMistenkt[id] = runder;
       kjenteAktiveOppdrag.push(id);
     }
+  }
+
+  if (kunLes) {
+    diagnose.nyeFeiringerDenneRunden = nyeHendelser.map((h) => feiringTekst(h));
+    return { aktive, diagnose };
   }
 
   try {
