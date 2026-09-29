@@ -9,7 +9,12 @@ const KV_KEY = "innstillinger";
 // Alle felt er rene av/på-brytere (boolean), standard PÅ. Statlinje-feltene styrer
 // hvilke av de fem tallene øverst på tavlen som vises - se STAT_FELT i app.js sin
 // renderStats(), som må ha nøyaktig samme feltnavn.
+// visForesporsler / visUtforte styrer hvilke oppdragskort som står på tavlen (se
+// erSynligPaTavle i app.js). De påvirker bare KORTENE: tallene øverst, feiringene og
+// endringsloggen regnes fortsatt av hele lista.
 const STANDARD = {
+  visForesporsler: true,
+  visUtforte: true,
   kundenytt: true,
   linkedin: true,
   feiring: true,

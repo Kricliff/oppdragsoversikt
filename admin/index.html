@@ -446,6 +446,12 @@
     </div>
 
     <div class="kort">
+      <h2>Oppdrag på tavlen</h2>
+      <p class="storrelse-hint">Velg hvilke oppdragskort som vises. Skrur du av forespørsler eller utførte, blir det færre kort og dermed mer plass til resten - en rådgiver som bare har skjulte oppdrag forsvinner fra tavlen. <b>Tallene øverst påvirkes ikke</b>: «Utført i år» teller like mange uansett.</p>
+      <div id="oppdragVisningListe"><p class="endring-tom">Laster…</p></div>
+    </div>
+
+    <div class="kort">
       <h2>Innstillinger</h2>
       <p class="storrelse-hint">Skru funksjoner på tavlen midlertidig av og på - f.eks. under feilsøking eller en demo.</p>
       <div id="innstillingerListe"><p class="endring-tom">Laster…</p></div>
@@ -1414,7 +1420,9 @@
 
   const innstillingerListeEl = document.getElementById("innstillingerListe");
   const statlinjeListeEl = document.getElementById("statlinjeListe");
+  const oppdragVisningListeEl = document.getElementById("oppdragVisningListe");
   const BRYTER_NAVN = { kundenytt: "Kundenytt", linkedin: "LinkedIn", feiring: "Feiring", bursdager: "Bursdager", teamskanal: "Teamskanal" };
+  const VISNING_NAVN = { visForesporsler: "Vis forespørsler", visUtforte: "Vis utførte oppdrag" };
   const STAT_NAVN = {
     statAktive: "Aktive Prosjekter",
     statUtfort: "Utført i år",
@@ -1454,6 +1462,7 @@
   function renderInnstillinger(innstillinger) {
     tegnBrytere(innstillingerListeEl, BRYTER_NAVN, innstillinger);
     tegnBrytere(statlinjeListeEl, STAT_NAVN, innstillinger);
+    tegnBrytere(oppdragVisningListeEl, VISNING_NAVN, innstillinger);
   }
 
   async function lastInnstillinger() {
@@ -1464,6 +1473,7 @@
     } catch (err) {
       innstillingerListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
       statlinjeListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
+      oppdragVisningListeEl.innerHTML = '<p class="endring-tom">Fikk ikke hentet innstillinger.</p>';
       console.warn(err);
     }
   }

@@ -45,6 +45,8 @@ const BILDE_SJEKK_MS = 20 * 1000; // hvor ofte skjermen sjekker om admin har lag
 
 let alleOppdrag = [];
 let innstillinger = {
+  visForesporsler: true,
+  visUtforte: true,
   kundenytt: true,
   linkedin: true,
   feiring: true,
@@ -1055,6 +1057,10 @@ function render() {
 
 function erSynligPaTavle(o) {
   if (o.status === "aktiv") return true;
+  // Bryterne i /admin. De skjuler bare kortene - renderStats() får fortsatt hele lista,
+  // så «Utført i år» og de andre tallene stemmer uansett hva som vises.
+  if (o.status === "utfort" && !innstillinger.visUtforte) return false;
+  if (o.status === "paVent" && !innstillinger.visForesporsler) return false;
   if (o.status === "utfort") {
     return new Date(o.utfortDato) > UTFORT_BASISDATO && dagerSiden(o.utfortDato) <= UTFORT_SYNLIG_DAGER;
   }
