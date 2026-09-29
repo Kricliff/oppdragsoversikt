@@ -177,6 +177,8 @@ body {
    status-pillene), så merkefargene fungerer fint her. */
 .stat-card.accent-aktiv .value { color: var(--aktiv); }
 .stat-card.accent-utfort .value { color: var(--utfort); }
+/* Grå som forespørselskortene, men i tekstvarianten - det er tekst, ikke en kantstrek. */
+.stat-card.accent-foresporsel .value { color: var(--pa-vent-tekst); }
 
 .clock-block {
   flex: 0 0 auto;

@@ -56,7 +56,8 @@ let innstillinger = {
   statUtfort: true,
   statSignerte: true,
   statAvsluttet: true,
-  statSalgsmoter: true
+  statSalgsmoter: true,
+  statForesporsler: true
 };
 let sisteInnstillingerInnhold = null; // for å vite når en bryter faktisk har endret seg, se sjekkInnstillinger
 let sisteAvganger = [];
@@ -1055,6 +1056,14 @@ function render() {
   emptyState.hidden = pagaende.length > 0;
 }
 
+// En forespørsel regnes med hvis den er yngre enn engangsoppryddingen. Samme regel brukes
+// av tallet øverst og av kortene, slik at tallet alltid stemmer med det du ser når
+// bryteren for forespørsler står på. Recman gir oss flere - de eldre ble fjernet for
+// godt 02.09.2026 og vises aldri.
+function erForesporselPaTavle(o) {
+  return o.status === "paVent" && new Date(o.paVentDato) >= PA_VENT_OPPRYDDING_GRENSE;
+}
+
 function erSynligPaTavle(o) {
   if (o.status === "aktiv") return true;
   // Bryterne i /admin. De skjuler bare kortene - renderStats() får fortsatt hele lista,
@@ -1068,7 +1077,7 @@ function erSynligPaTavle(o) {
   // endres i Recman (til Aktiv, eller til Avlyst/Mistet - som allerede skjules helt,
   // se STATUS_MAP i _lib/oppdragStatus.js siden de ikke finnes der i det hele tatt).
   // PA_VENT_OPPRYDDING_GRENSE rydder kun bort den daværende bunken én gang, se der.
-  if (o.status === "paVent") return new Date(o.paVentDato) >= PA_VENT_OPPRYDDING_GRENSE;
+  if (o.status === "paVent") return erForesporselPaTavle(o);
   return false;
 }
 
@@ -1076,11 +1085,15 @@ function renderStats(liste) {
   const utfortIArListe = liste.filter((o) => o.status === "utfort" && erIDetteAret(o.utfortDato));
   const aktive = liste.filter((o) => o.status === "aktiv").length;
   const utfortIAr = utfortIArListe.length;
+  // Teller uavhengig av bryteren for å SKJULE forespørsler - poenget er nettopp å kunne
+  // se antallet selv om kortene er borte.
+  const foresporsler = liste.filter(erForesporselPaTavle).length;
 
   statsRow.innerHTML = "";
   [
     { felt: "statAktive", label: "Aktive Prosjekter", value: aktive, accent: "aktiv" },
     { felt: "statUtfort", label: "Utført i år", value: utfortIAr, accent: "utfort" },
+    { felt: "statForesporsler", label: "Forespørsler", value: foresporsler, accent: "foresporsel" },
     { felt: "statSignerte", label: "Signerte tilbud denne mnd", value: sisteSignerteTilbud },
     { felt: "statAvsluttet", label: "Avsluttet denne mnd", value: sisteAvsluttet },
     { felt: "statSalgsmoter", label: "Salgsmøter", value: sisteTelling.moter }

@@ -24,7 +24,8 @@ const STANDARD = {
   statUtfort: true,
   statSignerte: true,
   statAvsluttet: true,
-  statSalgsmoter: true
+  statSalgsmoter: true,
+  statForesporsler: true
 };
 
 export async function onRequestGet(context) {
